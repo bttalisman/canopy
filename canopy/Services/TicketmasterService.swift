@@ -114,12 +114,21 @@ actor TicketmasterService {
                 event.eventDescription = "Event at \(event.location)"
             }
 
-            // Store image URL as part of a custom field approach
             if let imageURL = tmEvent.primaryImage?.url {
                 event.imageURL = imageURL
             }
 
+            // Store venue coordinates
+            if let loc = tmEvent.venue?.location {
+                event.latitude = loc.latitudeDouble
+                event.longitude = loc.longitudeDouble
+            }
+
             context.insert(event)
+
+            // Auto-attach venue map data if we have it
+            VenueMapData.attachMapData(to: event, using: context)
+
             importedCount += 1
         }
 

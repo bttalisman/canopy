@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import MapKit
 
 struct EventDetailView: View {
     @Environment(\.modelContext) private var modelContext
@@ -323,6 +324,8 @@ struct ScheduleItemRow: View {
 struct EventMapView: View {
     let event: Event
     @State private var selectedPinType: MapPinType?
+    @State private var selectedPin: MapPin?
+    @State private var mapPosition: MapCameraPosition = .automatic
 
     var filteredPins: [MapPin] {
         if let type = selectedPinType {
@@ -331,8 +334,24 @@ struct EventMapView: View {
         return event.mapPins
     }
 
+    // Convert a pin's relative x/y (0–1) to lat/long around the venue center
+    func pinCoordinate(_ pin: MapPin) -> CLLocationCoordinate2D {
+        let venue = VenueMapData.findVenue(for: event.location)
+        let span = venue?.mapSpan ?? 0.004
+        let centerLat = event.latitude ?? venue?.latitude ?? 47.6062
+        let centerLon = event.longitude ?? venue?.longitude ?? -122.3321
+
+        // Map x (0–1) to longitude offset, y (0–1) to latitude offset
+        // y=0 is top (north), y=1 is bottom (south)
+        let lat = centerLat + (0.5 - pin.y) * span
+        let lon = centerLon + (pin.x - 0.5) * span
+
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
+            // Filter pills
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     Button {
@@ -371,43 +390,85 @@ struct EventMapView: View {
                 )
                 .padding(.top, 40)
             } else {
-                // Interactive venue map
-                GeometryReader { geo in
-                    ZStack {
-                        // Background grid
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(.systemGray6))
+                // Real MapKit map with annotation pins
+                Map(position: $mapPosition) {
+                    UserAnnotation()
 
-                        // Grid lines
-                        Canvas { context, size in
-                            let step: CGFloat = 30
-                            for x in stride(from: step, to: size.width, by: step) {
-                                var path = Path()
-                                path.move(to: CGPoint(x: x, y: 0))
-                                path.addLine(to: CGPoint(x: x, y: size.height))
-                                context.stroke(path, with: .color(.gray.opacity(0.15)), lineWidth: 0.5)
+                    ForEach(filteredPins) { pin in
+                        Annotation(pin.label, coordinate: pinCoordinate(pin)) {
+                            Button {
+                                selectedPin = pin
+                            } label: {
+                                Image(systemName: pin.pinType.systemImage)
+                                    .font(.caption)
+                                    .foregroundStyle(.white)
+                                    .frame(width: 28, height: 28)
+                                    .background(pinColor(pin.pinType))
+                                    .clipShape(Circle())
+                                    .shadow(radius: 2)
                             }
-                            for y in stride(from: step, to: size.height, by: step) {
-                                var path = Path()
-                                path.move(to: CGPoint(x: 0, y: y))
-                                path.addLine(to: CGPoint(x: size.width, y: y))
-                                context.stroke(path, with: .color(.gray.opacity(0.15)), lineWidth: 0.5)
-                            }
-                        }
-
-                        // Map pins
-                        ForEach(filteredPins) { pin in
-                            VenueMapPin(pin: pin)
-                                .position(
-                                    x: pin.x * geo.size.width,
-                                    y: pin.y * geo.size.height
-                                )
                         }
                     }
                 }
-                .frame(height: 350)
+                .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .including([.restaurant, .restroom, .parking])))
+                .frame(height: 380)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal)
+                .mapControls {
+                    MapUserLocationButton()
+                    MapCompass()
+                }
+                .onAppear {
+                    LocationManager.shared.requestPermission()
+                    let venue = VenueMapData.findVenue(for: event.location)
+                    let centerLat = event.latitude ?? venue?.latitude ?? 47.6062
+                    let centerLon = event.longitude ?? venue?.longitude ?? -122.3321
+                    let span = venue?.mapSpan ?? 0.004
+                    mapPosition = .region(MKCoordinateRegion(
+                        center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+                        span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
+                    ))
+                }
+
+                // Selected pin detail
+                if let pin = selectedPin {
+                    HStack(spacing: 12) {
+                        Image(systemName: pin.pinType.systemImage)
+                            .font(.title3)
+                            .foregroundStyle(pinColor(pin.pinType))
+                            .frame(width: 36, height: 36)
+                            .background(pinColor(pin.pinType).opacity(0.12))
+                            .clipShape(Circle())
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(pin.label)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            if !pin.pinDescription.isEmpty {
+                                Text(pin.pinDescription)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text(pin.pinType.rawValue)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        Spacer()
+
+                        Button {
+                            selectedPin = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+                    .padding(.horizontal)
+                }
 
                 // Pin legend
                 VStack(alignment: .leading, spacing: 8) {
@@ -416,25 +477,40 @@ struct EventMapView: View {
                         .padding(.horizontal)
 
                     ForEach(filteredPins) { pin in
-                        HStack(spacing: 10) {
-                            Image(systemName: pin.pinType.systemImage)
-                                .foregroundStyle(pinColor(pin.pinType))
-                                .frame(width: 24)
-                            VStack(alignment: .leading) {
-                                Text(pin.label)
-                                    .font(.subheadline)
-                                if !pin.pinDescription.isEmpty {
-                                    Text(pin.pinDescription)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+                        Button {
+                            selectedPin = pin
+                            // Pan map to the selected pin
+                            let coord = pinCoordinate(pin)
+                            let venue = VenueMapData.findVenue(for: event.location)
+                            let span = venue?.mapSpan ?? 0.004
+                            withAnimation {
+                                mapPosition = .region(MKCoordinateRegion(
+                                    center: coord,
+                                    span: MKCoordinateSpan(latitudeDelta: span * 0.5, longitudeDelta: span * 0.5)
+                                ))
                             }
-                            Spacer()
-                            Text(pin.pinType.rawValue)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: pin.pinType.systemImage)
+                                    .foregroundStyle(pinColor(pin.pinType))
+                                    .frame(width: 24)
+                                VStack(alignment: .leading) {
+                                    Text(pin.label)
+                                        .font(.subheadline)
+                                    if !pin.pinDescription.isEmpty {
+                                        Text(pin.pinDescription)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                Text(pin.pinType.rawValue)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.bottom)
@@ -450,41 +526,6 @@ struct EventMapView: View {
         case .firstAid: return .red
         case .exit: return .green
         case .custom: return .gray
-        }
-    }
-}
-
-struct VenueMapPin: View {
-    let pin: MapPin
-
-    var pinColor: Color {
-        switch pin.pinType {
-        case .restroom: return .blue
-        case .food: return .orange
-        case .stage: return .purple
-        case .firstAid: return .red
-        case .exit: return .green
-        case .custom: return .gray
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 2) {
-            Image(systemName: pin.pinType.systemImage)
-                .font(.caption)
-                .foregroundStyle(.white)
-                .frame(width: 28, height: 28)
-                .background(pinColor)
-                .clipShape(Circle())
-                .shadow(radius: 2)
-
-            Text(pin.label)
-                .font(.system(size: 9, weight: .medium))
-                .lineLimit(1)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
-                .background(Color(.systemBackground).opacity(0.9))
-                .clipShape(RoundedRectangle(cornerRadius: 3))
         }
     }
 }

@@ -3,44 +3,32 @@ import SwiftData
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
-    @AppStorage("ticketmasterAPIKey") private var apiKey = ""
-    @AppStorage("notificationsEnabled") private var notificationsEnabled = true
-    @AppStorage("quietHoursEnabled") private var quietHoursEnabled = false
     @Query private var events: [Event]
     @State private var showingClearConfirmation = false
+
+    private var hasAPIKey: Bool {
+        let key = Secrets.ticketmasterAPIKey
+        return !key.isEmpty && key != "YOUR_KEY_HERE"
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Ticketmaster API Key", systemImage: "key")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        SecureField("Enter API key", text: $apiKey)
-                            .textContentType(.password)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.never)
-                        Text("Get a free key at developer.ticketmaster.com")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                Section("Event Data") {
+                    HStack {
+                        Label("Ticketmaster API", systemImage: "key")
+                        Spacer()
+                        if hasAPIKey {
+                            Label("Configured", systemImage: "checkmark.circle.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(.green)
+                        } else {
+                            Label("Not set", systemImage: "exclamationmark.triangle")
+                                .font(.subheadline)
+                                .foregroundStyle(.orange)
+                        }
                     }
-                    .padding(.vertical, 4)
-                } header: {
-                    Text("Event Data")
-                } footer: {
-                    if apiKey.isEmpty {
-                        Label("No API key set — the Discover tab won't fetch events.", systemImage: "exclamationmark.triangle")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    } else {
-                        Label("API key saved. Pull to refresh in Discover to fetch events.", systemImage: "checkmark.circle")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                    }
-                }
 
-                Section("Data") {
                     HStack {
                         Text("Cached Events")
                         Spacer()
@@ -54,8 +42,8 @@ struct SettingsView: View {
                 }
 
                 Section("Notifications") {
-                    Toggle("Enable Notifications", isOn: $notificationsEnabled)
-                    Toggle("Quiet Hours (10PM–8AM)", isOn: $quietHoursEnabled)
+                    Toggle("Enable Notifications", isOn: .constant(true))
+                    Toggle("Quiet Hours (10PM–8AM)", isOn: .constant(false))
                 }
 
                 Section("About") {

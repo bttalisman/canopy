@@ -4,14 +4,18 @@ import SwiftData
 struct DiscoverView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Event.startDate) private var events: [Event]
-    @AppStorage("ticketmasterAPIKey") private var apiKey = ""
     @State private var searchText = ""
     @State private var selectedCategory: EventCategory?
     @State private var selectedTimeFilter: TimeFilter = .all
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var lastFetchedCount: Int?
-    @State private var showingAPIKeyAlert = false
+
+    private var apiKey: String { Secrets.ticketmasterAPIKey }
+
+    private var hasAPIKey: Bool {
+        !apiKey.isEmpty && apiKey != "YOUR_KEY_HERE"
+    }
 
     enum TimeFilter: String, CaseIterable, Identifiable {
         case all = "All"
@@ -138,18 +142,10 @@ struct DiscoverView: View {
                                 .foregroundStyle(.orange)
                                 .multilineTextAlignment(.center)
 
-                            if apiKey.isEmpty {
-                                Button("Add API Key") {
-                                    showingAPIKeyAlert = true
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.green)
-                            } else {
-                                Button("Retry") {
-                                    Task { await fetchEvents() }
-                                }
-                                .buttonStyle(.bordered)
+                            Button("Retry") {
+                                Task { await fetchEvents() }
                             }
+                            .buttonStyle(.bordered)
                         }
                         .padding(.top, 40)
                         .padding(.horizontal)
@@ -164,9 +160,9 @@ struct DiscoverView: View {
                         ContentUnavailableView(
                             "No Events Found",
                             systemImage: "calendar.badge.exclamationmark",
-                            description: Text(apiKey.isEmpty
-                                ? "Add your Ticketmaster API key in Settings to discover events."
-                                : "Try adjusting your filters or pull to refresh.")
+                            description: Text(hasAPIKey
+                                ? "Try adjusting your filters or pull to refresh."
+                                : "API key not configured. See Config.xcconfig.")
                         )
                         .padding(.top, 60)
                     } else {
@@ -198,17 +194,16 @@ struct DiscoverView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-                    .disabled(isLoading || apiKey.isEmpty)
+                    .disabled(isLoading || !hasAPIKey)
                 }
             }
-            .alert("Ticketmaster API Key", isPresented: $showingAPIKeyAlert) {
-                TextField("API Key", text: $apiKey)
-                Button("Save", role: .cancel) {}
-            } message: {
-                Text("Get a free key at developer.ticketmaster.com")
-            }
             .task {
-                if events.isEmpty && !apiKey.isEmpty {
+                // Backfill map data for any events missing it
+                for event in events where event.mapPins.isEmpty {
+                    VenueMapData.attachMapData(to: event, using: modelContext)
+                }
+
+                if events.isEmpty && hasAPIKey {
                     await fetchEvents()
                 }
             }
@@ -216,34 +211,51 @@ struct DiscoverView: View {
     }
 
     private func fetchEvents() async {
-        guard !apiKey.isEmpty else {
-            errorMessage = "No API key. Add your Ticketmaster API key in Settings."
-            return
-        }
-
         isLoading = true
         errorMessage = nil
         lastFetchedCount = nil
 
+        var totalImported = 0
+
+        // 1. Fetch from Canopy backend (schedule items, curated events)
         do {
-            // Format start time as ISO8601 (now)
-            let formatter = ISO8601DateFormatter()
-            let startDT = formatter.string(from: Date())
+            let apiEvents = try await CanopyAPIService.shared.fetchEvents()
+            let count = await CanopyAPIService.shared.importEvents(apiEvents, into: modelContext)
+            totalImported += count
+        } catch let error as CanopyAPIError where error == .notConfigured {
+            // Backend not configured yet — that's fine, skip it
+        } catch {
+            // Log but don't block — Ticketmaster may still work
+            print("Canopy API error: \(error.localizedDescription)")
+        }
 
-            let response = try await TicketmasterService.shared.searchEvents(
-                apiKey: apiKey,
-                startDateTime: startDT
-            )
+        // 2. Fetch from Ticketmaster (event discovery)
+        if hasAPIKey {
+            do {
+                let formatter = ISO8601DateFormatter()
+                let startDT = formatter.string(from: Date())
 
-            let tmEvents = response.embedded?.events ?? []
-            let count = await TicketmasterService.shared.importEvents(tmEvents, into: modelContext)
-            lastFetchedCount = count
+                let response = try await TicketmasterService.shared.searchEvents(
+                    apiKey: apiKey,
+                    startDateTime: startDT
+                )
 
-            // Clear status after a few seconds
+                let tmEvents = response.embedded?.events ?? []
+                let count = await TicketmasterService.shared.importEvents(tmEvents, into: modelContext)
+                totalImported += count
+            } catch {
+                if totalImported == 0 {
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+
+        if totalImported > 0 {
+            lastFetchedCount = totalImported
             try? await Task.sleep(for: .seconds(3))
             lastFetchedCount = nil
-        } catch {
-            errorMessage = error.localizedDescription
+        } else if errorMessage == nil && events.isEmpty {
+            errorMessage = "No events found. Check your API configuration."
         }
 
         isLoading = false
@@ -335,9 +347,13 @@ struct EventCard: View {
             }
             .padding()
         }
-        .background(Color(.systemBackground))
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color(.separator), lineWidth: 0.5)
+        )
     }
 
     private var fallbackHeader: some View {

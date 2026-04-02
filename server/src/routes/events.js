@@ -1,0 +1,154 @@
+const { Router } = require('express');
+const { pool } = require('../db/pool');
+
+const router = Router();
+
+// GET /api/events — list all active events with their stages, schedule items, and map pins
+router.get('/', async (req, res) => {
+  try {
+    const { rows: events } = await pool.query(`
+      SELECT * FROM events
+      WHERE is_active = true
+      ORDER BY start_date ASC
+    `);
+
+    if (events.length === 0) {
+      return res.json([]);
+    }
+
+    const eventIds = events.map(e => e.id);
+
+    const [stagesResult, scheduleResult, pinsResult] = await Promise.all([
+      pool.query(`SELECT * FROM stages WHERE event_id = ANY($1) ORDER BY name`, [eventIds]),
+      pool.query(`SELECT * FROM schedule_items WHERE event_id = ANY($1) ORDER BY start_time`, [eventIds]),
+      pool.query(`SELECT * FROM map_pins WHERE event_id = ANY($1) ORDER BY label`, [eventIds]),
+    ]);
+
+    const stagesByEvent = groupBy(stagesResult.rows, 'event_id');
+    const scheduleByEvent = groupBy(scheduleResult.rows, 'event_id');
+    const pinsByEvent = groupBy(pinsResult.rows, 'event_id');
+
+    const result = events.map(event => ({
+      id: event.id,
+      name: event.name,
+      slug: event.slug,
+      description: event.description,
+      startDate: event.start_date,
+      endDate: event.end_date,
+      location: event.location,
+      neighborhood: event.neighborhood,
+      logoSystemImage: event.logo_system_image,
+      imageURL: event.image_url,
+      ticketingURL: event.ticketing_url,
+      latitude: event.latitude,
+      longitude: event.longitude,
+      category: event.category,
+      stages: (stagesByEvent[event.id] || []).map(s => ({
+        id: s.id,
+        name: s.name,
+        mapX: s.map_x,
+        mapY: s.map_y,
+      })),
+      scheduleItems: (scheduleByEvent[event.id] || []).map(si => ({
+        id: si.id,
+        stageId: si.stage_id,
+        title: si.title,
+        description: si.description,
+        startTime: si.start_time,
+        endTime: si.end_time,
+        category: si.category,
+        isCancelled: si.is_cancelled,
+      })),
+      mapPins: (pinsByEvent[event.id] || []).map(p => ({
+        id: p.id,
+        label: p.label,
+        pinType: p.pin_type,
+        x: p.x,
+        y: p.y,
+        description: p.description,
+      })),
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error('Error fetching events:', err);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+// GET /api/events/:slug — single event with full details
+router.get('/:slug', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM events WHERE slug = $1 AND is_active = true',
+      [req.params.slug]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const event = rows[0];
+
+    const [stagesResult, scheduleResult, pinsResult] = await Promise.all([
+      pool.query('SELECT * FROM stages WHERE event_id = $1 ORDER BY name', [event.id]),
+      pool.query('SELECT * FROM schedule_items WHERE event_id = $1 ORDER BY start_time', [event.id]),
+      pool.query('SELECT * FROM map_pins WHERE event_id = $1 ORDER BY label', [event.id]),
+    ]);
+
+    res.json({
+      id: event.id,
+      name: event.name,
+      slug: event.slug,
+      description: event.description,
+      startDate: event.start_date,
+      endDate: event.end_date,
+      location: event.location,
+      neighborhood: event.neighborhood,
+      logoSystemImage: event.logo_system_image,
+      imageURL: event.image_url,
+      ticketingURL: event.ticketing_url,
+      latitude: event.latitude,
+      longitude: event.longitude,
+      category: event.category,
+      stages: stagesResult.rows.map(s => ({
+        id: s.id,
+        name: s.name,
+        mapX: s.map_x,
+        mapY: s.map_y,
+      })),
+      scheduleItems: scheduleResult.rows.map(si => ({
+        id: si.id,
+        stageId: si.stage_id,
+        title: si.title,
+        description: si.description,
+        startTime: si.start_time,
+        endTime: si.end_time,
+        category: si.category,
+        isCancelled: si.is_cancelled,
+      })),
+      mapPins: pinsResult.rows.map(p => ({
+        id: p.id,
+        label: p.label,
+        pinType: p.pin_type,
+        x: p.x,
+        y: p.y,
+        description: p.description,
+      })),
+    });
+  } catch (err) {
+    console.error('Error fetching event:', err);
+    res.status(500).json({ error: 'Failed to fetch event' });
+  }
+});
+
+function groupBy(arr, key) {
+  return arr.reduce((acc, item) => {
+    const k = item[key];
+    if (!acc[k]) acc[k] = [];
+    acc[k].push(item);
+    return acc;
+  }, {});
+}
+
+module.exports = router;

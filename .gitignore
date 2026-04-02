@@ -1,0 +1,15 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Secrets (contains API keys)
+canopy/Secrets.swift
+
+# Server
+server/node_modules/
+server/.env
+
+# macOS
+.DS_Store
