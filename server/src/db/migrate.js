@@ -55,11 +55,33 @@ const schema = `
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
 
+  CREATE TABLE IF NOT EXISTS device_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_token TEXT NOT NULL,
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    platform TEXT DEFAULT 'ios',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(device_token, event_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS push_notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    sent_count INTEGER DEFAULT 0,
+    failed_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
   CREATE INDEX IF NOT EXISTS idx_stages_event ON stages(event_id);
   CREATE INDEX IF NOT EXISTS idx_schedule_items_event ON schedule_items(event_id);
   CREATE INDEX IF NOT EXISTS idx_schedule_items_stage ON schedule_items(stage_id);
   CREATE INDEX IF NOT EXISTS idx_map_pins_event ON map_pins(event_id);
   CREATE INDEX IF NOT EXISTS idx_events_active ON events(is_active, start_date);
+  CREATE INDEX IF NOT EXISTS idx_device_tokens_event ON device_tokens(event_id);
+  CREATE INDEX IF NOT EXISTS idx_push_notifications_event ON push_notifications(event_id);
 `;
 
 async function migrate(pool) {

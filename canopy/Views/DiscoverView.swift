@@ -220,6 +220,10 @@ struct DiscoverView: View {
             print("[Fetch] Imported \(count) new events")
         } catch let error as CanopyAPIError where error == .notConfigured {
             print("[Fetch] Backend not configured, skipping")
+        } catch is CancellationError {
+            print("[Fetch] Canopy API cancelled")
+            isLoading = false
+            return
         } catch {
             print("[Fetch] Canopy API error: \(error.localizedDescription)")
         }
@@ -238,8 +242,15 @@ struct DiscoverView: View {
                 let tmEvents = response.embedded?.events ?? []
                 let count = await TicketmasterService.shared.importEvents(tmEvents, into: modelContext)
                 totalImported += count
+            } catch is CancellationError {
+                print("[Fetch] Ticketmaster cancelled")
+                isLoading = false
+                return
             } catch {
-                if totalImported == 0 {
+                if totalImported == 0 && !events.isEmpty {
+                    // Don't show error if we already have cached events
+                    print("[Fetch] Ticketmaster error (cached data available): \(error.localizedDescription)")
+                } else if totalImported == 0 {
                     errorMessage = error.localizedDescription
                 }
             }
@@ -249,8 +260,6 @@ struct DiscoverView: View {
             lastFetchedCount = totalImported
             try? await Task.sleep(for: .seconds(3))
             lastFetchedCount = nil
-        } else if errorMessage == nil && events.isEmpty {
-            errorMessage = "No events found. Check your API configuration."
         }
 
         isLoading = false

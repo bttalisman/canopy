@@ -432,6 +432,37 @@
       </div>
     </div>
   </div>
+
+  <!-- Send Push Notification View -->
+  <div id="pushNotificationView" style="display:none">
+    <span class="back-link" onclick="backToEventDetail()">← Back to Event</span>
+    <h2>Send Push Notification</h2>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 id="pushEventName"></h3>
+        <span class="badge green" id="pushDeviceCount">0 subscribers</span>
+      </div>
+      <form id="pushForm" onsubmit="sendPush(event)">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="pushTitle" required placeholder="e.g. Schedule Update" />
+        </div>
+        <div class="form-group">
+          <label>Message</label>
+          <textarea id="pushBody" required placeholder="e.g. The headliner has moved to Main Stage at 8 PM" style="min-height:80px"></textarea>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-primary" id="pushSendBtn">Send Notification</button>
+          <button type="button" class="btn-secondary" onclick="backToEventDetail()">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-bottom:12px">Notification History</h3>
+      <div id="pushHistory"><div class="empty">No notifications sent yet</div></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -461,7 +492,7 @@ function toast(msg) {
 }
 
 function hideAll() {
-  ['eventListView','eventDetailView','eventFormView','scheduleFormView','stageFormView','pasteScheduleView']
+  ['eventListView','eventDetailView','eventFormView','scheduleFormView','stageFormView','pasteScheduleView','pushNotificationView']
     .forEach(id => document.getElementById(id).style.display = 'none');
 }
 
@@ -593,6 +624,10 @@ function renderEventDetail(e) {
         </div>
       </div>
       ${scheduleHtml}
+    </div>
+
+    <div style="margin-top:8px">
+      <button class="btn-secondary" onclick="showSendPush()" style="font-size:14px;padding:8px 18px;width:100%">📣 Send Push Notification</button>
     </div>
   `;
 }
@@ -922,6 +957,96 @@ async function importParsedItems() {
     backToEventDetail();
   } catch (e) {
     toast('Error: ' + e.message);
+  }
+}
+
+// ---- Push Notifications ----
+
+async function showSendPush() {
+  hideAll();
+  document.getElementById('pushNotificationView').style.display = 'block';
+  document.getElementById('pushForm').reset();
+  document.getElementById('pushEventName').textContent = currentEventData?.name || '';
+
+  // Load subscriber count
+  try {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/devices/count`, {
+      headers: adminHeaders()
+    });
+    const data = await res.json();
+    document.getElementById('pushDeviceCount').textContent = `${data.count} subscriber${data.count !== 1 ? 's' : ''}`;
+  } catch (e) {
+    document.getElementById('pushDeviceCount').textContent = '? subscribers';
+  }
+
+  loadPushHistory();
+}
+
+async function loadPushHistory() {
+  try {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/push`, {
+      headers: adminHeaders()
+    });
+    const notifications = await res.json();
+
+    if (notifications.length === 0) {
+      document.getElementById('pushHistory').innerHTML = '<div class="empty">No notifications sent yet</div>';
+      return;
+    }
+
+    document.getElementById('pushHistory').innerHTML = notifications.map(n => `
+      <div class="schedule-item">
+        <div>
+          <div class="title">${n.title}</div>
+          <div class="detail">${n.body}</div>
+          <div class="detail" style="margin-top:4px">
+            Sent: ${n.sent_count} · Failed: ${n.failed_count} · ${new Date(n.created_at).toLocaleString()}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    document.getElementById('pushHistory').innerHTML = '<div class="empty">Error loading history</div>';
+  }
+}
+
+async function sendPush(evt) {
+  evt.preventDefault();
+  const title = document.getElementById('pushTitle').value;
+  const body = document.getElementById('pushBody').value;
+
+  const btn = document.getElementById('pushSendBtn');
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/push`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ title, body })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Send failed');
+    }
+
+    const data = await res.json();
+    toast(`Sent to ${data.sent} device${data.sent !== 1 ? 's' : ''}${data.failed ? `, ${data.failed} failed` : ''}`);
+    document.getElementById('pushForm').reset();
+    loadPushHistory();
+
+    // Refresh subscriber count
+    const countRes = await fetch(`${API}/api/admin/events/${currentEventId}/devices/count`, {
+      headers: adminHeaders()
+    });
+    const countData = await countRes.json();
+    document.getElementById('pushDeviceCount').textContent = `${countData.count} subscriber${countData.count !== 1 ? 's' : ''}`;
+  } catch (e) {
+    toast('Error: ' + e.message);
+  } finally {
+    btn.textContent = 'Send Notification';
+    btn.disabled = false;
   }
 }
 

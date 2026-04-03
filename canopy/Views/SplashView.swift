@@ -9,6 +9,7 @@ struct LetterState {
 
 struct SplashView: View {
     @State private var dropOffset: CGFloat = -500
+    @State private var dropSpin: Double = 0
     @State private var squish: CGFloat = 1.0
     @State private var bounceScale: CGFloat = 1.0
     @State private var rotation: Double = 0
@@ -132,6 +133,11 @@ struct SplashView: View {
             dropOffset = 0
         }
 
+        // Continuous spin: starts fast during fall, decelerates to stop after landing
+        withAnimation(.easeOut(duration: 2.0)) {
+            rotation = 2160
+        }
+
         // Phase 2: Squish on impact
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             withAnimation(.spring(response: 0.12, dampingFraction: 0.3)) {
@@ -149,13 +155,6 @@ struct SplashView: View {
                         bounceScale = 1.0
                     }
                 }
-            }
-        }
-
-        // Phase 3: Fast spin
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
-            withAnimation(.easeOut(duration: 1.2)) {
-                rotation = 1800
             }
         }
 

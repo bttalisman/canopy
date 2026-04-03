@@ -6,6 +6,8 @@ xcuserdata/
 
 # Secrets (contains API keys)
 canopy/Secrets.swift
+Config.xcconfig
+*.p8
 
 # Server
 server/node_modules/

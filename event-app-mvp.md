@@ -58,23 +58,23 @@ These are all reasonable v2+ features but would bloat the MVP.
 
 ## Architecture
 
-### Mobile App
-- **Framework**: React Native (single codebase, iOS + Android)
-- **State**: local-first with sync — app should work offline at crowded outdoor events where cell service is poor
-- **Maps**: MapLibre GL (open source) for base map + custom overlay layer for venue maps
-- **Notifications**: Firebase Cloud Messaging (FCM) for Android, APNs for iOS, via Expo Notifications
+### Mobile App (iOS)
+- **Framework**: SwiftUI (native iOS)
+- **Persistence**: SwiftData (local-first with offline support — works at crowded outdoor events where cell service is poor)
+- **Maps**: MapKit with custom annotations for venue pins, stages, and user location
+- **Notifications**: Local notifications via UserNotifications framework (APNs for future remote push)
+- **Concurrency**: Actor-based services for thread-safe API calls
 
 ### Backend
-- **API**: Node.js + Express (or Fastify), REST
-- **Database**: PostgreSQL (events, schedules, map pins, users)
-- **Auth**: Email/password + Apple/Google sign-in (for saved schedules and preferences)
-- **File storage**: S3-compatible (venue map images, event logos)
-- **Hosting**: Railway or Fly.io for MVP simplicity
+- **API**: Node.js + Express, REST
+- **Database**: PostgreSQL (events, schedules, map pins)
+- **Hosting**: Railway
+- **External APIs**: Ticketmaster Discovery API for event discovery; Canopy backend for curated organizer data
 
 ### Organizer Dashboard (Web)
-- **Framework**: Next.js
-- **Features**: upload venue map, place pins, manage schedule, send notifications, view basic analytics (app opens, schedule saves)
-- **Access**: invite-only during MVP, one login per event
+- **Framework**: Next.js (admin dashboard at /admin)
+- **Features**: manage events, upload schedules (with AI-powered text/URL parsing), manage map pins, view basic analytics
+- **Access**: invite-only during MVP
 
 ## Data Model (Simplified)
 

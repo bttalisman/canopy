@@ -8,29 +8,10 @@ struct SettingsView: View {
     @AppStorage("quietHoursEnabled") private var quietHoursEnabled = false
     @State private var showingClearConfirmation = false
 
-    private var hasAPIKey: Bool {
-        let key = Secrets.ticketmasterAPIKey
-        return !key.isEmpty && key != "YOUR_KEY_HERE"
-    }
-
     var body: some View {
         NavigationStack {
             List {
-                Section("Event Data") {
-                    HStack {
-                        Label("Ticketmaster API", systemImage: "key")
-                        Spacer()
-                        if hasAPIKey {
-                            Label("Configured", systemImage: "checkmark.circle.fill")
-                                .font(.subheadline)
-                                .foregroundStyle(.green)
-                        } else {
-                            Label("Not set", systemImage: "exclamationmark.triangle")
-                                .font(.subheadline)
-                                .foregroundStyle(.orange)
-                        }
-                    }
-
+                Section("Data") {
                     HStack {
                         Text("Cached Events")
                         Spacer()
@@ -63,12 +44,6 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    HStack {
-                        Text("Data Source")
-                        Spacer()
-                        Text("Ticketmaster Discovery API")
-                            .foregroundStyle(.secondary)
-                    }
                 }
 
                 Section {

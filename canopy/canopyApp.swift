@@ -1,32 +1,38 @@
 import SwiftUI
 import SwiftData
+import UIKit
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        application.registerForRemoteNotifications()
+        return true
+    }
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationManager.shared.registerToken(deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("[Push] Failed to register for remote notifications: \(error.localizedDescription)")
+    }
+}
 
 @main
 struct canopyApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Event.self,
-            Stage.self,
-            ScheduleItem.self,
-            MapPin.self,
-            UserSavedItem.self,
-        ])
+        let schema = Schema(versionedSchema: CanopySchemaV1.self)
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: CanopyMigrationPlan.self,
+                configurations: [modelConfiguration]
+            )
         } catch {
-            // If the store is incompatible (e.g. schema changed), delete and recreate
-            let url = modelConfiguration.url
-            try? FileManager.default.removeItem(at: url)
-            // Also remove journal/wal files
-            try? FileManager.default.removeItem(at: url.appendingPathExtension("shm"))
-            try? FileManager.default.removeItem(at: url.appendingPathExtension("wal"))
-            do {
-                return try ModelContainer(for: schema, configurations: [modelConfiguration])
-            } catch {
-                fatalError("Could not create ModelContainer: \(error)")
-            }
+            fatalError("Could not create ModelContainer: \(error)")
         }
     }()
 

@@ -6,10 +6,45 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationManager()
 
     private let center = UNUserNotificationCenter.current()
+    var deviceToken: String?
 
     override init() {
         super.init()
         center.delegate = self
+    }
+
+    // MARK: - Device Token Registration
+
+    func registerToken(_ tokenData: Data) {
+        let token = tokenData.map { String(format: "%02x", $0) }.joined()
+        self.deviceToken = token
+        print("[Push] Device token: \(token)")
+    }
+
+    func registerTokenWithBackend(eventIds: [String]) {
+        guard let token = deviceToken else { return }
+
+        let baseURL = Secrets.canopyAPIBaseURL
+        guard !baseURL.isEmpty, baseURL != "YOUR_API_URL_HERE" else { return }
+
+        guard let url = URL(string: "\(baseURL)/api/devices/register") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = ["deviceToken": token, "eventIds": eventIds]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let error {
+                print("[Push] Registration error: \(error.localizedDescription)")
+                return
+            }
+            if let http = response as? HTTPURLResponse {
+                print("[Push] Registration response: \(http.statusCode)")
+            }
+        }.resume()
     }
 
     // MARK: - Permission
@@ -176,6 +211,10 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 }
 
                 print("[Notifications] Synced \(savedItems.count) reminders")
+
+                // Sync device token with backend for push notifications
+                let eventIds = Array(scheduledEvents).map(\.uuidString)
+                self?.registerTokenWithBackend(eventIds: eventIds)
             }
         }
     }

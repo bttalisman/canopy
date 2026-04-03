@@ -4,6 +4,7 @@ const cors = require('cors');
 const { pool } = require('./db/pool');
 const { migrate } = require('./db/migrate');
 const eventsRouter = require('./routes/events');
+const devicesRouter = require('./routes/devices');
 const adminRouter = require('./routes/admin');
 
 const app = express();
@@ -19,6 +20,7 @@ app.get('/admin', (req, res) => {
 
 // Public API routes
 app.use('/api/events', eventsRouter);
+app.use('/api/devices', devicesRouter);
 
 // Admin routes (protected by API key)
 app.use('/api/admin', adminRouter);

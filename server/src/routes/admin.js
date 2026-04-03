@@ -256,6 +256,66 @@ router.delete('/pins/:id', async (req, res) => {
 });
 
 // =====================
+// PUSH NOTIFICATIONS
+// =====================
+
+const { sendPushToEvent } = require('../services/apns');
+
+// GET /api/admin/events/:eventId/devices/count — how many devices are subscribed
+router.get('/events/:eventId/devices/count', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT COUNT(*) FROM device_tokens WHERE event_id = $1',
+      [req.params.eventId]
+    );
+    res.json({ count: parseInt(rows[0].count, 10) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/events/:eventId/push — send a push notification
+router.post('/events/:eventId/push', async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    if (!title || !body) {
+      return res.status(400).json({ error: 'title and body are required' });
+    }
+
+    const result = await sendPushToEvent(req.params.eventId, title, body);
+
+    // Record in push_notifications history
+    const { rows } = await pool.query(
+      `INSERT INTO push_notifications (event_id, title, body, sent_count, failed_count)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [req.params.eventId, title, body, result.sent, result.failed]
+    );
+
+    res.json({ notification: rows[0], ...result });
+  } catch (err) {
+    console.error('Error sending push:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/events/:eventId/push — notification history
+router.get('/events/:eventId/push', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM push_notifications
+       WHERE event_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [req.params.eventId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =====================
 // LLM SCHEDULE PARSING
 // =====================
 

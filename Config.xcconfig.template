@@ -1,0 +1,4 @@
+// Copy this file to Config.xcconfig and fill in your keys.
+// Config.xcconfig is gitignored and will not be committed.
+TICKETMASTER_API_KEY = YOUR_KEY_HERE
+CANOPY_API_BASE_URL = https:/$()/your-api-url.example.com
