@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -60 1024 1084">
+  <defs>
+    <linearGradient id="pinT" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="leafT" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="cgradT" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#bbf7d0"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </linearGradient>
+  </defs>
+  <!-- Pin body - centered -->
+  <path d="M512 950 L340 540 Q275 390 340 250 Q405 110 512 80 Q619 110 684 250 Q749 390 684 540 Z" fill="url(#pinT)"/>
+  <!-- Inner dark circle -->
+  <circle cx="512" cy="350" r="140" fill="#1a1a2e" opacity="0.85"/>
+  <!-- Stylized C -->
+  <path d="M548 275 A87 87 0 1 0 548 425"
+        stroke="url(#cgradT)" stroke-width="40" fill="none" stroke-linecap="square"/>
+  <!-- Leaf top right -->
+  <path d="M512 80 Q590 -40 700 0 Q760 30 725 130 Q690 200 590 165 Q545 145 512 80 Z" fill="url(#leafT)"/>
+  <path d="M512 80 Q575 5 610 -5" stroke="#16a34a" stroke-width="4" fill="none" opacity="0.5"/>
+  <!-- Leaf top left -->
+  <path d="M512 80 Q425 -20 365 25 Q335 55 365 115 Q400 160 455 130 Q488 112 512 80 Z" fill="#4ade80" opacity="0.8"/>
+  <path d="M512 80 Q440 10 418 18" stroke="#16a34a" stroke-width="3" fill="none" opacity="0.4"/>
+</svg>

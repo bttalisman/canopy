@@ -187,16 +187,6 @@ struct DiscoverView: View {
             .refreshable {
                 await fetchEvents()
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task { await fetchEvents() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .disabled(isLoading || !hasAPIKey)
-                }
-            }
             .task {
                 // Backfill map data for any events missing it
                 for event in events where event.mapPins.isEmpty {

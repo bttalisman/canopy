@@ -61,21 +61,26 @@ struct EventDetailView: View {
                         .font(.title.bold())
                         .multilineTextAlignment(.center)
 
-                    HStack(spacing: 16) {
-                        Label(event.location, systemImage: "mappin.and.ellipse")
-                        Label(event.neighborhood, systemImage: "building.2")
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            Label(event.location, systemImage: "mappin.and.ellipse")
+                            Label(event.neighborhood, systemImage: "building.2")
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
 
-                    HStack(spacing: 4) {
-                        Text(event.startDate, format: .dateTime.month(.wide).day())
-                        Text("–")
-                        Text(event.endDate, format: .dateTime.month(.wide).day(.twoDigits).year())
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 4) {
+                            Text(event.startDate, format: .dateTime.month(.wide).day().hour().minute())
+                            Text("–")
+                            Text(event.endDate, format: .dateTime.month(.wide).day().hour().minute().year())
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.green)
+                        .fixedSize()
                     }
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.green)
 
                     if let url = event.ticketingURL, let ticketURL = URL(string: url) {
                         Link(destination: ticketURL) {
@@ -234,7 +239,7 @@ struct EventScheduleView: View {
                             .padding(.top, 8)
 
                         ForEach(items) { item in
-                            ScheduleItemRow(item: item, modelContext: modelContext)
+                            ScheduleItemRow(item: item)
                         }
                     }
                 }
@@ -245,76 +250,92 @@ struct EventScheduleView: View {
 }
 
 struct ScheduleItemRow: View {
-    let item: ScheduleItem
-    let modelContext: ModelContext
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var item: ScheduleItem
+    @State private var saved: Bool = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(item.startTime, format: .dateTime.hour().minute())
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                Text(item.endTime, format: .dateTime.hour().minute())
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(width: 56)
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(item.title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .strikethrough(item.isCancelled)
-
-                    if item.isCancelled {
-                        Text("CANCELLED")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.red)
-                            .clipShape(Capsule())
-                    }
+        VStack(alignment: .leading, spacing: 8) {
+            // Top row: time range + bookmark
+            HStack {
+                Label {
+                    Text("\(item.startTime, format: .dateTime.hour().minute()) – \(item.endTime, format: .dateTime.hour().minute())")
+                } icon: {
+                    Image(systemName: "clock")
                 }
+                .font(.caption)
+                .foregroundStyle(.green)
 
                 if let stage = item.stage {
+                    Text("·")
+                        .foregroundStyle(.secondary)
                     Label(stage.name, systemImage: "music.mic")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                if !item.itemDescription.isEmpty {
-                    Text(item.itemDescription)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(2)
+                Spacer()
+
+                Button {
+                    toggleSave()
+                } label: {
+                    Image(systemName: saved ? "bookmark.fill" : "bookmark")
+                        .foregroundStyle(saved ? .green : .secondary)
+                        .font(.body)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Title
+            HStack {
+                Text(item.title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .strikethrough(item.isCancelled)
+
+                if item.isCancelled {
+                    Text("CANCELLED")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.red)
+                        .clipShape(Capsule())
                 }
             }
 
-            Spacer()
-
-            Button {
-                toggleSave(item)
-            } label: {
-                Image(systemName: item.isSaved ? "bookmark.fill" : "bookmark")
-                    .foregroundStyle(item.isSaved ? .green : .secondary)
-                    .font(.title3)
+            // Description
+            if !item.itemDescription.isEmpty {
+                Text(item.itemDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
         }
+        .padding(12)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(item.isCancelled ? Color.red.opacity(0.05) : Color.clear)
         .opacity(item.isCancelled ? 0.7 : 1.0)
+        .onAppear {
+            saved = item.isSaved
+        }
     }
 
-    private func toggleSave(_ item: ScheduleItem) {
-        if let saved = item.savedByUsers.first {
-            modelContext.delete(saved)
+    private func toggleSave() {
+        if let existing = item.savedByUsers.first {
+            item.savedByUsers.removeAll()
+            modelContext.delete(existing)
+            try? modelContext.save()
+            saved = false
         } else {
-            let saved = UserSavedItem(scheduleItem: item)
-            modelContext.insert(saved)
+            let newSave = UserSavedItem(scheduleItem: item)
+            modelContext.insert(newSave)
+            try? modelContext.save()
+            saved = true
         }
     }
 }
@@ -563,14 +584,14 @@ struct EventInfoView: View {
                 HStack {
                     Label("Starts", systemImage: "calendar")
                     Spacer()
-                    Text(event.startDate, format: .dateTime.month(.wide).day().year())
+                    Text(event.startDate, format: .dateTime.month(.wide).day().year().hour().minute())
                 }
                 .font(.subheadline)
 
                 HStack {
                     Label("Ends", systemImage: "calendar.badge.checkmark")
                     Spacer()
-                    Text(event.endDate, format: .dateTime.month(.wide).day().year())
+                    Text(event.endDate, format: .dateTime.month(.wide).day().year().hour().minute())
                 }
                 .font(.subheadline)
             }

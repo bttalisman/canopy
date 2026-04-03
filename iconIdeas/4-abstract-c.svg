@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg4" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="arc1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </linearGradient>
+    <linearGradient id="arc2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="arc3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg4)"/>
+  <!-- Layered C arcs - outermost -->
+  <path d="M650 250 A280 280 0 1 0 650 774" stroke="url(#arc3)" stroke-width="50" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <!-- Middle arc -->
+  <path d="M600 310 A220 220 0 1 0 600 714" stroke="url(#arc2)" stroke-width="50" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <!-- Inner arc -->
+  <path d="M555 375 A155 155 0 1 0 555 649" stroke="url(#arc1)" stroke-width="50" fill="none" stroke-linecap="round" opacity="0.9"/>
+  <!-- Center dot -->
+  <circle cx="460" cy="512" r="30" fill="#86efac"/>
+</svg>

@@ -70,9 +70,22 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Label("Canopy — One app for every event.", systemImage: "leaf.fill")
-                        .foregroundStyle(.green)
-                        .font(.subheadline)
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 10) {
+                            Image("CanopyLogo")
+                                .resizable()
+                                .frame(width: 64, height: 64)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                            Text("Canopy")
+                                .font(.headline)
+                            Text("One app for every event.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
                 }
             }
             .navigationTitle("Settings")

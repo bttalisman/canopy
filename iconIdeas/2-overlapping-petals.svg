@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg2)"/>
+  <!-- Overlapping event circles/petals -->
+  <g transform="translate(512, 480)">
+    <!-- Petal 1 - top -->
+    <ellipse cx="0" cy="-120" rx="110" ry="160" fill="#4ade80" opacity="0.6" transform="rotate(0)"/>
+    <!-- Petal 2 -->
+    <ellipse cx="0" cy="-120" rx="110" ry="160" fill="#22c55e" opacity="0.5" transform="rotate(72)"/>
+    <!-- Petal 3 -->
+    <ellipse cx="0" cy="-120" rx="110" ry="160" fill="#86efac" opacity="0.5" transform="rotate(144)"/>
+    <!-- Petal 4 -->
+    <ellipse cx="0" cy="-120" rx="110" ry="160" fill="#16a34a" opacity="0.5" transform="rotate(216)"/>
+    <!-- Petal 5 -->
+    <ellipse cx="0" cy="-120" rx="110" ry="160" fill="#bbf7d0" opacity="0.4" transform="rotate(288)"/>
+  </g>
+  <!-- Center circle -->
+  <circle cx="512" cy="480" r="55" fill="#ffffff" opacity="0.95"/>
+  <circle cx="512" cy="480" r="35" fill="#22c55e"/>
+</svg>

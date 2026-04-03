@@ -32,8 +32,30 @@ struct canopyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainTabView()
+            RootView()
         }
         .modelContainer(sharedModelContainer)
+    }
+}
+
+struct RootView: View {
+    @State private var showSplash = true
+
+    var body: some View {
+        ZStack {
+            MainTabView()
+                .opacity(showSplash ? 0 : 1)
+
+            if showSplash {
+                SplashView()
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.9) {
+                            withAnimation {
+                                showSplash = false
+                            }
+                        }
+                    }
+            }
+        }
     }
 }

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg3c" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="pin3c" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="leafg3c" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="cgrad3c" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#bbf7d0"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg3c)"/>
+  <!-- Map pin body -->
+  <path d="M512 800 L388 510 Q340 400 388 300 Q436 200 512 180 Q588 200 636 300 Q684 400 636 510 Z" fill="url(#pin3c)" opacity="0.9"/>
+  <!-- Pin inner dark circle -->
+  <circle cx="512" cy="370" r="100" fill="#1a1a2e" opacity="0.7"/>
+  <!-- Stylized C - centered, sized to follow the inner circle's curvature -->
+  <path d="M548 315 A62 62 0 1 0 548 425"
+        stroke="url(#cgrad3c)" stroke-width="20" fill="none" stroke-linecap="round"/>
+  <!-- Leaf growing from top right of pin -->
+  <path d="M512 180 Q570 100 640 125 Q680 145 655 210 Q630 255 565 230 Q535 218 512 180 Z" fill="url(#leafg3c)" opacity="0.9"/>
+  <path d="M512 180 Q555 140 575 135" stroke="#16a34a" stroke-width="3" fill="none" opacity="0.5"/>
+  <!-- Second smaller leaf to the left -->
+  <path d="M512 180 Q450 115 405 150 Q385 175 410 215 Q435 245 475 222 Q498 210 512 180 Z" fill="#4ade80" opacity="0.7"/>
+  <path d="M512 180 Q465 140 445 145" stroke="#16a34a" stroke-width="2.5" fill="none" opacity="0.4"/>
+</svg>

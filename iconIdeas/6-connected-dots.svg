@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg6" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg6)"/>
+  <!-- Connection lines (tree/network shape) -->
+  <g stroke="#4ade80" stroke-width="4" opacity="0.3">
+    <!-- Trunk -->
+    <line x1="512" y1="720" x2="512" y2="520"/>
+    <!-- Main branches -->
+    <line x1="512" y1="520" x2="360" y2="380"/>
+    <line x1="512" y1="520" x2="664" y2="380"/>
+    <line x1="512" y1="520" x2="512" y2="320"/>
+    <!-- Sub branches left -->
+    <line x1="360" y1="380" x2="280" y2="280"/>
+    <line x1="360" y1="380" x2="380" y2="260"/>
+    <!-- Sub branches right -->
+    <line x1="664" y1="380" x2="744" y2="280"/>
+    <line x1="664" y1="380" x2="644" y2="260"/>
+    <!-- Sub branches center -->
+    <line x1="512" y1="320" x2="460" y2="230"/>
+    <line x1="512" y1="320" x2="564" y2="230"/>
+    <!-- Cross connections -->
+    <line x1="360" y1="380" x2="512" y2="320"/>
+    <line x1="664" y1="380" x2="512" y2="320"/>
+    <line x1="280" y1="280" x2="380" y2="260"/>
+    <line x1="644" y1="260" x2="744" y2="280"/>
+    <line x1="380" y1="260" x2="460" y2="230"/>
+    <line x1="564" y1="230" x2="644" y2="260"/>
+  </g>
+  <!-- Event dots - varying sizes for hierarchy -->
+  <!-- Root -->
+  <circle cx="512" cy="720" r="24" fill="#22c55e" opacity="0.8"/>
+  <!-- Main hub -->
+  <circle cx="512" cy="520" r="28" fill="#4ade80"/>
+  <!-- Secondary hubs -->
+  <circle cx="360" cy="380" r="22" fill="#4ade80" opacity="0.9"/>
+  <circle cx="664" cy="380" r="22" fill="#4ade80" opacity="0.9"/>
+  <circle cx="512" cy="320" r="22" fill="#4ade80" opacity="0.9"/>
+  <!-- Leaf nodes -->
+  <circle cx="280" cy="280" r="16" fill="#86efac" opacity="0.8"/>
+  <circle cx="380" cy="260" r="14" fill="#86efac" opacity="0.7"/>
+  <circle cx="744" cy="280" r="16" fill="#86efac" opacity="0.8"/>
+  <circle cx="644" cy="260" r="14" fill="#86efac" opacity="0.7"/>
+  <circle cx="460" cy="230" r="14" fill="#bbf7d0" opacity="0.7"/>
+  <circle cx="564" cy="230" r="14" fill="#bbf7d0" opacity="0.7"/>
+  <!-- Tiny accent dots -->
+  <circle cx="300" cy="340" r="6" fill="#86efac" opacity="0.4"/>
+  <circle cx="724" cy="340" r="6" fill="#86efac" opacity="0.4"/>
+  <circle cx="436" cy="450" r="6" fill="#4ade80" opacity="0.4"/>
+  <circle cx="588" cy="450" r="6" fill="#4ade80" opacity="0.4"/>
+</svg>

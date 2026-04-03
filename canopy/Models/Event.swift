@@ -69,7 +69,7 @@ enum EventCategory: String, Codable, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .festival: return "party.popper"
-        case .fair: return "ferriswheel"
+        case .fair: return "tent.2.fill"
         case .conference: return "person.3.fill"
         case .expo: return "building.2.fill"
         case .concert: return "music.note"

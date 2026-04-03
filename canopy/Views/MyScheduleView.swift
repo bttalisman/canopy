@@ -106,56 +106,61 @@ struct SavedItemRow: View {
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(item.startTime, format: .dateTime.hour().minute())
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                Text(item.endTime, format: .dateTime.hour().minute())
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(width: 56)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .strikethrough(item.isCancelled)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label {
+                    Text("\(item.startTime, format: .dateTime.hour().minute()) – \(item.endTime, format: .dateTime.hour().minute())")
+                } icon: {
+                    Image(systemName: "clock")
+                }
+                .font(.caption)
+                .foregroundStyle(.green)
 
                 if let stage = item.stage {
+                    Text("·")
+                        .foregroundStyle(.secondary)
                     Label(stage.name, systemImage: "music.mic")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                if let event = item.event {
-                    Label(event.name, systemImage: "party.popper")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                }
+                Spacer()
 
-                if item.isCancelled {
-                    Text("CANCELLED")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.red)
-                        .clipShape(Capsule())
+                Button(action: onRemove) {
+                    Image(systemName: "bookmark.slash.fill")
+                        .foregroundStyle(.red)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
 
-            Spacer()
+            Text(item.title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .strikethrough(item.isCancelled)
 
-            Button(action: onRemove) {
-                Image(systemName: "bookmark.slash.fill")
-                    .foregroundStyle(.red)
+            if let event = item.event {
+                Label(event.name, systemImage: "party.popper")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
+
+            if item.isCancelled {
+                Text("CANCELLED")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.red)
+                    .clipShape(Capsule())
             }
         }
+        .padding(12)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal)
-        .padding(.vertical, 8)
     }
 }
 

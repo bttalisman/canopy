@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="leaf1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="leaf2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="leaf3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg1)"/>
+  <!-- Tree trunk -->
+  <rect x="488" y="580" width="48" height="200" rx="24" fill="#4ade80" opacity="0.6"/>
+  <!-- Canopy layers - looking up through a tree from below -->
+  <!-- Large outer ring -->
+  <ellipse cx="512" cy="420" rx="280" ry="260" fill="url(#leaf2)" opacity="0.3"/>
+  <!-- Middle ring -->
+  <ellipse cx="512" cy="400" rx="210" ry="195" fill="url(#leaf1)" opacity="0.5"/>
+  <!-- Inner bright area (sky through canopy) -->
+  <ellipse cx="512" cy="380" rx="130" ry="120" fill="url(#leaf3)" opacity="0.4"/>
+  <!-- Radiating leaf/branch shapes -->
+  <g transform="translate(512,420)">
+    <!-- Branch 1 - top -->
+    <ellipse cx="0" cy="-160" rx="60" ry="100" fill="url(#leaf1)" opacity="0.8" transform="rotate(0)"/>
+    <!-- Branch 2 -->
+    <ellipse cx="0" cy="-160" rx="55" ry="95" fill="url(#leaf2)" opacity="0.7" transform="rotate(60)"/>
+    <!-- Branch 3 -->
+    <ellipse cx="0" cy="-160" rx="60" ry="100" fill="url(#leaf3)" opacity="0.6" transform="rotate(120)"/>
+    <!-- Branch 4 -->
+    <ellipse cx="0" cy="-160" rx="55" ry="90" fill="url(#leaf1)" opacity="0.7" transform="rotate(180)"/>
+    <!-- Branch 5 -->
+    <ellipse cx="0" cy="-160" rx="60" ry="95" fill="url(#leaf2)" opacity="0.6" transform="rotate(240)"/>
+    <!-- Branch 6 -->
+    <ellipse cx="0" cy="-160" rx="55" ry="100" fill="url(#leaf3)" opacity="0.8" transform="rotate(300)"/>
+  </g>
+  <!-- Center dot (looking up through center) -->
+  <circle cx="512" cy="420" r="40" fill="#1a1a2e" opacity="0.5"/>
+  <circle cx="512" cy="420" r="20" fill="#4ade80" opacity="0.9"/>
+</svg>
