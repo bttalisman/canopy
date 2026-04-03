@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>TICKETMASTER_API_KEY</key>
+	<string>$(TICKETMASTER_API_KEY)</string>
+	<key>CANOPY_API_BASE_URL</key>
+	<string>$(CANOPY_API_BASE_URL)</string>
+</dict>
+</plist>

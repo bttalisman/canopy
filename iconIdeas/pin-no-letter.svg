@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="350 110 320 680" width="640" height="1360">
+  <defs>
+    <linearGradient id="pin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+  </defs>
+  <!-- Pin body -->
+  <path d="M512 780 L400 500 Q360 400 400 310 Q440 220 512 200 Q584 220 624 310 Q664 400 624 500 Z" fill="url(#pin)" opacity="0.9"/>
+  <!-- Main leaf (right) -->
+  <path d="M512 200 Q560 120 620 140 Q660 160 640 220 Q620 260 560 240 Q530 230 512 200 Z" fill="url(#leaf)" opacity="0.9"/>
+  <!-- Leaf vein -->
+  <path d="M512 200 Q530 160 520 140" stroke="#16a34a" stroke-width="3" fill="none" opacity="0.6"/>
+  <!-- Second leaf (left) -->
+  <path d="M512 200 Q460 130 420 160 Q400 180 420 220 Q440 250 480 230 Q500 220 512 200 Z" fill="#4ade80" opacity="0.7"/>
+</svg>

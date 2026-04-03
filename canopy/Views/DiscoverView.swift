@@ -18,7 +18,7 @@ struct DiscoverView: View {
     }
 
     enum TimeFilter: String, CaseIterable, Identifiable {
-        case all = "All"
+        case all = "Any Time"
         case thisWeek = "This Week"
         case thisWeekend = "This Weekend"
         case thisMonth = "This Month"
@@ -68,16 +68,50 @@ struct DiscoverView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
+            VStack(spacing: 0) {
+                // Header
+                HStack(spacing: 12) {
+                    CanopyPinView(size: 42)
+
+                    HStack(spacing: 6) {
+                        Text("Canopy")
+                            .font(.system(size: 28, weight: .bold))
+                        Text("Seattle")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.green, .mint],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                    }
+
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+
+                // Search bar
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Search events, venues...", text: $searchText)
+                }
+                .padding(10)
+                .background(Color(.systemGray5).opacity(0.8))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal)
+                .padding(.vertical, 10)
+
+                // Filter pills
+                VStack(spacing: 8) {
                     // Time filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             ForEach(TimeFilter.allCases) { filter in
                                 Button {
-                                    withAnimation {
-                                        selectedTimeFilter = filter
-                                    }
+                                    withAnimation { selectedTimeFilter = filter }
                                 } label: {
                                     Text(filter.rawValue)
                                         .font(.subheadline)
@@ -97,7 +131,7 @@ struct DiscoverView: View {
 
                     // Category filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             Button {
                                 withAnimation { selectedCategory = nil }
                             } label: {
@@ -130,62 +164,67 @@ struct DiscoverView: View {
                         }
                         .padding(.horizontal)
                     }
-
-                    // Status messages
-                    if isLoading {
-                        ProgressView("Fetching Seattle events...")
-                            .padding(.top, 40)
-                    } else if let error = errorMessage {
-                        VStack(spacing: 12) {
-                            Label(error, systemImage: "exclamationmark.triangle")
-                                .font(.subheadline)
-                                .foregroundStyle(.orange)
-                                .multilineTextAlignment(.center)
-
-                            Button("Retry") {
-                                Task { await fetchEvents() }
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        .padding(.top, 40)
-                        .padding(.horizontal)
-                    } else if let count = lastFetchedCount {
-                        Text("Imported \(count) new events from Ticketmaster")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                            .padding(.horizontal)
-                    }
-
-                    if filteredEvents.isEmpty && !isLoading && errorMessage == nil {
-                        ContentUnavailableView(
-                            "No Events Found",
-                            systemImage: "calendar.badge.exclamationmark",
-                            description: Text(hasAPIKey
-                                ? "Try adjusting your filters or pull to refresh."
-                                : "API key not configured. See Config.xcconfig.")
-                        )
-                        .padding(.top, 60)
-                    } else {
-                        LazyVStack(spacing: 16) {
-                            ForEach(filteredEvents) { event in
-                                NavigationLink(value: event) {
-                                    EventCard(event: event)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
                 }
-                .padding(.vertical)
+                .padding(.bottom, 8)
+
+                // Scrollable event list
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Status messages
+                        if isLoading {
+                            ProgressView("Fetching Seattle events...")
+                                .padding(.top, 40)
+                        } else if let error = errorMessage {
+                            VStack(spacing: 12) {
+                                Label(error, systemImage: "exclamationmark.triangle")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.orange)
+                                    .multilineTextAlignment(.center)
+
+                                Button("Retry") {
+                                    Task { await fetchEvents() }
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                            .padding(.top, 40)
+                            .padding(.horizontal)
+                        } else if let count = lastFetchedCount {
+                            Text("Imported \(count) new events from Ticketmaster")
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                                .padding(.horizontal)
+                        }
+
+                        if filteredEvents.isEmpty && !isLoading && errorMessage == nil {
+                            ContentUnavailableView(
+                                "No Events Found",
+                                systemImage: "calendar.badge.exclamationmark",
+                                description: Text(hasAPIKey
+                                    ? "Try adjusting your filters or pull to refresh."
+                                    : "API key not configured. See Config.xcconfig.")
+                            )
+                            .padding(.top, 60)
+                        } else {
+                            LazyVStack(spacing: 16) {
+                                ForEach(filteredEvents) { event in
+                                    NavigationLink(value: event) {
+                                        EventCard(event: event)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+                .refreshable {
+                    await fetchEvents()
+                }
             }
-            .navigationTitle("Discover Seattle")
-            .searchable(text: $searchText, prompt: "Search events, venues...")
+            .navigationBarHidden(true)
             .navigationDestination(for: Event.self) { event in
                 EventDetailView(event: event)
-            }
-            .refreshable {
-                await fetchEvents()
             }
             .task {
                 // Backfill map data for any events missing it
