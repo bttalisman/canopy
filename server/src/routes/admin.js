@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
+const cheerio = require('cheerio');
 const { pool } = require('../db/pool');
 
 const router = Router();
@@ -331,6 +332,119 @@ ${text}`
     res.json(items);
   } catch (err) {
     console.error('Error parsing schedule:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/import-url — scrape a URL and parse schedule from it
+router.post('/import-url', async (req, res) => {
+  try {
+    const { url, eventName, stages } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: 'No URL provided' });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured on server' });
+    }
+
+    // Fetch the page
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; CanopyBot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: HTTP ${response.status}`);
+    }
+
+    const html = await response.text();
+
+    // Extract text content using cheerio
+    const $ = cheerio.load(html);
+
+    // Remove scripts, styles, nav, footer, etc.
+    $('script, style, nav, footer, header, iframe, noscript, svg').remove();
+
+    // Get the page title
+    const pageTitle = $('title').text().trim();
+
+    // Extract text from the main content area
+    const text = $('body').text()
+      .replace(/\s+/g, ' ')       // collapse whitespace
+      .replace(/\n{3,}/g, '\n\n') // collapse blank lines
+      .trim()
+      .slice(0, 15000);           // limit to ~15k chars for the API
+
+    if (text.length < 50) {
+      return res.status(400).json({ error: 'Could not extract meaningful text from the page' });
+    }
+
+    // Send to Claude for parsing
+    const client = new Anthropic();
+
+    const stageList = (stages || []).map(s => s.name).join(', ');
+    const stageInstruction = stageList
+      ? `Available stages: ${stageList}. Match each item to the most appropriate stage name, or leave stageName empty if unclear.`
+      : 'No stages are defined yet. Set stageName to whatever stage/location is mentioned, or leave empty.';
+
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: `Extract schedule/lineup items from the following web page content for the event "${eventName || pageTitle || 'Unknown Event'}".
+
+${stageInstruction}
+
+Return a JSON array of objects with these fields:
+- title (string, required): the session/performance/act name
+- description (string): brief description if available
+- startTime (string): ISO 8601 datetime. Use 2026 as the year if not specified. If only a date is given with no time, use 12:00 PM.
+- endTime (string): ISO 8601 datetime. Estimate 1 hour duration if end time not given.
+- stageName (string): the stage, venue, or location name if mentioned
+- category (string): one of Music, Comedy, Art, Film, Food, Panel, Workshop, Dance, Community, Performance, or General
+
+Return ONLY the JSON array, no other text. If you can't find schedule items, return an empty array [].
+Focus on individual performances, sessions, or lineup items — not general event info.
+
+Page title: ${pageTitle}
+Page content:
+${text}`
+      }]
+    });
+
+    const content = message.content[0].text.trim();
+
+    let jsonStr = content;
+    const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      jsonStr = codeBlockMatch[1].trim();
+    }
+
+    const items = JSON.parse(jsonStr);
+
+    // Map stage names to IDs
+    if (stages && stages.length > 0) {
+      for (const item of items) {
+        if (item.stageName) {
+          const match = stages.find(s =>
+            s.name.toLowerCase().includes(item.stageName.toLowerCase()) ||
+            item.stageName.toLowerCase().includes(s.name.toLowerCase())
+          );
+          if (match) {
+            item.stageId = match.id;
+          }
+        }
+      }
+    }
+
+    res.json({ items, pageTitle, textLength: text.length });
+  } catch (err) {
+    console.error('Error importing from URL:', err);
     res.status(500).json({ error: err.message });
   }
 });

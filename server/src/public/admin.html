@@ -378,16 +378,39 @@
     <span class="back-link" onclick="backToEventDetail()">← Back to Event</span>
     <h2>Paste Schedule</h2>
     <div class="card">
-      <p style="color:#94a3b8;font-size:14px;margin-bottom:14px">
-        Paste any schedule text — from a website, email, PDF, whatever. AI will extract structured sessions.
-      </p>
-      <div class="form-group">
-        <label>Raw Schedule Text</label>
-        <textarea id="pasteText" style="min-height:200px" placeholder="Paste schedule here...&#10;&#10;Example:&#10;Friday Aug 29&#10;2:00 PM - Comedy Showcase - Fisher Pavilion&#10;5:00 PM - Local Natives - Mural Stage&#10;8:00 PM - The Head and the Heart - Main Stage"></textarea>
+      <div class="tabs" style="margin-bottom:16px">
+        <div class="tab active" id="tabURL" onclick="switchParseTab('url')">Import from URL</div>
+        <div class="tab" id="tabPaste" onclick="switchParseTab('paste')">Paste Text</div>
       </div>
-      <div class="actions">
-        <button class="btn-primary" onclick="parseSchedule()" id="parseBtn">Parse with AI</button>
-        <button class="btn-secondary" onclick="backToEventDetail()">Cancel</button>
+
+      <!-- URL input -->
+      <div id="urlInput">
+        <p style="color:#94a3b8;font-size:14px;margin-bottom:14px">
+          Paste the URL of an event schedule page. The system will scrape it and extract sessions automatically.
+        </p>
+        <div class="form-group">
+          <label>Event Schedule URL</label>
+          <input type="url" id="importURL" placeholder="https://example.com/event/schedule" />
+        </div>
+        <div class="actions">
+          <button class="btn-primary" onclick="importFromURL()" id="importURLBtn">Import from URL</button>
+          <button class="btn-secondary" onclick="backToEventDetail()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Text paste input -->
+      <div id="pasteInput" style="display:none">
+        <p style="color:#94a3b8;font-size:14px;margin-bottom:14px">
+          Paste any schedule text — from a website, email, PDF, whatever. AI will extract structured sessions.
+        </p>
+        <div class="form-group">
+          <label>Raw Schedule Text</label>
+          <textarea id="pasteText" style="min-height:200px" placeholder="Paste schedule here...&#10;&#10;Example:&#10;Friday Aug 29&#10;2:00 PM - Comedy Showcase - Fisher Pavilion&#10;5:00 PM - Local Natives - Mural Stage&#10;8:00 PM - The Head and the Heart - Main Stage"></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn-primary" onclick="parseSchedule()" id="parseBtn">Parse with AI</button>
+          <button class="btn-secondary" onclick="backToEventDetail()">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -745,8 +768,61 @@ function showPasteSchedule() {
   hideAll();
   document.getElementById('pasteScheduleView').style.display = 'block';
   document.getElementById('pasteText').value = '';
+  document.getElementById('importURL').value = '';
   document.getElementById('parsedResults').style.display = 'none';
   parsedItems = [];
+  switchParseTab('url');
+}
+
+function switchParseTab(tab) {
+  document.getElementById('tabURL').classList.toggle('active', tab === 'url');
+  document.getElementById('tabPaste').classList.toggle('active', tab === 'paste');
+  document.getElementById('urlInput').style.display = tab === 'url' ? 'block' : 'none';
+  document.getElementById('pasteInput').style.display = tab === 'paste' ? 'block' : 'none';
+}
+
+async function importFromURL() {
+  const url = document.getElementById('importURL').value.trim();
+  if (!url) { toast('Enter a URL first'); return; }
+
+  const btn = document.getElementById('importURLBtn');
+  btn.textContent = 'Scraping & parsing...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/admin/import-url`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        url,
+        eventName: currentEventData?.name || '',
+        stages: currentEventData?.stages || []
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Import failed');
+    }
+
+    const data = await res.json();
+    parsedItems = data.items || [];
+
+    if (parsedItems.length === 0) {
+      toast('No schedule items found on that page');
+      return;
+    }
+
+    document.getElementById('parsedCount').textContent = `${parsedItems.length} found`;
+    renderParsedItems();
+    document.getElementById('parsedResults').style.display = 'block';
+    toast(`Found ${parsedItems.length} sessions from ${data.pageTitle || 'page'}`);
+  } catch (e) {
+    toast('Error: ' + e.message);
+  } finally {
+    btn.textContent = 'Import from URL';
+    btn.disabled = false;
+  }
 }
 
 async function parseSchedule() {
