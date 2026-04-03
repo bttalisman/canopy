@@ -78,15 +78,23 @@ struct SettingsView: View {
     }
 
     private func clearAllEvents() {
-        do {
-            try modelContext.delete(model: UserSavedItem.self)
-            try modelContext.delete(model: ScheduleItem.self)
-            try modelContext.delete(model: MapPin.self)
-            try modelContext.delete(model: Stage.self)
-            try modelContext.delete(model: Event.self)
-        } catch {
-            print("Failed to clear events: \(error)")
-        }
+        // Delete individually to avoid batch delete constraint issues
+        let savedItems = (try? modelContext.fetch(FetchDescriptor<UserSavedItem>())) ?? []
+        for item in savedItems { modelContext.delete(item) }
+
+        let scheduleItems = (try? modelContext.fetch(FetchDescriptor<ScheduleItem>())) ?? []
+        for item in scheduleItems { modelContext.delete(item) }
+
+        let pins = (try? modelContext.fetch(FetchDescriptor<MapPin>())) ?? []
+        for pin in pins { modelContext.delete(pin) }
+
+        let stages = (try? modelContext.fetch(FetchDescriptor<Stage>())) ?? []
+        for stage in stages { modelContext.delete(stage) }
+
+        let events = (try? modelContext.fetch(FetchDescriptor<Event>())) ?? []
+        for event in events { modelContext.delete(event) }
+
+        try? modelContext.save()
     }
 }
 
