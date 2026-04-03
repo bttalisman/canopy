@@ -158,6 +158,7 @@ actor CanopyAPIService {
                       let end = parseDate(apiItem.endTime) else { continue }
 
                 let item = ScheduleItem(
+                    id: UUID(uuidString: apiItem.id),
                     title: apiItem.title,
                     itemDescription: apiItem.description ?? "",
                     startTime: start,
@@ -211,6 +212,7 @@ actor CanopyAPIService {
             if existingKeys.contains(key) { continue }
 
             let item = ScheduleItem(
+                id: UUID(uuidString: apiItem.id),
                 title: apiItem.title,
                 itemDescription: apiItem.description ?? "",
                 startTime: start,

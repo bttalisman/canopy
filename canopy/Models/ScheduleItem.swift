@@ -22,6 +22,7 @@ final class ScheduleItem {
     }
 
     init(
+        id: UUID? = nil,
         title: String,
         itemDescription: String = "",
         startTime: Date,
@@ -29,7 +30,7 @@ final class ScheduleItem {
         category: String = "General",
         isCancelled: Bool = false
     ) {
-        self.id = UUID()
+        self.id = id ?? UUID()
         self.title = title
         self.itemDescription = itemDescription
         self.startTime = startTime
