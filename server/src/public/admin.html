@@ -590,7 +590,10 @@ function renderEventDetail(e) {
             <div class="title">${si.title}${si.isCancelled ? ' <span class="badge" style="background:#ef444433;color:#f87171">CANCELLED</span>' : ''}</div>
             <div class="detail">${si.description || ''} ${si.stageId ? '· ' + (e.stages?.find(s => s.id === si.stageId)?.name || '') : ''}</div>
           </div>
-          <button class="btn-danger" onclick="deleteScheduleItem('${si.id}')">Delete</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn-secondary" onclick="sendItemPush('${si.id}', '${si.title.replace(/'/g, "\\'")}')" style="font-size:11px;padding:3px 8px">📣</button>
+            <button class="btn-danger" onclick="deleteScheduleItem('${si.id}')">Delete</button>
+          </div>
         </div>
       `).join('');
 
@@ -1086,6 +1089,29 @@ async function sendPush(evt) {
   } finally {
     btn.textContent = 'Send Notification';
     btn.disabled = false;
+  }
+}
+
+async function sendItemPush(itemId, itemTitle) {
+  const title = prompt(`Notification title for "${itemTitle}":`, 'Schedule Change');
+  if (!title) return;
+  const body = prompt('Message:', `Update for ${itemTitle}`);
+  if (!body) return;
+
+  try {
+    const res = await fetch(`${API}/api/admin/schedule/${itemId}/push`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ title, body })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Send failed');
+    }
+    const data = await res.json();
+    toast(`Sent to ${data.sent} of ${data.subscribers} subscriber${data.subscribers !== 1 ? 's' : ''}`);
+  } catch (e) {
+    toast('Error: ' + e.message);
   }
 }
 

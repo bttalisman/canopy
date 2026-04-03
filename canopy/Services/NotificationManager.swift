@@ -19,34 +19,9 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let token = tokenData.map { String(format: "%02x", $0) }.joined()
         self.deviceToken = token
         print("[Push] Device token: \(token)")
-
-        // Immediately register with backend using all active events
-        registerTokenWithAllEvents()
     }
 
-    /// Register token with all active events so the device receives any push notification.
-    /// Called immediately when the token is received, and again from syncReminders with specific event IDs.
-    func registerTokenWithAllEvents() {
-        guard let token = deviceToken else { return }
-
-        let baseURL = Secrets.canopyAPIBaseURL
-        guard !baseURL.isEmpty, baseURL != "YOUR_API_URL_HERE" else { return }
-        guard let url = URL(string: "\(baseURL)/api/events") else { return }
-
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let data, error == nil else { return }
-
-            // Parse event IDs from the public API response
-            guard let events = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
-            let eventIds = events.compactMap { $0["id"] as? String }
-
-            if !eventIds.isEmpty {
-                self?.registerTokenWithBackend(eventIds: eventIds)
-            }
-        }.resume()
-    }
-
-    func registerTokenWithBackend(eventIds: [String]) {
+    func registerTokenWithBackend(eventIds: [String], scheduleItemIds: [String] = []) {
         guard let token = deviceToken else { return }
 
         let baseURL = Secrets.canopyAPIBaseURL
@@ -58,7 +33,11 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body: [String: Any] = ["deviceToken": token, "eventIds": eventIds]
+        let body: [String: Any] = [
+            "deviceToken": token,
+            "eventIds": eventIds,
+            "scheduleItemIds": scheduleItemIds
+        ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
         URLSession.shared.dataTask(with: request) { _, response, error in
@@ -239,7 +218,8 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
                 // Sync device token with backend for push notifications
                 let eventIds = Array(scheduledEvents).map(\.uuidString)
-                self?.registerTokenWithBackend(eventIds: eventIds)
+                let itemIds = savedItems.compactMap { $0.scheduleItem?.id.uuidString }
+                self?.registerTokenWithBackend(eventIds: eventIds, scheduleItemIds: itemIds)
             }
         }
     }

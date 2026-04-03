@@ -80,7 +80,16 @@ const schema = `
   CREATE INDEX IF NOT EXISTS idx_schedule_items_stage ON schedule_items(stage_id);
   CREATE INDEX IF NOT EXISTS idx_map_pins_event ON map_pins(event_id);
   CREATE INDEX IF NOT EXISTS idx_events_active ON events(is_active, start_date);
+  CREATE TABLE IF NOT EXISTS device_saved_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_token TEXT NOT NULL,
+    schedule_item_id UUID NOT NULL REFERENCES schedule_items(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(device_token, schedule_item_id)
+  );
+
   CREATE INDEX IF NOT EXISTS idx_device_tokens_event ON device_tokens(event_id);
+  CREATE INDEX IF NOT EXISTS idx_device_saved_items_item ON device_saved_items(schedule_item_id);
   CREATE INDEX IF NOT EXISTS idx_push_notifications_event ON push_notifications(event_id);
 `;
 

@@ -259,7 +259,7 @@ router.delete('/pins/:id', async (req, res) => {
 // PUSH NOTIFICATIONS
 // =====================
 
-const { sendPushToEvent } = require('../services/apns');
+const { sendPushToEvent, sendPushToScheduleItem } = require('../services/apns');
 
 // GET /api/admin/events/:eventId/devices/count — how many devices are subscribed
 router.get('/events/:eventId/devices/count', async (req, res) => {
@@ -300,6 +300,50 @@ router.post('/events/:eventId/push', async (req, res) => {
     res.json({ notification: rows[0], ...result });
   } catch (err) {
     console.error('Error sending push:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/schedule/:id/push — send notification to users who saved this item
+router.post('/schedule/:id/push', async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    if (!title || !body) {
+      return res.status(400).json({ error: 'title and body are required' });
+    }
+
+    // Look up schedule item and its event for context
+    const itemResult = await pool.query(
+      `SELECT si.title as item_title, si.event_id, e.name as event_name
+       FROM schedule_items si JOIN events e ON e.id = si.event_id
+       WHERE si.id = $1`,
+      [req.params.id]
+    );
+    if (itemResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Schedule item not found' });
+    }
+
+    const { event_name, event_id } = itemResult.rows[0];
+    const fullTitle = `${event_name}: ${title}`;
+
+    const result = await sendPushToScheduleItem(req.params.id, fullTitle, body);
+
+    // Also record in push_notifications for history
+    await pool.query(
+      `INSERT INTO push_notifications (event_id, title, body, sent_count, failed_count)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [event_id, fullTitle, body, result.sent, result.failed]
+    );
+
+    // Get subscriber count for this item
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM device_saved_items WHERE schedule_item_id = $1',
+      [req.params.id]
+    );
+
+    res.json({ ...result, subscribers: parseInt(countResult.rows[0].count, 10) });
+  } catch (err) {
+    console.error('Error sending item push:', err);
     res.status(500).json({ error: err.message });
   }
 });

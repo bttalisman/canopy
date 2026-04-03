@@ -96,4 +96,45 @@ async function sendPushToEvent(eventId, title, body) {
   return { sent, failed };
 }
 
-module.exports = { sendPushToEvent };
+async function sendPushToScheduleItem(scheduleItemId, title, body) {
+  const apnProvider = getProvider();
+  if (!apnProvider) {
+    console.log('[APNs] Provider not configured, skipping push');
+    return { sent: 0, failed: 0, error: 'APNs not configured' };
+  }
+
+  const result = await pool.query(
+    'SELECT device_token FROM device_saved_items WHERE schedule_item_id = $1',
+    [scheduleItemId]
+  );
+
+  const tokens = result.rows.map(r => r.device_token);
+  if (tokens.length === 0) {
+    return { sent: 0, failed: 0 };
+  }
+
+  const notification = new apn.Notification();
+  notification.alert = { title, body };
+  notification.sound = 'default';
+  notification.topic = process.env.APNS_BUNDLE_ID || 'btt.canopy';
+  notification.payload = { scheduleItemId };
+
+  const response = await apnProvider.send(notification, tokens);
+
+  const badTokens = response.failed
+    .filter(f => f.response && (f.response.reason === 'Unregistered' || f.response.reason === 'BadDeviceToken'))
+    .map(f => f.device);
+
+  if (badTokens.length > 0) {
+    await pool.query('DELETE FROM device_saved_items WHERE device_token = ANY($1)', [badTokens]);
+    await pool.query('DELETE FROM device_tokens WHERE device_token = ANY($1)', [badTokens]);
+  }
+
+  const sent = response.sent.length;
+  const failed = response.failed.length;
+  console.log(`[APNs] Item push — sent: ${sent}, failed: ${failed}`);
+
+  return { sent, failed };
+}
+
+module.exports = { sendPushToEvent, sendPushToScheduleItem };
