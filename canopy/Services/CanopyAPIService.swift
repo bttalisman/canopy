@@ -126,6 +126,7 @@ actor CanopyAPIService {
             let category = mapCategory(apiEvent.category ?? "community")
 
             let event = Event(
+                id: UUID(uuidString: apiEvent.id),
                 name: apiEvent.name,
                 slug: apiEvent.slug,
                 eventDescription: apiEvent.description ?? "",
@@ -146,7 +147,7 @@ actor CanopyAPIService {
             // Add stages
             var stageMap: [String: Stage] = [:]
             for apiStage in apiEvent.stages ?? [] {
-                let stage = Stage(name: apiStage.name, mapX: apiStage.mapX ?? 0, mapY: apiStage.mapY ?? 0)
+                let stage = Stage(id: UUID(uuidString: apiStage.id), name: apiStage.name, mapX: apiStage.mapX ?? 0, mapY: apiStage.mapY ?? 0)
                 stage.event = event
                 context.insert(stage)
                 stageMap[apiStage.id] = stage
@@ -263,7 +264,7 @@ actor CanopyAPIService {
         for apiStage in apiStages {
             if existingNames.contains(apiStage.name) { continue }
 
-            let stage = Stage(name: apiStage.name, mapX: apiStage.mapX ?? 0, mapY: apiStage.mapY ?? 0)
+            let stage = Stage(id: UUID(uuidString: apiStage.id), name: apiStage.name, mapX: apiStage.mapX ?? 0, mapY: apiStage.mapY ?? 0)
             stage.event = event
             context.insert(stage)
         }

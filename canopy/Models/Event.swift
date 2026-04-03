@@ -29,6 +29,7 @@ final class Event {
     var mapPins: [MapPin] = []
 
     init(
+        id: UUID? = nil,
         name: String,
         slug: String,
         eventDescription: String,
@@ -41,7 +42,7 @@ final class Event {
         isActive: Bool = true,
         category: EventCategory = .festival
     ) {
-        self.id = UUID()
+        self.id = id ?? UUID()
         self.name = name
         self.slug = slug
         self.eventDescription = eventDescription

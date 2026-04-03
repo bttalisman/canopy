@@ -13,8 +13,8 @@ final class Stage {
     @Relationship(deleteRule: .cascade, inverse: \ScheduleItem.stage)
     var scheduleItems: [ScheduleItem] = []
 
-    init(name: String, mapX: Double = 0, mapY: Double = 0) {
-        self.id = UUID()
+    init(id: UUID? = nil, name: String, mapX: Double = 0, mapY: Double = 0) {
+        self.id = id ?? UUID()
         self.name = name
         self.mapX = mapX
         self.mapY = mapY
