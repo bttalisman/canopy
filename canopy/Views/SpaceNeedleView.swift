@@ -164,6 +164,7 @@ struct SpaceNeedleView: View {
             context.fill(ground, with: .color(color))
         }
         .frame(width: height * 0.4, height: height)
+        .accessibilityHidden(true)
     }
 }
 

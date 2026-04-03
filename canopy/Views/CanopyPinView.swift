@@ -90,6 +90,7 @@ struct CanopyPinView: View {
             context.fill(leaf2Path, with: .color(Color(red: 0.29, green: 0.87, blue: 0.50)))
         }
         .frame(width: size * 0.485, height: size)
+        .accessibilityHidden(true)
     }
 }
 

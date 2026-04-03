@@ -72,6 +72,7 @@ struct DiscoverView: View {
                 // Header
                 HStack(spacing: 12) {
                     CanopyPinView(size: 42)
+                        .accessibilityHidden(true)
 
                     HStack(spacing: 6) {
                         Text("Canopy")
@@ -86,6 +87,8 @@ struct DiscoverView: View {
                                 )
                             )
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Canopy Seattle")
 
                     Spacer()
                 }
@@ -97,6 +100,16 @@ struct DiscoverView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
                     TextField("Search events, venues...", text: $searchText)
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .accessibilityLabel("Clear search")
+                    }
                 }
                 .padding(10)
                 .background(Color(.systemGray5).opacity(0.8))
@@ -123,6 +136,8 @@ struct DiscoverView: View {
                                                 .fill(selectedTimeFilter == filter ? Color.green : Color(.systemGray5))
                                         )
                                         .foregroundStyle(selectedTimeFilter == filter ? .white : .primary)
+                                        .accessibilityLabel("\(filter.rawValue) filter")
+                                        .accessibilityAddTraits(selectedTimeFilter == filter ? .isSelected : [])
                                 }
                             }
                         }
@@ -361,6 +376,10 @@ struct EventCard: View {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
+
+                        if let lat = event.latitude, let lng = event.longitude {
+                            WeatherBadgeView(latitude: lat, longitude: lng, date: event.startDate)
+                        }
                     }
                 }
 
@@ -397,18 +416,55 @@ struct EventCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color(.separator), lineWidth: 0.5)
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(event.name), \(event.category.rawValue) at \(event.location), \(event.startDate.formatted(.dateTime.month(.wide).day()))")
+        .accessibilityHint("Double tap to view event details")
+    }
+
+    private var categoryColor: Color {
+        switch event.category {
+        case .festival: return .green
+        case .concert: return .purple
+        case .fair: return .orange
+        case .conference: return .blue
+        case .expo: return .cyan
+        case .community: return .pink
+        }
     }
 
     private var fallbackHeader: some View {
-        HStack {
-            Spacer()
+        ZStack(alignment: .bottomLeading) {
+            // Gradient background using category color
+            LinearGradient(
+                colors: [categoryColor.opacity(0.3), categoryColor.opacity(0.1), Color(.secondarySystemBackground)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            // Decorative category icon, large and faded
             Image(systemName: event.logoSystemImage)
-                .font(.system(size: 32))
-                .foregroundStyle(.green.opacity(0.5))
-            Spacer()
+                .font(.system(size: 70, weight: .thin))
+                .foregroundStyle(categoryColor.opacity(0.15))
+                .rotationEffect(.degrees(-12))
+                .offset(x: 220, y: -10)
+
+            // Event name and date overlay
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.neighborhood.isEmpty ? event.location : event.neighborhood)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(categoryColor)
+                    .textCase(.uppercase)
+                    .tracking(1)
+
+                Text(event.startDate, format: .dateTime.month(.wide).day())
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(14)
         }
         .frame(height: 100)
-        .background(Color.green.opacity(0.08))
+        .clipped()
     }
 }
 

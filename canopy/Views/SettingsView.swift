@@ -26,7 +26,11 @@ struct SettingsView: View {
 
                 Section("Notifications") {
                     Toggle("Enable Notifications", isOn: $notificationsEnabled)
+                        .accessibilityHint("Controls session reminders and push notifications")
                     Toggle("Quiet Hours (10PM–8AM)", isOn: $quietHoursEnabled)
+                        .disabled(!notificationsEnabled)
+                        .foregroundStyle(notificationsEnabled ? .primary : .secondary)
+                        .accessibilityHint(notificationsEnabled ? "Silences notifications between 10 PM and 8 AM" : "Enable notifications first")
                 }
 
                 Section("About") {

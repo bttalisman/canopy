@@ -58,6 +58,10 @@ router.get('/', async (req, res) => {
         endTime: si.end_time,
         category: si.category,
         isCancelled: si.is_cancelled,
+        performerName: si.performer_name || null,
+        performerBio: si.performer_bio || null,
+        performerImageURL: si.performer_image_url || null,
+        performerLinks: si.performer_links || null,
       })),
       mapPins: (pinsByEvent[event.id] || []).map(p => ({
         id: p.id,
@@ -126,6 +130,10 @@ router.get('/:slug', async (req, res) => {
         endTime: si.end_time,
         category: si.category,
         isCancelled: si.is_cancelled,
+        performerName: si.performer_name || null,
+        performerBio: si.performer_bio || null,
+        performerImageURL: si.performer_image_url || null,
+        performerLinks: si.performer_links || null,
       })),
       mapPins: pinsResult.rows.map(p => ({
         id: p.id,

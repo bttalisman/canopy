@@ -5,14 +5,20 @@ struct MyScheduleView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \UserSavedItem.savedAt) private var savedItems: [UserSavedItem]
 
-    var sortedByTime: [UserSavedItem] {
+    var savedSessions: [UserSavedItem] {
         savedItems
             .filter { $0.scheduleItem != nil }
             .sorted { ($0.scheduleItem?.startTime ?? .distantPast) < ($1.scheduleItem?.startTime ?? .distantPast) }
     }
 
+    var savedEvents: [UserSavedItem] {
+        savedItems
+            .filter { $0.event != nil && $0.scheduleItem == nil }
+            .sorted { ($0.event?.startDate ?? .distantPast) < ($1.event?.startDate ?? .distantPast) }
+    }
+
     var conflicts: [(ScheduleItem, ScheduleItem)] {
-        let items = sortedByTime.compactMap(\.scheduleItem)
+        let items = savedSessions.compactMap(\.scheduleItem)
         var result: [(ScheduleItem, ScheduleItem)] = []
 
         for i in 0..<items.count {
@@ -30,7 +36,7 @@ struct MyScheduleView: View {
 
     var groupedByDay: [(Date, [UserSavedItem])] {
         let calendar = Calendar.current
-        let grouped = Dictionary(grouping: sortedByTime) { item in
+        let grouped = Dictionary(grouping: savedSessions) { item in
             calendar.startOfDay(for: item.scheduleItem?.startTime ?? Date())
         }
         return grouped.sorted { $0.key < $1.key }
@@ -39,11 +45,11 @@ struct MyScheduleView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if savedItems.isEmpty {
+                if savedSessions.isEmpty && savedEvents.isEmpty {
                     ContentUnavailableView(
-                        "No Saved Sessions",
+                        "No Saved Events",
                         systemImage: "bookmark",
-                        description: Text("Browse events and tap the bookmark icon to save sessions to your schedule.")
+                        description: Text("Browse events and tap Save Event or bookmark individual sessions.")
                     )
                 } else {
                     ScrollView {
@@ -81,13 +87,43 @@ struct MyScheduleView: View {
 
                                     ForEach(items) { saved in
                                         if let item = saved.scheduleItem {
-                                            SavedItemRow(item: item, savedItem: saved) {
-                                                withAnimation {
-                                                    NotificationManager.shared.removeReminder(for: item)
-                                                    modelContext.delete(saved)
-                                                    NotificationManager.shared.syncReminders(context: modelContext)
+                                            if let event = item.event {
+                                                NavigationLink(value: event) {
+                                                    SavedItemRow(item: item, savedItem: saved) {
+                                                        withAnimation {
+                                                            NotificationManager.shared.removeReminder(for: item)
+                                                            modelContext.delete(saved)
+                                                            NotificationManager.shared.syncReminders(context: modelContext)
+                                                        }
+                                                    }
+                                                }
+                                                .buttonStyle(.plain)
+                                            } else {
+                                                SavedItemRow(item: item, savedItem: saved) {
+                                                    withAnimation {
+                                                        NotificationManager.shared.removeReminder(for: item)
+                                                        modelContext.delete(saved)
+                                                        NotificationManager.shared.syncReminders(context: modelContext)
+                                                    }
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                            // Saved events (no specific sessions)
+                            if !savedEvents.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(savedEvents) { saved in
+                                        if let event = saved.event {
+                                            NavigationLink(value: event) {
+                                                SavedEventRow(event: event, savedItem: saved) {
+                                                    withAnimation {
+                                                        modelContext.delete(saved)
+                                                    }
+                                                }
+                                            }
+                                            .buttonStyle(.plain)
                                         }
                                     }
                                 }
@@ -96,6 +132,9 @@ struct MyScheduleView: View {
                         .padding(.vertical)
                     }
                 }
+            }
+            .navigationDestination(for: Event.self) { event in
+                EventDetailView(event: event)
             }
             .navigationTitle("My Schedule")
         }
@@ -135,6 +174,7 @@ struct SavedItemRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Remove \(item.title) from schedule")
             }
 
             Text(item.title)
@@ -157,12 +197,64 @@ struct SavedItemRow: View {
                     .padding(.vertical, 2)
                     .background(Color.red)
                     .clipShape(Capsule())
+                    .accessibilityLabel("This session is cancelled")
             }
         }
         .padding(12)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(item.title)\(item.isCancelled ? ", cancelled" : ""), \(item.startTime.formatted(.dateTime.hour().minute())) to \(item.endTime.formatted(.dateTime.hour().minute()))\(item.stage != nil ? " at \(item.stage!.name)" : "")\(item.event != nil ? ", \(item.event!.name)" : "")")
+    }
+}
+
+struct SavedEventRow: View {
+    let event: Event
+    let savedItem: UserSavedItem
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.name)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                HStack(spacing: 4) {
+                    Label(event.location, systemImage: "mappin")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                HStack(spacing: 4) {
+                    Text(event.startDate, format: .dateTime.month(.abbreviated).day())
+                    Text("–")
+                    Text(event.endDate, format: .dateTime.month(.abbreviated).day())
+                }
+                .font(.caption)
+                .foregroundStyle(.green)
+            }
+
+            Spacer()
+
+            Button(action: onRemove) {
+                Image(systemName: "bookmark.slash.fill")
+                    .foregroundStyle(.red)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove \(event.name) from saved events")
+        }
+        .padding(12)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(event.name) at \(event.location), \(event.startDate.formatted(.dateTime.month(.abbreviated).day())) to \(event.endDate.formatted(.dateTime.month(.abbreviated).day()))")
+        .accessibilityHint("Double tap to view event details")
     }
 }
 

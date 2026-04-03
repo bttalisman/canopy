@@ -39,6 +39,10 @@ struct APIScheduleItem: Codable {
     let endTime: String
     let category: String?
     let isCancelled: Bool?
+    let performerName: String?
+    let performerBio: String?
+    let performerImageURL: String?
+    let performerLinks: String?
 }
 
 struct APIMapPin: Codable {
@@ -167,6 +171,10 @@ actor CanopyAPIService {
                     category: apiItem.category ?? "General",
                     isCancelled: apiItem.isCancelled ?? false
                 )
+                item.performerName = apiItem.performerName
+                item.performerBio = apiItem.performerBio
+                item.performerImageURL = apiItem.performerImageURL
+                item.performerLinks = apiItem.performerLinks
                 item.event = event
                 if let stageId = apiItem.stageId {
                     item.stage = stageMap[stageId]
@@ -221,6 +229,10 @@ actor CanopyAPIService {
                 category: apiItem.category ?? "General",
                 isCancelled: apiItem.isCancelled ?? false
             )
+            item.performerName = apiItem.performerName
+            item.performerBio = apiItem.performerBio
+            item.performerImageURL = apiItem.performerImageURL
+            item.performerLinks = apiItem.performerLinks
             item.event = event
             context.insert(item)
         }

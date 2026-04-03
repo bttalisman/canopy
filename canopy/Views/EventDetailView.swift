@@ -6,6 +6,7 @@ struct EventDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var event: Event
     @State private var selectedTab: DetailTab = .schedule
+    @State private var eventSaved = false
 
     enum DetailTab: String, CaseIterable, Identifiable {
         case schedule = "Schedule"
@@ -82,32 +83,62 @@ struct EventDetailView: View {
                         .fixedSize()
                     }
 
-                    if let url = event.ticketingURL, let ticketURL = URL(string: url) {
-                        Link(destination: ticketURL) {
-                            Label("Get Tickets", systemImage: "ticket")
-                                .font(.headline)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(Color.green)
-                                .foregroundStyle(.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .padding(.horizontal)
+                    if let lat = event.latitude, let lng = event.longitude {
+                        WeatherForecastView(
+                            latitude: lat, longitude: lng,
+                            startDate: event.startDate, endDate: event.endDate
+                        )
                     }
+
+                    HStack(spacing: 12) {
+                        if let url = event.ticketingURL, let ticketURL = URL(string: url) {
+                            Link(destination: ticketURL) {
+                                Label("Tickets", systemImage: "ticket")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.green)
+                                    .foregroundStyle(.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .accessibilityLabel("Get tickets for \(event.name)")
+                            .accessibilityHint("Opens ticketing website")
+                        }
+
+                        Button {
+                            toggleEventSave()
+                        } label: {
+                            Label(
+                                eventSaved ? "Saved" : "Save",
+                                systemImage: eventSaved ? "bookmark.fill" : "bookmark"
+                            )
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(eventSaved ? Color.green.opacity(0.15) : Color(.systemGray5))
+                            .foregroundStyle(eventSaved ? .green : .primary)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .accessibilityLabel(eventSaved ? "Remove \(event.name) from saved events" : "Save \(event.name) to my schedule")
+                        .accessibilityAddTraits(eventSaved ? .isSelected : [])
+                    }
+                    .padding(.horizontal)
                 }
                 .padding()
                 .padding(.top, 8)
 
-                // Tab picker
-                Picker("Section", selection: $selectedTab) {
-                    ForEach(DetailTab.allCases) { tab in
-                        Label(tab.rawValue, systemImage: tab.systemImage)
-                            .tag(tab)
+                // Tab picker (only show if more than one tab has content)
+                if availableTabs.count > 1 {
+                    Picker("Section", selection: $selectedTab) {
+                        ForEach(availableTabs) { tab in
+                            Label(tab.rawValue, systemImage: tab.systemImage)
+                                .tag(tab)
+                        }
                     }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.bottom)
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.bottom)
 
                 // Tab content
                 switch selectedTab {
@@ -122,6 +153,50 @@ struct EventDetailView: View {
         }
         .navigationTitle(event.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            checkEventSaved()
+            if !availableTabs.contains(selectedTab) {
+                selectedTab = availableTabs.first ?? .info
+            }
+        }
+    }
+
+    private var hasSchedule: Bool { !event.scheduleItems.isEmpty }
+    private var hasMap: Bool { !event.mapPins.isEmpty }
+
+    private var availableTabs: [DetailTab] {
+        var tabs: [DetailTab] = []
+        if hasSchedule { tabs.append(.schedule) }
+        if hasMap { tabs.append(.map) }
+        tabs.append(.info) // always available
+        return tabs
+    }
+
+    private func checkEventSaved() {
+        let eventId = event.id
+        let descriptor = FetchDescriptor<UserSavedItem>(predicate: #Predicate {
+            $0.event?.id == eventId
+        })
+        eventSaved = ((try? modelContext.fetch(descriptor))?.isEmpty == false)
+    }
+
+    private func toggleEventSave() {
+        if eventSaved {
+            let eventId = event.id
+            let descriptor = FetchDescriptor<UserSavedItem>(predicate: #Predicate {
+                $0.event?.id == eventId
+            })
+            if let items = try? modelContext.fetch(descriptor) {
+                for item in items { modelContext.delete(item) }
+            }
+            eventSaved = false
+        } else {
+            let saved = UserSavedItem(event: event)
+            modelContext.insert(saved)
+            try? modelContext.save()
+            eventSaved = true
+        }
+        NotificationManager.shared.syncReminders(context: modelContext)
     }
 }
 
@@ -253,6 +328,11 @@ struct ScheduleItemRow: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var item: ScheduleItem
     @State private var saved: Bool = false
+    @State private var showingPerformer = false
+
+    private var hasPerformer: Bool {
+        item.performerName != nil || item.performerBio != nil || item.performerImageURL != nil
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -286,6 +366,8 @@ struct ScheduleItemRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(saved ? "Remove \(item.title) from schedule" : "Save \(item.title) to schedule")
+                .accessibilityAddTraits(saved ? .isSelected : [])
             }
 
             // Title
@@ -320,8 +402,21 @@ struct ScheduleItemRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal)
         .opacity(item.isCancelled ? 0.7 : 1.0)
+        .onTapGesture {
+            if hasPerformer { showingPerformer = true }
+        }
         .onAppear {
             saved = item.isSaved
+        }
+        .sheet(isPresented: $showingPerformer) {
+            NavigationStack {
+                PerformerProfileView(item: item)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showingPerformer = false }
+                        }
+                    }
+            }
         }
     }
 
@@ -612,6 +707,11 @@ struct EventInfoView: View {
                     Text(event.endDate, format: .dateTime.month(.wide).day().year().hour().minute())
                 }
                 .font(.subheadline)
+            }
+
+            if let lat = event.latitude, let lng = event.longitude {
+                Divider()
+                RideShareView(venueName: event.location, venueLatitude: lat, venueLongitude: lng)
             }
 
             if let url = event.ticketingURL, let ticketURL = URL(string: url) {

@@ -89,6 +89,14 @@ const schema = `
     UNIQUE(device_token, schedule_item_id)
   );
 
+  -- Add performer fields to schedule_items (idempotent)
+  DO $$ BEGIN
+    ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_name TEXT;
+    ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_bio TEXT;
+    ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_image_url TEXT;
+    ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_links TEXT;
+  END $$;
+
   CREATE INDEX IF NOT EXISTS idx_device_tokens_event ON device_tokens(event_id);
   CREATE INDEX IF NOT EXISTS idx_device_saved_items_item ON device_saved_items(schedule_item_id);
   CREATE INDEX IF NOT EXISTS idx_push_notifications_event ON push_notifications(event_id);

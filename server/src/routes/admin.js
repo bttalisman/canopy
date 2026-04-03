@@ -127,12 +127,12 @@ router.delete('/stages/:id', async (req, res) => {
 // POST /api/admin/events/:eventId/schedule
 router.post('/events/:eventId/schedule', async (req, res) => {
   try {
-    const { stageId, title, description, startTime, endTime, category } = req.body;
+    const { stageId, title, description, startTime, endTime, category, performerName, performerBio, performerImageURL, performerLinks } = req.body;
     const { rows } = await pool.query(`
-      INSERT INTO schedule_items (event_id, stage_id, title, description, start_time, end_time, category)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO schedule_items (event_id, stage_id, title, description, start_time, end_time, category, performer_name, performer_bio, performer_image_url, performer_links)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
-    `, [req.params.eventId, stageId, title, description || '', startTime, endTime, category || 'General']);
+    `, [req.params.eventId, stageId, title, description || '', startTime, endTime, category || 'General', performerName || null, performerBio || null, performerImageURL || null, performerLinks || null]);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -149,11 +149,12 @@ router.post('/events/:eventId/schedule/bulk', async (req, res) => {
 
     for (const item of items) {
       const { rows } = await pool.query(`
-        INSERT INTO schedule_items (event_id, stage_id, title, description, start_time, end_time, category)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO schedule_items (event_id, stage_id, title, description, start_time, end_time, category, performer_name, performer_bio, performer_image_url, performer_links)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
       `, [req.params.eventId, item.stageId, item.title, item.description || '',
-          item.startTime, item.endTime, item.category || 'General']);
+          item.startTime, item.endTime, item.category || 'General',
+          item.performerName || null, item.performerBio || null, item.performerImageURL || null, item.performerLinks || null]);
       results.push(rows[0]);
     }
 
@@ -167,7 +168,7 @@ router.post('/events/:eventId/schedule/bulk', async (req, res) => {
 // PUT /api/admin/schedule/:id
 router.put('/schedule/:id', async (req, res) => {
   try {
-    const { stageId, title, description, startTime, endTime, category, isCancelled } = req.body;
+    const { stageId, title, description, startTime, endTime, category, isCancelled, performerName, performerBio, performerImageURL, performerLinks } = req.body;
 
     const { rows } = await pool.query(`
       UPDATE schedule_items SET
@@ -178,10 +179,14 @@ router.put('/schedule/:id', async (req, res) => {
         end_time = COALESCE($6, end_time),
         category = COALESCE($7, category),
         is_cancelled = COALESCE($8, is_cancelled),
+        performer_name = COALESCE($9, performer_name),
+        performer_bio = COALESCE($10, performer_bio),
+        performer_image_url = COALESCE($11, performer_image_url),
+        performer_links = COALESCE($12, performer_links),
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
-    `, [req.params.id, stageId, title, description, startTime, endTime, category, isCancelled]);
+    `, [req.params.id, stageId, title, description, startTime, endTime, category, isCancelled, performerName, performerBio, performerImageURL, performerLinks]);
 
     if (rows.length === 0) return res.status(404).json({ error: 'Schedule item not found' });
     res.json(rows[0]);

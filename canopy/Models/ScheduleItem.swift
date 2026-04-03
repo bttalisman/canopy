@@ -10,6 +10,10 @@ final class ScheduleItem {
     var endTime: Date
     var category: String
     var isCancelled: Bool
+    var performerName: String?
+    var performerBio: String?
+    var performerImageURL: String?
+    var performerLinks: String? // JSON string: [{"label":"Instagram","url":"https://..."}]
 
     var event: Event?
     var stage: Stage?

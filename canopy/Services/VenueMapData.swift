@@ -272,6 +272,188 @@ enum VenueMapData {
                 StageTemplate(name: "Secondary Stage", x: 0.25, y: 0.55),
             ]
         ),
+        // MARK: - Genesee Park / Seafair
+        VenueTemplate(
+            matchPatterns: ["genesee park", "seafair", "lake washington"],
+            neighborhood: "Mount Baker",
+            latitude: 47.5535, longitude: -122.2612, mapSpan: 0.012,
+            pins: [
+                PinTemplate("Air Show Viewing Area", .custom, x: 0.50, y: 0.20, description: "Best views of the Blue Angels over Lake Washington"),
+                PinTemplate("Hydroplane Pit", .stage, x: 0.60, y: 0.35, description: "H1 Unlimited race viewing"),
+                PinTemplate("Festival Stage", .stage, x: 0.30, y: 0.45, description: "Live music and entertainment"),
+                PinTemplate("Food Court", .food, x: 0.45, y: 0.55, description: "Festival food vendors"),
+                PinTemplate("Beer Garden", .food, x: 0.65, y: 0.55, description: "21+ with ID"),
+                PinTemplate("Restrooms - North", .restroom, x: 0.35, y: 0.30),
+                PinTemplate("Restrooms - South", .restroom, x: 0.55, y: 0.70),
+                PinTemplate("First Aid", .firstAid, x: 0.25, y: 0.60),
+                PinTemplate("Main Entrance", .exit, x: 0.50, y: 0.90),
+                PinTemplate("Boat Launch", .custom, x: 0.70, y: 0.15, description: "Lake access for watercraft viewing"),
+            ],
+            stages: [
+                StageTemplate(name: "Hydroplane Pit", x: 0.60, y: 0.35),
+                StageTemplate(name: "Air Show Viewing", x: 0.50, y: 0.20),
+                StageTemplate(name: "Festival Stage", x: 0.30, y: 0.45),
+            ]
+        ),
+
+        // MARK: - Pike/Pine Corridor (Capitol Hill Block Party)
+        VenueTemplate(
+            matchPatterns: ["pike/pine", "pike pine", "capitol hill block party", "chbp"],
+            neighborhood: "Capitol Hill",
+            latitude: 47.6145, longitude: -122.3210, mapSpan: 0.005,
+            pins: [
+                PinTemplate("Main Stage", .stage, x: 0.50, y: 0.25, description: "Headliner stage on Pike St"),
+                PinTemplate("Vera Stage", .stage, x: 0.20, y: 0.50, description: "Vera Project stage"),
+                PinTemplate("Neumos Stage", .stage, x: 0.80, y: 0.45, description: "Indoor stage at Neumos"),
+                PinTemplate("Food Vendors", .food, x: 0.40, y: 0.60, description: "Street food from Capitol Hill restaurants"),
+                PinTemplate("Beer Garden", .food, x: 0.65, y: 0.65, description: "21+ with ID"),
+                PinTemplate("Restrooms - Pike", .restroom, x: 0.30, y: 0.35),
+                PinTemplate("Restrooms - Pine", .restroom, x: 0.70, y: 0.75),
+                PinTemplate("First Aid", .firstAid, x: 0.15, y: 0.40),
+                PinTemplate("Entrance - Broadway", .exit, x: 0.10, y: 0.50),
+                PinTemplate("Entrance - 12th Ave", .exit, x: 0.90, y: 0.50),
+                PinTemplate("Art Installations", .custom, x: 0.55, y: 0.80, description: "Interactive art along Pine St"),
+            ],
+            stages: [
+                StageTemplate(name: "Main Stage", x: 0.50, y: 0.25),
+                StageTemplate(name: "Vera Stage", x: 0.20, y: 0.50),
+                StageTemplate(name: "Neumos Stage", x: 0.80, y: 0.45),
+            ]
+        ),
+
+        // MARK: - West Seattle Junction
+        VenueTemplate(
+            matchPatterns: ["west seattle junction", "west seattle summer", "junction"],
+            neighborhood: "West Seattle",
+            latitude: 47.5605, longitude: -122.3868, mapSpan: 0.004,
+            pins: [
+                PinTemplate("Main Stage", .stage, x: 0.50, y: 0.30, description: "Live music stage on California Ave"),
+                PinTemplate("Kids Zone", .custom, x: 0.25, y: 0.55, description: "Activities, face painting, and games"),
+                PinTemplate("Food Vendors", .food, x: 0.60, y: 0.50, description: "Local restaurant booths"),
+                PinTemplate("Beer Garden", .food, x: 0.75, y: 0.40, description: "21+ with ID"),
+                PinTemplate("Arts & Crafts", .custom, x: 0.40, y: 0.70, description: "Local artisan vendor booths"),
+                PinTemplate("Restrooms", .restroom, x: 0.30, y: 0.80),
+                PinTemplate("First Aid", .firstAid, x: 0.20, y: 0.35),
+                PinTemplate("Entrance - Alaska", .exit, x: 0.50, y: 0.95),
+            ],
+            stages: [
+                StageTemplate(name: "Main Stage", x: 0.50, y: 0.30),
+                StageTemplate(name: "Kids Zone", x: 0.25, y: 0.55),
+            ]
+        ),
+
+        // MARK: - Hing Hay Park (CID Dragon Fest)
+        VenueTemplate(
+            matchPatterns: ["hing hay", "dragon fest", "chinatown", "international district"],
+            neighborhood: "Chinatown-International District",
+            latitude: 47.5984, longitude: -122.3232, mapSpan: 0.003,
+            pins: [
+                PinTemplate("Main Stage", .stage, x: 0.50, y: 0.35, description: "Performances and ceremonies"),
+                PinTemplate("Dragon Dance Route", .custom, x: 0.40, y: 0.20, description: "Dragon and lion dance parade path"),
+                PinTemplate("Food Vendors", .food, x: 0.70, y: 0.55, description: "Asian street food from local restaurants"),
+                PinTemplate("Night Market", .food, x: 0.30, y: 0.65, description: "Evening food and craft vendors"),
+                PinTemplate("Restrooms", .restroom, x: 0.20, y: 0.45),
+                PinTemplate("First Aid", .firstAid, x: 0.80, y: 0.40),
+                PinTemplate("Entrance - King St", .exit, x: 0.50, y: 0.90),
+            ],
+            stages: [
+                StageTemplate(name: "Main Stage", x: 0.50, y: 0.35),
+            ]
+        ),
+        // MARK: - Fremont (Solstice Parade & Fair)
+        VenueTemplate(
+            matchPatterns: ["fremont", "solstice"],
+            neighborhood: "Fremont",
+            latitude: 47.6510, longitude: -122.3500, mapSpan: 0.005,
+            pins: [
+                PinTemplate("Parade Start", .custom, x: 0.20, y: 0.20, description: "Parade begins at N 36th St"),
+                PinTemplate("Parade End / Fair", .stage, x: 0.60, y: 0.50, description: "Fair grounds and stage"),
+                PinTemplate("Food Vendors", .food, x: 0.50, y: 0.60, description: "Street food and local restaurants"),
+                PinTemplate("Beer Garden", .food, x: 0.70, y: 0.65, description: "21+ with ID"),
+                PinTemplate("Restrooms", .restroom, x: 0.40, y: 0.75),
+                PinTemplate("First Aid", .firstAid, x: 0.30, y: 0.55),
+                PinTemplate("Fremont Troll", .custom, x: 0.15, y: 0.40, description: "The famous Fremont Troll under Aurora Bridge"),
+            ],
+            stages: [
+                StageTemplate(name: "Parade Route", x: 0.40, y: 0.30),
+                StageTemplate(name: "Fair Stage", x: 0.60, y: 0.50),
+            ]
+        ),
+
+        // MARK: - Judkins Park (Juneteenth)
+        VenueTemplate(
+            matchPatterns: ["judkins", "juneteenth"],
+            neighborhood: "Central District",
+            latitude: 47.5945, longitude: -122.3028, mapSpan: 0.004,
+            pins: [
+                PinTemplate("Main Stage", .stage, x: 0.50, y: 0.30, description: "Performances and speakers"),
+                PinTemplate("Food Vendors", .food, x: 0.65, y: 0.55, description: "BBQ and soul food vendors"),
+                PinTemplate("Community Village", .custom, x: 0.35, y: 0.55, description: "Local organizations and vendors"),
+                PinTemplate("Kids Area", .custom, x: 0.25, y: 0.70, description: "Activities for children"),
+                PinTemplate("Restrooms", .restroom, x: 0.75, y: 0.65),
+                PinTemplate("First Aid", .firstAid, x: 0.20, y: 0.40),
+                PinTemplate("Entrance", .exit, x: 0.50, y: 0.90),
+            ],
+            stages: [
+                StageTemplate(name: "Main Stage", x: 0.50, y: 0.30),
+            ]
+        ),
+
+        // MARK: - Ballard Avenue (SeafoodFest)
+        VenueTemplate(
+            matchPatterns: ["ballard avenue", "ballard seafood", "seafoodfest"],
+            neighborhood: "Ballard",
+            latitude: 47.6634, longitude: -122.3838, mapSpan: 0.004,
+            pins: [
+                PinTemplate("Main Stage", .stage, x: 0.50, y: 0.25, description: "Live music on Ballard Ave"),
+                PinTemplate("Beer Garden Stage", .stage, x: 0.75, y: 0.55, description: "Acoustic sets in the beer garden"),
+                PinTemplate("Seafood Row", .food, x: 0.40, y: 0.45, description: "Salmon, crab, oysters, and more"),
+                PinTemplate("Beer Garden", .food, x: 0.70, y: 0.50, description: "Craft beer from PNW breweries"),
+                PinTemplate("Lutefisk Arena", .custom, x: 0.30, y: 0.60, description: "Home of the legendary eating contest"),
+                PinTemplate("Restrooms - North", .restroom, x: 0.25, y: 0.30),
+                PinTemplate("Restrooms - South", .restroom, x: 0.60, y: 0.75),
+                PinTemplate("First Aid", .firstAid, x: 0.15, y: 0.50),
+                PinTemplate("Entrance", .exit, x: 0.50, y: 0.90),
+            ],
+            stages: [
+                StageTemplate(name: "Main Stage", x: 0.50, y: 0.25),
+                StageTemplate(name: "Beer Garden Stage", x: 0.75, y: 0.55),
+            ]
+        ),
+
+        // MARK: - Tractor Tavern
+        VenueTemplate(
+            matchPatterns: ["tractor tavern", "tractor"],
+            neighborhood: "Ballard",
+            latitude: 47.6636, longitude: -122.3846, mapSpan: 0.002,
+            pins: [
+                PinTemplate("Stage", .stage, x: 0.50, y: 0.25, description: "Main performance stage"),
+                PinTemplate("Bar", .food, x: 0.70, y: 0.50, description: "Full bar"),
+                PinTemplate("Sound Booth", .custom, x: 0.50, y: 0.60, description: "Sound and lighting"),
+                PinTemplate("Restrooms", .restroom, x: 0.25, y: 0.70),
+                PinTemplate("Front Entrance", .exit, x: 0.50, y: 0.90, description: "5213 Ballard Ave NW"),
+            ],
+            stages: [
+                StageTemplate(name: "Stage", x: 0.50, y: 0.25),
+            ]
+        ),
+
+        // MARK: - Chop Suey
+        VenueTemplate(
+            matchPatterns: ["chop suey"],
+            neighborhood: "Capitol Hill",
+            latitude: 47.6148, longitude: -122.3185, mapSpan: 0.002,
+            pins: [
+                PinTemplate("Main Stage", .stage, x: 0.50, y: 0.30, description: "Indoor main stage"),
+                PinTemplate("Bar", .food, x: 0.75, y: 0.50, description: "Full bar with cocktails and beer"),
+                PinTemplate("Restrooms", .restroom, x: 0.25, y: 0.65),
+                PinTemplate("Front Entrance", .exit, x: 0.50, y: 0.90, description: "1325 E Madison St"),
+                PinTemplate("Merch Table", .custom, x: 0.80, y: 0.70, description: "Artist merchandise"),
+            ],
+            stages: [
+                StageTemplate(name: "Main Stage", x: 0.50, y: 0.30),
+            ]
+        ),
     ]
 
     // MARK: - Matching & Attaching
