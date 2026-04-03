@@ -982,17 +982,36 @@ async function showSendPush() {
   loadPushHistory();
 }
 
-async function loadPushHistory() {
+let pushHistoryPage = 0;
+const PUSH_PAGE_SIZE = 10;
+let pushHistoryTotal = 0;
+
+async function loadPushHistory(page = 0) {
+  pushHistoryPage = page;
   try {
-    const res = await fetch(`${API}/api/admin/events/${currentEventId}/push`, {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/push?limit=${PUSH_PAGE_SIZE}&offset=${page * PUSH_PAGE_SIZE}`, {
       headers: adminHeaders()
     });
-    const notifications = await res.json();
+    const data = await res.json();
+    const notifications = data.notifications || [];
+    pushHistoryTotal = data.total || 0;
 
-    if (notifications.length === 0) {
+    if (notifications.length === 0 && page === 0) {
       document.getElementById('pushHistory').innerHTML = '<div class="empty">No notifications sent yet</div>';
       return;
     }
+
+    const totalPages = Math.ceil(pushHistoryTotal / PUSH_PAGE_SIZE);
+    const paginationHtml = totalPages > 1 ? `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #334155">
+        <span style="font-size:12px;color:#94a3b8">${pushHistoryTotal} total</span>
+        <div style="display:flex;gap:6px">
+          ${page > 0 ? `<button class="btn-secondary" onclick="loadPushHistory(${page - 1})" style="font-size:12px;padding:4px 12px">← Newer</button>` : ''}
+          <span style="font-size:12px;color:#94a3b8;padding:4px 0">${page + 1} / ${totalPages}</span>
+          ${page < totalPages - 1 ? `<button class="btn-secondary" onclick="loadPushHistory(${page + 1})" style="font-size:12px;padding:4px 12px">Older →</button>` : ''}
+        </div>
+      </div>
+    ` : '';
 
     document.getElementById('pushHistory').innerHTML = notifications.map(n => `
       <div class="schedule-item">
@@ -1004,7 +1023,7 @@ async function loadPushHistory() {
           </div>
         </div>
       </div>
-    `).join('');
+    `).join('') + paginationHtml;
   } catch (e) {
     document.getElementById('pushHistory').innerHTML = '<div class="empty">Error loading history</div>';
   }

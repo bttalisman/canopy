@@ -299,17 +299,30 @@ router.post('/events/:eventId/push', async (req, res) => {
   }
 });
 
-// GET /api/admin/events/:eventId/push — notification history
+// GET /api/admin/events/:eventId/push — notification history (paginated)
 router.get('/events/:eventId/push', async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT * FROM push_notifications
-       WHERE event_id = $1
-       ORDER BY created_at DESC
-       LIMIT 50`,
-      [req.params.eventId]
-    );
-    res.json(rows);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const offset = parseInt(req.query.offset) || 0;
+
+    const [{ rows }, countResult] = await Promise.all([
+      pool.query(
+        `SELECT * FROM push_notifications
+         WHERE event_id = $1
+         ORDER BY created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [req.params.eventId, limit, offset]
+      ),
+      pool.query(
+        'SELECT COUNT(*) FROM push_notifications WHERE event_id = $1',
+        [req.params.eventId]
+      )
+    ]);
+
+    res.json({
+      notifications: rows,
+      total: parseInt(countResult.rows[0].count, 10)
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
