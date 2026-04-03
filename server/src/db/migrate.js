@@ -1,4 +1,4 @@
-const { pool } = require('./pool');
+const { pool: defaultPool } = require('./pool');
 
 const schema = `
   CREATE TABLE IF NOT EXISTS events (
@@ -62,16 +62,20 @@ const schema = `
   CREATE INDEX IF NOT EXISTS idx_events_active ON events(is_active, start_date);
 `;
 
-async function migrate() {
+async function migrate(pool) {
+  const db = pool || defaultPool;
   try {
-    await pool.query(schema);
+    await db.query(schema);
     console.log('Database migration complete.');
   } catch (err) {
     console.error('Migration failed:', err.message);
-    process.exit(1);
-  } finally {
-    await pool.end();
+    throw err;
   }
 }
 
-migrate();
+// Allow running directly: node src/db/migrate.js
+if (require.main === module) {
+  migrate().then(() => defaultPool.end());
+}
+
+module.exports = { migrate };

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { pool } = require('./db/pool');
+const { migrate } = require('./db/migrate');
 const eventsRouter = require('./routes/events');
 const adminRouter = require('./routes/admin');
 
@@ -26,6 +27,14 @@ app.get('/health', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Canopy API running on port ${PORT}`);
-});
+// Run migrations then start server
+migrate(pool)
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Canopy API running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to start:', err.message);
+    process.exit(1);
+  });
