@@ -45,6 +45,7 @@ struct canopyApp: App {
 }
 
 struct RootView: View {
+    @Environment(\.modelContext) private var modelContext
     @State private var showSplash = true
 
     var body: some View {
@@ -62,6 +63,12 @@ struct RootView: View {
                             }
                         }
                     }
+            }
+        }
+        .onAppear {
+            // Sync push token + saved items with backend on every launch
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                NotificationManager.shared.syncReminders(context: modelContext)
             }
         }
     }

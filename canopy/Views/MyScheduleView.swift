@@ -85,6 +85,7 @@ struct MyScheduleView: View {
                                                 withAnimation {
                                                     NotificationManager.shared.removeReminder(for: item)
                                                     modelContext.delete(saved)
+                                                    NotificationManager.shared.syncReminders(context: modelContext)
                                                 }
                                             }
                                         }

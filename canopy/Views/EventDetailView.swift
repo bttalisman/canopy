@@ -341,6 +341,8 @@ struct ScheduleItemRow: View {
             // Check for conflicts with other saved items
             checkConflicts()
         }
+        // Sync push notification registration with backend
+        NotificationManager.shared.syncReminders(context: modelContext)
     }
 
     private func checkConflicts() {
