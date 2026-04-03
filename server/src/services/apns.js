@@ -11,7 +11,10 @@ function getProvider() {
   const bundleId = process.env.APNS_BUNDLE_ID || 'btt.canopy';
   const isProduction = process.env.APNS_PRODUCTION === 'true';
 
+  console.log(`[APNs] Config check — keyId: ${keyId ? 'set' : 'MISSING'}, teamId: ${teamId ? 'set' : 'MISSING'}`);
+
   if (!keyId || !teamId) {
+    console.log('[APNs] Missing keyId or teamId');
     return null;
   }
 
@@ -19,7 +22,10 @@ function getProvider() {
   const keyContents = process.env.APNS_KEY_CONTENTS;
   const keyPath = process.env.APNS_KEY_PATH;
 
+  console.log(`[APNs] Key check — keyContents: ${keyContents ? keyContents.length + ' chars' : 'MISSING'}, keyPath: ${keyPath || 'MISSING'}`);
+
   if (!keyContents && !keyPath) {
+    console.log('[APNs] Missing both keyContents and keyPath');
     return null;
   }
 
@@ -32,9 +38,14 @@ function getProvider() {
     production: isProduction,
   };
 
-  provider = new apn.Provider(options);
-  console.log(`[APNs] Provider initialized (${isProduction ? 'production' : 'sandbox'})`);
-  return provider;
+  try {
+    provider = new apn.Provider(options);
+    console.log(`[APNs] Provider initialized (${isProduction ? 'production' : 'sandbox'})`);
+    return provider;
+  } catch (err) {
+    console.error(`[APNs] Failed to initialize provider: ${err.message}`);
+    return null;
+  }
 }
 
 async function sendPushToEvent(eventId, title, body) {
