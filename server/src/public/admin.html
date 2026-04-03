@@ -372,6 +372,43 @@
       </form>
     </div>
   </div>
+
+  <!-- Paste Schedule View -->
+  <div id="pasteScheduleView" style="display:none">
+    <span class="back-link" onclick="backToEventDetail()">← Back to Event</span>
+    <h2>Paste Schedule</h2>
+    <div class="card">
+      <p style="color:#94a3b8;font-size:14px;margin-bottom:14px">
+        Paste any schedule text — from a website, email, PDF, whatever. AI will extract structured sessions.
+      </p>
+      <div class="form-group">
+        <label>Raw Schedule Text</label>
+        <textarea id="pasteText" style="min-height:200px" placeholder="Paste schedule here...&#10;&#10;Example:&#10;Friday Aug 29&#10;2:00 PM - Comedy Showcase - Fisher Pavilion&#10;5:00 PM - Local Natives - Mural Stage&#10;8:00 PM - The Head and the Heart - Main Stage"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" onclick="parseSchedule()" id="parseBtn">Parse with AI</button>
+        <button class="btn-secondary" onclick="backToEventDetail()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Parsed results review -->
+    <div id="parsedResults" style="display:none;margin-top:16px">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <h3>Parsed Sessions</h3>
+          <span id="parsedCount" class="badge green"></span>
+        </div>
+        <p style="color:#94a3b8;font-size:13px;margin-bottom:14px">
+          Review the extracted sessions below. Uncheck any you don't want to import, then click Import.
+        </p>
+        <div id="parsedItemsList"></div>
+        <div class="actions" style="margin-top:16px">
+          <button class="btn-primary" onclick="importParsedItems()">Import Selected</button>
+          <button class="btn-secondary" onclick="document.getElementById('parsedResults').style.display='none'">Discard</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -380,6 +417,7 @@
 const API = window.location.origin;
 let currentEventId = null;
 let currentEventData = null;
+let parsedItems = [];
 
 function getKey() {
   return document.getElementById('apiKey').value;
@@ -400,7 +438,7 @@ function toast(msg) {
 }
 
 function hideAll() {
-  ['eventListView','eventDetailView','eventFormView','scheduleFormView','stageFormView']
+  ['eventListView','eventDetailView','eventFormView','scheduleFormView','stageFormView','pasteScheduleView']
     .forEach(id => document.getElementById(id).style.display = 'none');
 }
 
@@ -526,7 +564,10 @@ function renderEventDetail(e) {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <h3>Schedule (${e.scheduleItems?.length || 0})</h3>
-        <button class="btn-primary" onclick="showAddScheduleItem()" style="font-size:13px;padding:5px 14px">+ Session</button>
+        <div style="display:flex;gap:6px">
+          <button class="btn-secondary" onclick="showPasteSchedule()" style="font-size:13px;padding:5px 14px">📋 Paste Schedule</button>
+          <button class="btn-primary" onclick="showAddScheduleItem()" style="font-size:13px;padding:5px 14px">+ Session</button>
+        </div>
       </div>
       ${scheduleHtml}
     </div>
@@ -692,6 +733,116 @@ async function deleteScheduleItem(id) {
   try {
     await fetch(`${API}/api/admin/schedule/${id}`, { method: 'DELETE', headers: adminHeaders() });
     toast('Session deleted');
+    backToEventDetail();
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ---- Paste & Parse Schedule ----
+
+function showPasteSchedule() {
+  hideAll();
+  document.getElementById('pasteScheduleView').style.display = 'block';
+  document.getElementById('pasteText').value = '';
+  document.getElementById('parsedResults').style.display = 'none';
+  parsedItems = [];
+}
+
+async function parseSchedule() {
+  const text = document.getElementById('pasteText').value.trim();
+  if (!text) { toast('Paste some schedule text first'); return; }
+
+  const btn = document.getElementById('parseBtn');
+  btn.textContent = 'Parsing...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/admin/parse-schedule`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        text,
+        eventName: currentEventData?.name || '',
+        stages: currentEventData?.stages || []
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Parse failed');
+    }
+
+    parsedItems = await res.json();
+
+    if (parsedItems.length === 0) {
+      toast('No schedule items found in text');
+      return;
+    }
+
+    document.getElementById('parsedCount').textContent = `${parsedItems.length} found`;
+    renderParsedItems();
+    document.getElementById('parsedResults').style.display = 'block';
+  } catch (e) {
+    toast('Error: ' + e.message);
+  } finally {
+    btn.textContent = 'Parse with AI';
+    btn.disabled = false;
+  }
+}
+
+function renderParsedItems() {
+  const stages = currentEventData?.stages || [];
+  document.getElementById('parsedItemsList').innerHTML = parsedItems.map((item, i) => {
+    const stageName = item.stageName || (item.stageId ? stages.find(s => s.id === item.stageId)?.name : '') || '';
+    const startStr = item.startTime ? new Date(item.startTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '?';
+    const endStr = item.endTime ? new Date(item.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '?';
+
+    return `
+      <div class="schedule-item" style="align-items:center">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" id="parsed_${i}" checked style="width:18px;height:18px;accent-color:#4ade80" />
+          <div>
+            <div class="title">${item.title}</div>
+            <div class="detail">
+              ${startStr} – ${endStr}
+              ${stageName ? ' · ' + stageName : ''}
+              ${item.category ? ' · ' + item.category : ''}
+            </div>
+            ${item.description ? `<div class="detail">${item.description}</div>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function importParsedItems() {
+  const selected = parsedItems.filter((_, i) =>
+    document.getElementById(`parsed_${i}`).checked
+  );
+
+  if (selected.length === 0) { toast('No items selected'); return; }
+
+  const items = selected.map(item => ({
+    title: item.title,
+    description: item.description || '',
+    startTime: item.startTime,
+    endTime: item.endTime,
+    stageId: item.stageId || null,
+    category: item.category || 'General'
+  }));
+
+  try {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/schedule/bulk`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ items })
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+
+    const result = await res.json();
+    toast(`${result.length} sessions imported!`);
     backToEventDetail();
   } catch (e) {
     toast('Error: ' + e.message);

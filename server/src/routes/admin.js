@@ -1,4 +1,5 @@
 const { Router } = require('express');
+const Anthropic = require('@anthropic-ai/sdk');
 const { pool } = require('../db/pool');
 
 const router = Router();
@@ -249,6 +250,87 @@ router.delete('/pins/:id', async (req, res) => {
     if (rowCount === 0) return res.status(404).json({ error: 'Pin not found' });
     res.json({ deleted: true });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =====================
+// LLM SCHEDULE PARSING
+// =====================
+
+// POST /api/admin/parse-schedule — parse raw text into structured schedule items
+router.post('/parse-schedule', async (req, res) => {
+  try {
+    const { text, eventName, stages } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ error: 'No text provided' });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured on server' });
+    }
+
+    const client = new Anthropic();
+
+    const stageList = (stages || []).map(s => s.name).join(', ');
+    const stageInstruction = stageList
+      ? `Available stages: ${stageList}. Match each item to the most appropriate stage name, or leave stageName empty if unclear.`
+      : 'No stages are defined yet. Set stageName to whatever stage/location is mentioned, or leave empty.';
+
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: `Extract schedule items from the following text for the event "${eventName || 'Unknown Event'}".
+
+${stageInstruction}
+
+Return a JSON array of objects with these fields:
+- title (string, required): the session/performance name
+- description (string): brief description if available
+- startTime (string): ISO 8601 datetime, use the current year if not specified
+- endTime (string): ISO 8601 datetime, estimate 1 hour duration if end time not given
+- stageName (string): the stage or location name if mentioned
+- category (string): one of Music, Comedy, Art, Film, Food, Panel, Workshop, Dance, Community, Performance, or General
+
+Return ONLY the JSON array, no other text. If you can't parse anything, return an empty array [].
+
+Text to parse:
+${text}`
+      }]
+    });
+
+    const content = message.content[0].text.trim();
+
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonStr = content;
+    const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      jsonStr = codeBlockMatch[1].trim();
+    }
+
+    const items = JSON.parse(jsonStr);
+
+    // Map stage names to stage IDs if stages were provided
+    if (stages && stages.length > 0) {
+      for (const item of items) {
+        if (item.stageName) {
+          const match = stages.find(s =>
+            s.name.toLowerCase().includes(item.stageName.toLowerCase()) ||
+            item.stageName.toLowerCase().includes(s.name.toLowerCase())
+          );
+          if (match) {
+            item.stageId = match.id;
+          }
+        }
+      }
+    }
+
+    res.json(items);
+  } catch (err) {
+    console.error('Error parsing schedule:', err);
     res.status(500).json({ error: err.message });
   }
 });
