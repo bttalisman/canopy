@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canopy Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .header {
+      background: #1e293b;
+      padding: 16px 24px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 { font-size: 20px; color: #4ade80; }
+    .header .key-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      width: 220px;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+    }
+    .tab {
+      padding: 8px 20px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #94a3b8;
+      transition: all 0.15s;
+    }
+    .tab:hover { background: #334155; }
+    .tab.active { background: #4ade80; color: #0f172a; border-color: #4ade80; }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card h3 { margin-bottom: 12px; font-size: 16px; }
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    .card-row:last-child { border-bottom: none; }
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #334155;
+      color: #94a3b8;
+    }
+    .badge.green { background: #16a34a33; color: #4ade80; }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: #4ade80;
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .btn-primary:hover { background: #22c55e; }
+    .btn-danger {
+      background: #ef444433;
+      color: #f87171;
+      font-size: 12px;
+      padding: 4px 12px;
+    }
+    .btn-danger:hover { background: #ef444455; }
+    .btn-secondary {
+      background: #334155;
+      color: #e2e8f0;
+    }
+    .btn-secondary:hover { background: #475569; }
+    .event-list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .event-list-item:hover { border-color: #4ade80; }
+    .event-list-item.selected { border-color: #4ade80; background: #4ade8010; }
+    .event-list-item .info { display: flex; flex-direction: column; gap: 2px; }
+    .event-list-item .name { font-weight: 600; }
+    .event-list-item .meta { font-size: 12px; color: #94a3b8; }
+    .schedule-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px 14px;
+      background: #0f172a;
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+    .schedule-item .time { color: #4ade80; font-size: 13px; min-width: 120px; }
+    .schedule-item .title { font-weight: 500; }
+    .schedule-item .detail { font-size: 12px; color: #94a3b8; }
+    .empty { color: #64748b; text-align: center; padding: 40px; font-style: italic; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #4ade80;
+      color: #0f172a;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .actions { display: flex; gap: 8px; margin-top: 12px; }
+    h2 { font-size: 18px; margin-bottom: 16px; color: #f8fafc; }
+    .back-link {
+      color: #4ade80;
+      cursor: pointer;
+      font-size: 14px;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🌿 Canopy Admin</h1>
+  <div class="key-input">
+    <label style="font-size:12px;color:#94a3b8">Admin Key:</label>
+    <input type="password" id="apiKey" placeholder="Enter admin API key" />
+  </div>
+</div>
+
+<div class="container">
+  <!-- Event List View -->
+  <div id="eventListView">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2>Events</h2>
+      <button class="btn-primary" onclick="showCreateEvent()">+ New Event</button>
+    </div>
+    <div id="eventList"><div class="empty">Loading events...</div></div>
+  </div>
+
+  <!-- Event Detail View -->
+  <div id="eventDetailView" style="display:none">
+    <span class="back-link" onclick="showEventList()">← Back to Events</span>
+    <div id="eventDetailContent"></div>
+  </div>
+
+  <!-- Create/Edit Event Form -->
+  <div id="eventFormView" style="display:none">
+    <span class="back-link" onclick="showEventList()">← Back to Events</span>
+    <h2 id="eventFormTitle">New Event</h2>
+    <div class="card">
+      <form id="eventForm" onsubmit="saveEvent(event)">
+        <input type="hidden" id="eventId" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="evName" required />
+          </div>
+          <div class="form-group">
+            <label>Slug</label>
+            <input type="text" id="evSlug" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="evDescription"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date & Time</label>
+            <input type="datetime-local" id="evStartDate" required />
+          </div>
+          <div class="form-group">
+            <label>End Date & Time</label>
+            <input type="datetime-local" id="evEndDate" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Location / Venue</label>
+            <input type="text" id="evLocation" required />
+          </div>
+          <div class="form-group">
+            <label>Neighborhood</label>
+            <input type="text" id="evNeighborhood" />
+          </div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="evCategory">
+              <option value="festival">Festival</option>
+              <option value="fair">Fair</option>
+              <option value="conference">Conference</option>
+              <option value="expo">Expo</option>
+              <option value="concert">Concert</option>
+              <option value="community">Community</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Latitude</label>
+            <input type="number" step="any" id="evLat" />
+          </div>
+          <div class="form-group">
+            <label>Longitude</label>
+            <input type="number" step="any" id="evLng" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ticketing URL</label>
+            <input type="url" id="evTicketURL" />
+          </div>
+          <div class="form-group">
+            <label>Image URL</label>
+            <input type="url" id="evImageURL" />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-primary">Save Event</button>
+          <button type="button" class="btn-secondary" onclick="showEventList()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Schedule Item Form (modal-like) -->
+  <div id="scheduleFormView" style="display:none">
+    <span class="back-link" onclick="backToEventDetail()">← Back to Event</span>
+    <h2>Add Schedule Item</h2>
+    <div class="card">
+      <form id="scheduleForm" onsubmit="saveScheduleItem(event)">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="siTitle" required />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="siDescription"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Time</label>
+            <input type="datetime-local" id="siStartTime" required />
+          </div>
+          <div class="form-group">
+            <label>End Time</label>
+            <input type="datetime-local" id="siEndTime" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Stage</label>
+            <select id="siStage"><option value="">No stage</option></select>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <input type="text" id="siCategory" value="General" />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-primary">Add Session</button>
+          <button type="button" class="btn-secondary" onclick="backToEventDetail()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Stage Form -->
+  <div id="stageFormView" style="display:none">
+    <span class="back-link" onclick="backToEventDetail()">← Back to Event</span>
+    <h2>Add Stage</h2>
+    <div class="card">
+      <form id="stageForm" onsubmit="saveStage(event)">
+        <div class="form-group">
+          <label>Stage Name</label>
+          <input type="text" id="stName" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Map X (0-1)</label>
+            <input type="number" step="0.01" min="0" max="1" id="stMapX" value="0.5" />
+          </div>
+          <div class="form-group">
+            <label>Map Y (0-1)</label>
+            <input type="number" step="0.01" min="0" max="1" id="stMapY" value="0.5" />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-primary">Add Stage</button>
+          <button type="button" class="btn-secondary" onclick="backToEventDetail()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = window.location.origin;
+let currentEventId = null;
+let currentEventData = null;
+
+function getKey() {
+  return document.getElementById('apiKey').value;
+}
+
+function adminHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'X-Admin-Key': getKey()
+  };
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+function hideAll() {
+  ['eventListView','eventDetailView','eventFormView','scheduleFormView','stageFormView']
+    .forEach(id => document.getElementById(id).style.display = 'none');
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatTime(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function toLocalInput(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  const off = dt.getTimezoneOffset();
+  const local = new Date(dt.getTime() - off * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+// ---- Event List ----
+
+async function loadEvents() {
+  try {
+    const res = await fetch(`${API}/api/events`);
+    const events = await res.json();
+    renderEventList(events);
+  } catch (e) {
+    document.getElementById('eventList').innerHTML = `<div class="empty">Error loading events: ${e.message}</div>`;
+  }
+}
+
+function renderEventList(events) {
+  if (events.length === 0) {
+    document.getElementById('eventList').innerHTML = '<div class="empty">No events yet. Create one!</div>';
+    return;
+  }
+  document.getElementById('eventList').innerHTML = events.map(e => `
+    <div class="event-list-item" onclick="showEventDetail('${e.slug}')">
+      <div class="info">
+        <span class="name">${e.name}</span>
+        <span class="meta">${e.location} · ${formatDate(e.startDate)} – ${formatDate(e.endDate)}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="badge green">${e.scheduleItems?.length || 0} sessions</span>
+        <span class="badge">${e.stages?.length || 0} stages</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showEventList() {
+  hideAll();
+  document.getElementById('eventListView').style.display = 'block';
+  loadEvents();
+}
+
+// ---- Event Detail ----
+
+async function showEventDetail(slug) {
+  try {
+    const res = await fetch(`${API}/api/events/${slug}`);
+    const event = await res.json();
+    currentEventId = event.id;
+    currentEventData = event;
+    renderEventDetail(event);
+    hideAll();
+    document.getElementById('eventDetailView').style.display = 'block';
+  } catch (e) {
+    toast('Error loading event');
+  }
+}
+
+function renderEventDetail(e) {
+  const scheduleHtml = (e.scheduleItems || []).length === 0
+    ? '<div class="empty">No schedule items yet</div>'
+    : e.scheduleItems.map(si => `
+        <div class="schedule-item">
+          <div>
+            <div class="time">${formatTime(si.startTime)} – ${formatTime(si.endTime)}</div>
+            <div class="title">${si.title}${si.isCancelled ? ' <span class="badge" style="background:#ef444433;color:#f87171">CANCELLED</span>' : ''}</div>
+            <div class="detail">${si.description || ''} ${si.stageId ? '· ' + (e.stages?.find(s => s.id === si.stageId)?.name || '') : ''}</div>
+          </div>
+          <button class="btn-danger" onclick="deleteScheduleItem('${si.id}')">Delete</button>
+        </div>
+      `).join('');
+
+  const stagesHtml = (e.stages || []).length === 0
+    ? '<div class="empty">No stages yet</div>'
+    : e.stages.map(s => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
+          <span>${s.name}</span>
+          <button class="btn-danger" onclick="deleteStage('${s.id}')">Delete</button>
+        </div>
+      `).join('');
+
+  document.getElementById('eventDetailContent').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+      <div>
+        <h2 style="margin-bottom:4px">${e.name}</h2>
+        <div style="color:#94a3b8;font-size:14px">${e.location} · ${e.neighborhood || ''}</div>
+        <div style="color:#4ade80;font-size:14px;margin-top:4px">${formatDate(e.startDate)} – ${formatDate(e.endDate)}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secondary" onclick="showEditEvent()">Edit</button>
+        <button class="btn-danger" onclick="deleteEvent('${e.id}')">Delete</button>
+      </div>
+    </div>
+
+    ${e.description ? `<div class="card"><p style="color:#94a3b8;font-size:14px">${e.description}</p></div>` : ''}
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3>Stages (${e.stages?.length || 0})</h3>
+        <button class="btn-primary" onclick="showAddStage()" style="font-size:13px;padding:5px 14px">+ Stage</button>
+      </div>
+      ${stagesHtml}
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3>Schedule (${e.scheduleItems?.length || 0})</h3>
+        <button class="btn-primary" onclick="showAddScheduleItem()" style="font-size:13px;padding:5px 14px">+ Session</button>
+      </div>
+      ${scheduleHtml}
+    </div>
+  `;
+}
+
+function backToEventDetail() {
+  if (currentEventData) {
+    showEventDetail(currentEventData.slug);
+  } else {
+    showEventList();
+  }
+}
+
+// ---- Create / Edit Event ----
+
+function showCreateEvent() {
+  hideAll();
+  document.getElementById('eventFormView').style.display = 'block';
+  document.getElementById('eventFormTitle').textContent = 'New Event';
+  document.getElementById('eventId').value = '';
+  document.getElementById('eventForm').reset();
+}
+
+function showEditEvent() {
+  const e = currentEventData;
+  hideAll();
+  document.getElementById('eventFormView').style.display = 'block';
+  document.getElementById('eventFormTitle').textContent = 'Edit Event';
+  document.getElementById('eventId').value = e.id;
+  document.getElementById('evName').value = e.name;
+  document.getElementById('evSlug').value = e.slug;
+  document.getElementById('evDescription').value = e.description || '';
+  document.getElementById('evStartDate').value = toLocalInput(e.startDate);
+  document.getElementById('evEndDate').value = toLocalInput(e.endDate);
+  document.getElementById('evLocation').value = e.location;
+  document.getElementById('evNeighborhood').value = e.neighborhood || '';
+  document.getElementById('evCategory').value = e.category || 'community';
+  document.getElementById('evLat').value = e.latitude || '';
+  document.getElementById('evLng').value = e.longitude || '';
+  document.getElementById('evTicketURL').value = e.ticketingURL || '';
+  document.getElementById('evImageURL').value = e.imageURL || '';
+}
+
+async function saveEvent(evt) {
+  evt.preventDefault();
+  const id = document.getElementById('eventId').value;
+  const body = {
+    name: document.getElementById('evName').value,
+    slug: document.getElementById('evSlug').value,
+    description: document.getElementById('evDescription').value,
+    startDate: new Date(document.getElementById('evStartDate').value).toISOString(),
+    endDate: new Date(document.getElementById('evEndDate').value).toISOString(),
+    location: document.getElementById('evLocation').value,
+    neighborhood: document.getElementById('evNeighborhood').value,
+    category: document.getElementById('evCategory').value,
+    latitude: parseFloat(document.getElementById('evLat').value) || null,
+    longitude: parseFloat(document.getElementById('evLng').value) || null,
+    ticketingURL: document.getElementById('evTicketURL').value || null,
+    imageURL: document.getElementById('evImageURL').value || null,
+  };
+
+  try {
+    const url = id ? `${API}/api/admin/events/${id}` : `${API}/api/admin/events`;
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: adminHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) throw new Error(await res.text());
+    toast(id ? 'Event updated!' : 'Event created!');
+    showEventList();
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+async function deleteEvent(id) {
+  if (!confirm('Delete this event and all its data?')) return;
+  try {
+    await fetch(`${API}/api/admin/events/${id}`, { method: 'DELETE', headers: adminHeaders() });
+    toast('Event deleted');
+    showEventList();
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ---- Stages ----
+
+function showAddStage() {
+  hideAll();
+  document.getElementById('stageFormView').style.display = 'block';
+  document.getElementById('stageForm').reset();
+}
+
+async function saveStage(evt) {
+  evt.preventDefault();
+  const body = {
+    name: document.getElementById('stName').value,
+    mapX: parseFloat(document.getElementById('stMapX').value),
+    mapY: parseFloat(document.getElementById('stMapY').value),
+  };
+  try {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/stages`, {
+      method: 'POST', headers: adminHeaders(), body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    toast('Stage added!');
+    backToEventDetail();
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+async function deleteStage(id) {
+  if (!confirm('Delete this stage?')) return;
+  try {
+    await fetch(`${API}/api/admin/stages/${id}`, { method: 'DELETE', headers: adminHeaders() });
+    toast('Stage deleted');
+    backToEventDetail();
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ---- Schedule Items ----
+
+function showAddScheduleItem() {
+  hideAll();
+  document.getElementById('scheduleFormView').style.display = 'block';
+  document.getElementById('scheduleForm').reset();
+
+  // Populate stage dropdown
+  const select = document.getElementById('siStage');
+  select.innerHTML = '<option value="">No stage</option>';
+  (currentEventData?.stages || []).forEach(s => {
+    select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+  });
+}
+
+async function saveScheduleItem(evt) {
+  evt.preventDefault();
+  const body = {
+    title: document.getElementById('siTitle').value,
+    description: document.getElementById('siDescription').value,
+    startTime: new Date(document.getElementById('siStartTime').value).toISOString(),
+    endTime: new Date(document.getElementById('siEndTime').value).toISOString(),
+    stageId: document.getElementById('siStage').value || null,
+    category: document.getElementById('siCategory').value,
+  };
+  try {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/schedule`, {
+      method: 'POST', headers: adminHeaders(), body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    toast('Session added!');
+    backToEventDetail();
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+async function deleteScheduleItem(id) {
+  if (!confirm('Delete this session?')) return;
+  try {
+    await fetch(`${API}/api/admin/schedule/${id}`, { method: 'DELETE', headers: adminHeaders() });
+    toast('Session deleted');
+    backToEventDetail();
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ---- Init ----
+
+// Load saved key
+const savedKey = localStorage.getItem('canopy_admin_key');
+if (savedKey) document.getElementById('apiKey').value = savedKey;
+
+document.getElementById('apiKey').addEventListener('change', (e) => {
+  localStorage.setItem('canopy_admin_key', e.target.value);
+});
+
+loadEvents();
+</script>
+</body>
+</html>
