@@ -71,6 +71,7 @@ async function sendPushToEvent(eventId, title, body) {
   notification.alert = { title, body };
   notification.sound = 'default';
   notification.topic = process.env.APNS_BUNDLE_ID || 'btt.canopy';
+  notification.payload = { eventId };
 
   // Send to all tokens
   const response = await apnProvider.send(notification, tokens);

@@ -277,19 +277,24 @@ router.get('/events/:eventId/devices/count', async (req, res) => {
 // POST /api/admin/events/:eventId/push — send a push notification
 router.post('/events/:eventId/push', async (req, res) => {
   try {
-    const { title, body } = req.body;
+    const { title, body, category } = req.body;
     if (!title || !body) {
       return res.status(400).json({ error: 'title and body are required' });
     }
 
-    const result = await sendPushToEvent(req.params.eventId, title, body);
+    // Look up event name to prefix the notification
+    const eventResult = await pool.query('SELECT name FROM events WHERE id = $1', [req.params.eventId]);
+    const eventName = eventResult.rows[0]?.name || 'Event';
+    const fullTitle = `${eventName}: ${title}`;
+
+    const result = await sendPushToEvent(req.params.eventId, fullTitle, body);
 
     // Record in push_notifications history
     const { rows } = await pool.query(
       `INSERT INTO push_notifications (event_id, title, body, sent_count, failed_count)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [req.params.eventId, title, body, result.sent, result.failed]
+      [req.params.eventId, fullTitle, body, result.sent, result.failed]
     );
 
     res.json({ notification: rows[0], ...result });

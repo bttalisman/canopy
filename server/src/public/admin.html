@@ -444,8 +444,19 @@
       </div>
       <form id="pushForm" onsubmit="sendPush(event)">
         <div class="form-group">
+          <label>Category</label>
+          <select id="pushCategory" onchange="onPushCategoryChange()">
+            <option value="">Choose a category...</option>
+            <option value="Schedule Change">Schedule Change</option>
+            <option value="Weather Alert">Weather Alert</option>
+            <option value="Emergency">Emergency</option>
+            <option value="Announcement">Announcement</option>
+            <option value="Reminder">Reminder</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Title</label>
-          <input type="text" id="pushTitle" required placeholder="e.g. Schedule Update" />
+          <input type="text" id="pushTitle" required placeholder="e.g. Stage change for headliner" />
         </div>
         <div class="form-group">
           <label>Message</label>
@@ -1027,6 +1038,15 @@ async function loadPushHistory(page = 0) {
   } catch (e) {
     document.getElementById('pushHistory').innerHTML = '<div class="empty">Error loading history</div>';
   }
+}
+
+function onPushCategoryChange() {
+  const category = document.getElementById('pushCategory').value;
+  const titleInput = document.getElementById('pushTitle');
+  if (category && !titleInput.value) {
+    titleInput.value = category;
+  }
+  titleInput.focus();
 }
 
 async function sendPush(evt) {
