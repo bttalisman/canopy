@@ -6,7 +6,7 @@
     "watchPatterns": ["server/**"]
   },
   "deploy": {
-    "startCommand": "node server/src/index.js",
+    "startCommand": "node src/index.js",
     "healthcheckPath": "/health",
     "restartPolicyType": "ON_FAILURE"
   }
