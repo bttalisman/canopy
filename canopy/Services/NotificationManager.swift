@@ -19,6 +19,31 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let token = tokenData.map { String(format: "%02x", $0) }.joined()
         self.deviceToken = token
         print("[Push] Device token: \(token)")
+
+        // Immediately register with backend using all active events
+        registerTokenWithAllEvents()
+    }
+
+    /// Register token with all active events so the device receives any push notification.
+    /// Called immediately when the token is received, and again from syncReminders with specific event IDs.
+    func registerTokenWithAllEvents() {
+        guard let token = deviceToken else { return }
+
+        let baseURL = Secrets.canopyAPIBaseURL
+        guard !baseURL.isEmpty, baseURL != "YOUR_API_URL_HERE" else { return }
+        guard let url = URL(string: "\(baseURL)/api/events") else { return }
+
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+            guard let data, error == nil else { return }
+
+            // Parse event IDs from the public API response
+            guard let events = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+            let eventIds = events.compactMap { $0["id"] as? String }
+
+            if !eventIds.isEmpty {
+                self?.registerTokenWithBackend(eventIds: eventIds)
+            }
+        }.resume()
     }
 
     func registerTokenWithBackend(eventIds: [String]) {
