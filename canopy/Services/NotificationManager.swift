@@ -40,13 +40,16 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        URLSession.shared.dataTask(with: request) { _, response, error in
+        print("[Push] Registering — events: \(eventIds), items: \(scheduleItemIds)")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
             if let error {
                 print("[Push] Registration error: \(error.localizedDescription)")
                 return
             }
             if let http = response as? HTTPURLResponse {
-                print("[Push] Registration response: \(http.statusCode)")
+                let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+                print("[Push] Registration response: \(http.statusCode) \(body)")
             }
         }.resume()
     }

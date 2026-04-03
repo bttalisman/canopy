@@ -58,8 +58,8 @@ router.post('/register', async (req, res) => {
 
     res.json({ registeredEvents: events.length, registeredItems: items.length });
   } catch (err) {
-    console.error('[Devices] Registration error:', err.message);
-    res.status(500).json({ error: 'Registration failed' });
+    console.error('[Devices] Registration error:', err.message, err.stack);
+    res.status(500).json({ error: err.message });
   }
 });
 
