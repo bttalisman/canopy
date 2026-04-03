@@ -4,6 +4,8 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var events: [Event]
+    @AppStorage("notificationsEnabled") private var notificationsEnabled = true
+    @AppStorage("quietHoursEnabled") private var quietHoursEnabled = false
     @State private var showingClearConfirmation = false
 
     private var hasAPIKey: Bool {
@@ -42,8 +44,8 @@ struct SettingsView: View {
                 }
 
                 Section("Notifications") {
-                    Toggle("Enable Notifications", isOn: .constant(true))
-                    Toggle("Quiet Hours (10PM–8AM)", isOn: .constant(false))
+                    Toggle("Enable Notifications", isOn: $notificationsEnabled)
+                    Toggle("Quiet Hours (10PM–8AM)", isOn: $quietHoursEnabled)
                 }
 
                 Section("About") {

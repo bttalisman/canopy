@@ -331,11 +331,27 @@ struct ScheduleItemRow: View {
             modelContext.delete(existing)
             try? modelContext.save()
             saved = false
+            NotificationManager.shared.removeReminder(for: item)
         } else {
             let newSave = UserSavedItem(scheduleItem: item)
             modelContext.insert(newSave)
             try? modelContext.save()
             saved = true
+            NotificationManager.shared.scheduleReminder(for: item)
+            // Check for conflicts with other saved items
+            checkConflicts()
+        }
+    }
+
+    private func checkConflicts() {
+        let descriptor = FetchDescriptor<UserSavedItem>()
+        guard let allSaved = try? modelContext.fetch(descriptor) else { return }
+        let otherItems = allSaved.compactMap(\.scheduleItem).filter { $0.id != item.id && !$0.isCancelled }
+
+        for other in otherItems {
+            if item.startTime < other.endTime && other.startTime < item.endTime {
+                NotificationManager.shared.scheduleConflictAlert(item1: item, item2: other)
+            }
         }
     }
 }

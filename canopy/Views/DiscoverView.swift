@@ -193,14 +193,14 @@ struct DiscoverView: View {
                     VenueMapData.attachMapData(to: event, using: modelContext)
                 }
 
-                if events.isEmpty && hasAPIKey {
-                    await fetchEvents()
-                }
+                // Always sync from backend on launch
+                await fetchEvents()
             }
         }
     }
 
     private func fetchEvents() async {
+        print("[Fetch] fetchEvents() called, hasAPIKey=\(hasAPIKey)")
         isLoading = true
         errorMessage = nil
         lastFetchedCount = nil
@@ -209,14 +209,19 @@ struct DiscoverView: View {
 
         // 1. Fetch from Canopy backend (schedule items, curated events)
         do {
+            print("[Fetch] Calling Canopy API at \(Secrets.canopyAPIBaseURL)")
             let apiEvents = try await CanopyAPIService.shared.fetchEvents()
+            print("[Fetch] Got \(apiEvents.count) events from backend")
+            for e in apiEvents {
+                print("[Fetch]   \(e.name): \(e.scheduleItems?.count ?? 0) schedule, \(e.mapPins?.count ?? 0) pins, \(e.stages?.count ?? 0) stages")
+            }
             let count = await CanopyAPIService.shared.importEvents(apiEvents, into: modelContext)
             totalImported += count
+            print("[Fetch] Imported \(count) new events")
         } catch let error as CanopyAPIError where error == .notConfigured {
-            // Backend not configured yet — that's fine, skip it
+            print("[Fetch] Backend not configured, skipping")
         } catch {
-            // Log but don't block — Ticketmaster may still work
-            print("Canopy API error: \(error.localizedDescription)")
+            print("[Fetch] Canopy API error: \(error.localizedDescription)")
         }
 
         // 2. Fetch from Ticketmaster (event discovery)

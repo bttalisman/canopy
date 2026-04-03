@@ -83,6 +83,7 @@ struct MyScheduleView: View {
                                         if let item = saved.scheduleItem {
                                             SavedItemRow(item: item, savedItem: saved) {
                                                 withAnimation {
+                                                    NotificationManager.shared.removeReminder(for: item)
                                                     modelContext.delete(saved)
                                                 }
                                             }
