@@ -126,6 +126,27 @@ actor TicketmasterService {
 
             context.insert(event)
 
+            // Auto-create a schedule item so performer profiles work for single events
+            let performerName = tmEvent.embedded?.attractions?.first?.name
+            let performerURL = tmEvent.embedded?.attractions?.first?.url
+
+            let scheduleItem = ScheduleItem(
+                title: tmEvent.name,
+                itemDescription: event.eventDescription,
+                startTime: startDate,
+                endTime: endDate,
+                category: category == .concert ? "Music" : "General"
+            )
+            scheduleItem.performerName = performerName
+            if let url = performerURL {
+                scheduleItem.performerLinks = "[{\"label\":\"Tickets & Info\",\"url\":\"\(url)\"}]"
+            }
+            if let imageURL = tmEvent.primaryImage?.url {
+                scheduleItem.performerImageURL = imageURL
+            }
+            scheduleItem.event = event
+            context.insert(scheduleItem)
+
             // Auto-attach venue map data if we have it
             VenueMapData.attachMapData(to: event, using: context)
 
