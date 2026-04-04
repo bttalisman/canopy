@@ -387,6 +387,16 @@ struct ScheduleItemRow: View {
                         .background(Color.red)
                         .clipShape(Capsule())
                 }
+
+                if hasPerformer {
+                    Spacer()
+                    Image(systemName: "person.crop.circle")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             // Description
