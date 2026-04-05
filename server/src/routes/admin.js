@@ -846,10 +846,11 @@ Return ONLY a JSON array. If no icons found, return [].`
 // POST /api/admin/import-seattle-events — import from Seattle Special Events Permits
 router.post('/import-seattle-events', async (req, res) => {
   try {
-    const { minAttendance = 500, year = new Date().getFullYear() } = req.body;
+    const { minAttendance = 0, year = new Date().getFullYear() } = req.body;
 
     // Fetch permitted events from Seattle Open Data
-    const soqlUrl = `https://data.seattle.gov/resource/dm95-f8w5.json?$limit=200&$where=event_start_date>'${year}-01-01' AND permit_status!='Cancelled' AND attendance>${minAttendance}&$order=event_start_date`;
+    const attendanceFilter = minAttendance > 0 ? ` AND attendance>${minAttendance}` : '';
+    const soqlUrl = `https://data.seattle.gov/resource/dm95-f8w5.json?$limit=500&$where=event_start_date>'${year}-01-01' AND permit_status!='Cancelled'${attendanceFilter}&$order=event_start_date`;
 
     console.log(`[Seattle Data] Fetching: ${soqlUrl}`);
     const response = await fetch(soqlUrl);
@@ -921,10 +922,11 @@ router.post('/import-seattle-events', async (req, res) => {
 // GET /api/admin/seattle-events-preview — preview what would be imported
 router.get('/seattle-events-preview', async (req, res) => {
   try {
-    const minAttendance = parseInt(req.query.minAttendance) || 500;
+    const minAttendance = parseInt(req.query.minAttendance) || 0;
     const year = parseInt(req.query.year) || new Date().getFullYear();
 
-    const soqlUrl = `https://data.seattle.gov/resource/dm95-f8w5.json?$limit=200&$where=event_start_date>'${year}-01-01' AND permit_status!='Cancelled' AND attendance>${minAttendance}&$order=event_start_date`;
+    const attendanceFilter = minAttendance > 0 ? ` AND attendance>${minAttendance}` : '';
+    const soqlUrl = `https://data.seattle.gov/resource/dm95-f8w5.json?$limit=500&$where=event_start_date>'${year}-01-01' AND permit_status!='Cancelled'${attendanceFilter}&$order=event_start_date`;
 
     const response = await fetch(soqlUrl);
     if (!response.ok) throw new Error(`Seattle API error: ${response.status}`);
