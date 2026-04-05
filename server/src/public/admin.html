@@ -476,6 +476,72 @@
   </div>
 </div>
 
+  <!-- Map Pin Editor View -->
+  <div id="mapEditorView" style="display:none">
+    <span class="back-link" onclick="backToEventDetail()">← Back to Event</span>
+    <h2>Map Pin Editor</h2>
+
+    <div class="card">
+      <div class="form-group">
+        <label>Map Image URL</label>
+        <div style="display:flex;gap:8px">
+          <input type="url" id="mapImageURL" placeholder="https://example.com/venue-map.png" style="flex:1" />
+          <button class="btn-primary" onclick="saveMapImageURL()" style="font-size:13px;padding:5px 14px">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3>Pin Placement</h3>
+        <span class="badge green" id="mapPinCount">0 pins</span>
+      </div>
+
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">
+        Click on the map to place a pin. Select a pin type and label first.
+      </p>
+
+      <div class="form-row" style="margin-bottom:12px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Pin Type</label>
+          <select id="mapPinType">
+            <option value="Stage">Stage</option>
+            <option value="Food">Food</option>
+            <option value="Restroom">Restroom</option>
+            <option value="First Aid">First Aid</option>
+            <option value="Exit">Exit</option>
+            <option value="Custom">Custom</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Label</label>
+          <input type="text" id="mapPinLabel" placeholder="e.g. Main Stage" />
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Description (optional)</label>
+        <input type="text" id="mapPinDescription" placeholder="e.g. Headliner performances" />
+      </div>
+
+      <!-- Map image with clickable overlay -->
+      <div id="mapImageContainer" style="position:relative;border:1px solid #334155;border-radius:8px;overflow:hidden;cursor:crosshair;background:#0f172a;min-height:200px">
+        <div id="mapNoImage" style="color:#64748b;text-align:center;padding:60px;font-style:italic">
+          Set a map image URL above to start placing pins
+        </div>
+        <img id="mapImage" style="width:100%;display:none" />
+        <div id="mapPinsOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%"></div>
+      </div>
+
+      <!-- Pin list -->
+      <div style="margin-top:12px">
+        <h3 style="margin-bottom:8px">Pins</h3>
+        <div id="mapPinsList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -503,7 +569,7 @@ function toast(msg) {
 }
 
 function hideAll() {
-  ['eventListView','eventDetailView','eventFormView','scheduleFormView','stageFormView','pasteScheduleView','pushNotificationView']
+  ['eventListView','eventDetailView','eventFormView','scheduleFormView','stageFormView','pasteScheduleView','pushNotificationView','mapEditorView']
     .forEach(id => document.getElementById(id).style.display = 'none');
 }
 
@@ -640,8 +706,9 @@ function renderEventDetail(e) {
       ${scheduleHtml}
     </div>
 
-    <div style="margin-top:8px">
-      <button class="btn-secondary" onclick="showSendPush()" style="font-size:14px;padding:8px 18px;width:100%">📣 Send Push Notification</button>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <button class="btn-secondary" onclick="showSendPush()" style="font-size:14px;padding:8px 18px;flex:1">📣 Send Push</button>
+      <button class="btn-secondary" onclick="showMapEditor()" style="font-size:14px;padding:8px 18px;flex:1">🗺️ Map Editor</button>
     </div>
   `;
 }
@@ -1110,6 +1177,187 @@ async function sendItemPush(itemId, itemTitle) {
     }
     const data = await res.json();
     toast(`Sent to ${data.sent} of ${data.subscribers} subscriber${data.subscribers !== 1 ? 's' : ''}`);
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ---- Map Pin Editor ----
+
+let mapEditorPins = [];
+
+function showMapEditor() {
+  hideAll();
+  document.getElementById('mapEditorView').style.display = 'block';
+
+  // Set current map image URL
+  const mapURL = currentEventData?.mapImageURL || currentEventData?.map_image_url || '';
+  document.getElementById('mapImageURL').value = mapURL;
+
+  if (mapURL) {
+    loadMapImage(mapURL);
+  } else {
+    document.getElementById('mapImage').style.display = 'none';
+    document.getElementById('mapNoImage').style.display = 'block';
+  }
+
+  loadMapPins();
+}
+
+function loadMapImage(url) {
+  const img = document.getElementById('mapImage');
+  const noImg = document.getElementById('mapNoImage');
+  img.src = url;
+  img.onload = () => {
+    img.style.display = 'block';
+    noImg.style.display = 'none';
+    renderMapPins();
+  };
+  img.onerror = () => {
+    img.style.display = 'none';
+    noImg.style.display = 'block';
+    noImg.textContent = 'Failed to load map image';
+  };
+
+  // Click handler for placing pins
+  const container = document.getElementById('mapImageContainer');
+  container.onclick = (e) => {
+    if (img.style.display === 'none') return;
+    const rect = container.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    placePin(x, y);
+  };
+}
+
+async function saveMapImageURL() {
+  const url = document.getElementById('mapImageURL').value.trim();
+  try {
+    await fetch(`${API}/api/admin/events/${currentEventId}`, {
+      method: 'PUT',
+      headers: adminHeaders(),
+      body: JSON.stringify({ mapImageURL: url || null })
+    });
+    if (currentEventData) currentEventData.mapImageURL = url;
+    toast(url ? 'Map image saved!' : 'Map image removed');
+    if (url) loadMapImage(url);
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+function loadMapPins() {
+  mapEditorPins = (currentEventData?.mapPins || []).map(p => ({
+    id: p.id,
+    label: p.label,
+    pinType: p.pinType || p.pin_type || 'Custom',
+    x: p.x,
+    y: p.y,
+    description: p.description || ''
+  }));
+  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+  renderMapPins();
+  renderMapPinsList();
+}
+
+function renderMapPins() {
+  const overlay = document.getElementById('mapPinsOverlay');
+  const img = document.getElementById('mapImage');
+  if (img.style.display === 'none') return;
+
+  overlay.innerHTML = mapEditorPins.map((pin, i) => {
+    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', Custom: '#6b7280' };
+    const color = colors[pin.pinType] || '#6b7280';
+    return `<div style="position:absolute;left:${pin.x * 100}%;top:${pin.y * 100}%;transform:translate(-50%,-50%);cursor:pointer" onclick="event.stopPropagation();selectMapPin(${i})" title="${pin.label}">
+      <div style="width:20px;height:20px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center">
+        <span style="color:white;font-size:8px;font-weight:bold">${i + 1}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMapPinsList() {
+  const list = document.getElementById('mapPinsList');
+  if (mapEditorPins.length === 0) {
+    list.innerHTML = '<div class="empty">No pins yet. Click on the map to place one.</div>';
+    return;
+  }
+  list.innerHTML = mapEditorPins.map((pin, i) => {
+    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', Custom: '#6b7280' };
+    const color = colors[pin.pinType] || '#6b7280';
+    return `<div class="schedule-item" style="align-items:center">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:24px;height:24px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="color:white;font-size:10px;font-weight:bold">${i + 1}</span>
+        </div>
+        <div>
+          <div class="title">${pin.label}</div>
+          <div class="detail">${pin.pinType} · (${pin.x.toFixed(2)}, ${pin.y.toFixed(2)})${pin.description ? ' · ' + pin.description : ''}</div>
+        </div>
+      </div>
+      <button class="btn-danger" onclick="deleteMapPin(${i})">Delete</button>
+    </div>`;
+  }).join('');
+}
+
+function selectMapPin(index) {
+  const pin = mapEditorPins[index];
+  toast(`Pin ${index + 1}: ${pin.label} (${pin.pinType})`);
+}
+
+async function placePin(x, y) {
+  const label = document.getElementById('mapPinLabel').value.trim();
+  const pinType = document.getElementById('mapPinType').value;
+  const description = document.getElementById('mapPinDescription').value.trim();
+
+  if (!label) {
+    toast('Enter a pin label first');
+    document.getElementById('mapPinLabel').focus();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ label, pinType, x, y, description })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const pin = await res.json();
+
+    mapEditorPins.push({
+      id: pin.id,
+      label,
+      pinType,
+      x,
+      y,
+      description
+    });
+
+    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+    document.getElementById('mapPinLabel').value = '';
+    document.getElementById('mapPinDescription').value = '';
+    renderMapPins();
+    renderMapPinsList();
+    toast(`Placed: ${label}`);
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+async function deleteMapPin(index) {
+  const pin = mapEditorPins[index];
+  if (!confirm(`Delete pin "${pin.label}"?`)) return;
+
+  try {
+    if (pin.id) {
+      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+    }
+    mapEditorPins.splice(index, 1);
+    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+    renderMapPins();
+    renderMapPinsList();
+    toast('Pin deleted');
   } catch (e) {
     toast('Error: ' + e.message);
   }
