@@ -569,9 +569,29 @@
         </div>
       </div>
 
-      <!-- AI Detection (shown in both modes) -->
-      <div style="margin-bottom:12px">
-        <button class="btn-primary" onclick="aiDetectPins()" id="aiDetectBtn" style="width:100%">🤖 AI Detect Pins from Map Image</button>
+      <!-- Template matching -->
+      <div id="templateControls" style="display:none;margin-bottom:12px">
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:600">Icon Selection</span>
+            <button class="btn-danger" onclick="cancelTemplateSelect()" style="font-size:11px;padding:2px 8px">Cancel</button>
+          </div>
+          <p style="color:#94a3b8;font-size:12px;margin-bottom:8px">
+            Click and drag on the map to select one icon. Then we'll find all copies.
+          </p>
+          <div style="display:flex;gap:8px;align-items:center">
+            <canvas id="templatePreview" width="48" height="48" style="border:1px solid #334155;border-radius:4px;background:#0f172a"></canvas>
+            <div style="flex:1">
+              <div id="templateStatus" style="color:#64748b;font-size:12px">Draw a rectangle on the map</div>
+            </div>
+            <button class="btn-primary" onclick="findTemplateMatches()" id="findMatchesBtn" disabled style="font-size:12px;padding:4px 12px">Find All</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;display:flex;gap:8px">
+        <button class="btn-secondary" onclick="startTemplateSelect()" id="templateSelectBtn" style="flex:1">🔍 Select Icon to Find Copies</button>
+        <button class="btn-secondary" onclick="aiDetectPins()" id="aiDetectBtn" style="flex:1">🤖 AI Detect</button>
       </div>
 
       <!-- Map image with clickable overlay -->
@@ -582,6 +602,9 @@
         <img id="mapImage" style="width:100%;display:none" />
         <div id="mapPinsOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
         <div id="mapCalOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
+        <div id="mapSelectOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none">
+          <div id="selectRect" style="position:absolute;border:2px solid #f59e0b;background:rgba(245,158,11,0.15)"></div>
+        </div>
       </div>
 
       <!-- Pin list -->
@@ -1578,6 +1601,169 @@ async function autoPlacePins() {
   renderMapPins();
   renderMapPinsList();
   toast(`Auto-placed ${placed} pins`);
+}
+
+// ---- Template Matching ----
+
+let templateMode = false;
+let templateDragStart = null;
+let templateRegion = null; // {x, y, w, h} in 0-1 coords
+
+function startTemplateSelect() {
+  templateMode = true;
+  templateRegion = null;
+  document.getElementById('templateControls').style.display = 'block';
+  document.getElementById('mapSelectOverlay').style.display = 'block';
+  document.getElementById('mapSelectOverlay').style.pointerEvents = 'auto';
+  document.getElementById('templateStatus').textContent = 'Draw a rectangle around one icon on the map';
+  document.getElementById('findMatchesBtn').disabled = true;
+
+  const overlay = document.getElementById('mapSelectOverlay');
+  const rect = document.getElementById('selectRect');
+
+  overlay.onmousedown = (e) => {
+    const bounds = overlay.getBoundingClientRect();
+    templateDragStart = {
+      x: (e.clientX - bounds.left) / bounds.width,
+      y: (e.clientY - bounds.top) / bounds.height
+    };
+    rect.style.left = (templateDragStart.x * 100) + '%';
+    rect.style.top = (templateDragStart.y * 100) + '%';
+    rect.style.width = '0';
+    rect.style.height = '0';
+    rect.style.display = 'block';
+  };
+
+  overlay.onmousemove = (e) => {
+    if (!templateDragStart) return;
+    const bounds = overlay.getBoundingClientRect();
+    const curX = (e.clientX - bounds.left) / bounds.width;
+    const curY = (e.clientY - bounds.top) / bounds.height;
+    const x = Math.min(templateDragStart.x, curX);
+    const y = Math.min(templateDragStart.y, curY);
+    const w = Math.abs(curX - templateDragStart.x);
+    const h = Math.abs(curY - templateDragStart.y);
+    rect.style.left = (x * 100) + '%';
+    rect.style.top = (y * 100) + '%';
+    rect.style.width = (w * 100) + '%';
+    rect.style.height = (h * 100) + '%';
+  };
+
+  overlay.onmouseup = (e) => {
+    if (!templateDragStart) return;
+    const bounds = overlay.getBoundingClientRect();
+    const endX = (e.clientX - bounds.left) / bounds.width;
+    const endY = (e.clientY - bounds.top) / bounds.height;
+    const x = Math.min(templateDragStart.x, endX);
+    const y = Math.min(templateDragStart.y, endY);
+    const w = Math.abs(endX - templateDragStart.x);
+    const h = Math.abs(endY - templateDragStart.y);
+    templateDragStart = null;
+
+    if (w < 0.01 || h < 0.01) return; // too small
+
+    templateRegion = {x, y, w, h};
+    document.getElementById('templateStatus').textContent = `Selected region: ${Math.round(w*100)}% × ${Math.round(h*100)}%`;
+    document.getElementById('findMatchesBtn').disabled = false;
+
+    // Draw preview
+    const img = document.getElementById('mapImage');
+    const canvas = document.getElementById('templatePreview');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 48, 48);
+    ctx.drawImage(img,
+      x * img.naturalWidth, y * img.naturalHeight,
+      w * img.naturalWidth, h * img.naturalHeight,
+      0, 0, 48, 48
+    );
+  };
+}
+
+function cancelTemplateSelect() {
+  templateMode = false;
+  templateRegion = null;
+  document.getElementById('templateControls').style.display = 'none';
+  document.getElementById('mapSelectOverlay').style.display = 'none';
+  document.getElementById('mapSelectOverlay').style.pointerEvents = 'none';
+  document.getElementById('selectRect').style.display = 'none';
+}
+
+async function findTemplateMatches() {
+  if (!templateRegion) return;
+
+  const mapURL = document.getElementById('mapImageURL').value.trim();
+  const label = document.getElementById('mapPinLabel').value.trim() || 'Detected Icon';
+  const pinType = document.getElementById('mapPinType').value;
+  const description = document.getElementById('mapPinDescription').value.trim();
+
+  const btn = document.getElementById('findMatchesBtn');
+  btn.textContent = 'Scanning...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/admin/match-template`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        mapImageURL: mapURL,
+        template: templateRegion,
+        threshold: 0.85
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Match failed');
+    }
+
+    const data = await res.json();
+    const matches = data.matches || [];
+
+    if (matches.length === 0) {
+      toast('No matches found — try selecting a larger or clearer icon');
+      return;
+    }
+
+    // Place pins at each match
+    let placed = 0;
+    for (const match of matches) {
+      try {
+        const saveRes = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
+          method: 'POST',
+          headers: adminHeaders(),
+          body: JSON.stringify({
+            label: matches.length > 1 ? `${label} ${placed + 1}` : label,
+            pinType,
+            x: match.x,
+            y: match.y,
+            description
+          })
+        });
+        if (!saveRes.ok) continue;
+        const saved = await saveRes.json();
+        mapEditorPins.push({
+          id: saved.id,
+          label: matches.length > 1 ? `${label} ${placed + 1}` : label,
+          pinType,
+          x: match.x,
+          y: match.y,
+          description
+        });
+        placed++;
+      } catch(e) {}
+    }
+
+    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+    renderMapPins();
+    renderMapPinsList();
+    cancelTemplateSelect();
+    toast(`Found ${matches.length} matches, placed ${placed} pins`);
+  } catch (e) {
+    toast('Error: ' + e.message);
+  } finally {
+    btn.textContent = 'Find All';
+    btn.disabled = false;
+  }
 }
 
 async function aiDetectPins() {

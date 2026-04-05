@@ -579,6 +579,135 @@ ${text}`
 });
 
 // =====================
+// TEMPLATE MATCHING
+// =====================
+
+// POST /api/admin/match-template — find all instances of a selected icon region in the map
+router.post('/match-template', async (req, res) => {
+  try {
+    const { mapImageURL, template, threshold = 0.85 } = req.body;
+
+    if (!mapImageURL || !template) {
+      return res.status(400).json({ error: 'mapImageURL and template region required' });
+    }
+
+    const sharp = require('sharp');
+
+    // Fetch the map image
+    const imgResponse = await fetch(mapImageURL);
+    if (!imgResponse.ok) throw new Error(`Failed to fetch image: ${imgResponse.status}`);
+    const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+
+    const metadata = await sharp(imgBuffer).metadata();
+    const imgWidth = metadata.width;
+    const imgHeight = metadata.height;
+
+    // Extract the template region
+    const tLeft = Math.round(template.x * imgWidth);
+    const tTop = Math.round(template.y * imgHeight);
+    const tWidth = Math.max(Math.round(template.w * imgWidth), 1);
+    const tHeight = Math.max(Math.round(template.h * imgHeight), 1);
+
+    console.log(`[Template] Image: ${imgWidth}x${imgHeight}, template region: ${tLeft},${tTop} ${tWidth}x${tHeight}`);
+
+    // Get raw pixel data for both template and full image
+    const templatePixels = await sharp(imgBuffer)
+      .extract({ left: tLeft, top: tTop, width: tWidth, height: tHeight })
+      .resize(Math.min(tWidth, 32), Math.min(tHeight, 32), { fit: 'fill' }) // normalize size for comparison
+      .raw()
+      .toBuffer();
+
+    const templateSize = Math.min(tWidth, 32);
+    const templateSizeH = Math.min(tHeight, 32);
+
+    // Scale down the full image for faster scanning
+    const scanScale = Math.min(1, 1000 / imgWidth);
+    const scanWidth = Math.round(imgWidth * scanScale);
+    const scanHeight = Math.round(imgHeight * scanScale);
+    const scanTemplateW = Math.round(templateSize * scanScale * (imgWidth / tWidth) * (tWidth / Math.min(tWidth, 32)));
+    const scanTemplateH = Math.round(templateSizeH * scanScale * (imgHeight / tHeight) * (tHeight / Math.min(tHeight, 32)));
+
+    const fullPixels = await sharp(imgBuffer)
+      .resize(scanWidth, scanHeight, { fit: 'fill' })
+      .raw()
+      .toBuffer();
+
+    // Compute average color of template
+    let tR = 0, tG = 0, tB = 0, tCount = 0;
+    for (let i = 0; i < templatePixels.length; i += 3) {
+      tR += templatePixels[i];
+      tG += templatePixels[i + 1];
+      tB += templatePixels[i + 2];
+      tCount++;
+    }
+    tR /= tCount; tG /= tCount; tB /= tCount;
+
+    console.log(`[Template] Template avg color: R${Math.round(tR)} G${Math.round(tG)} B${Math.round(tB)}`);
+
+    // Slide a window across the full image and compare color similarity
+    const stepX = Math.max(Math.round(tWidth * scanScale * 0.3), 2);
+    const stepY = Math.max(Math.round(tHeight * scanScale * 0.3), 2);
+    const windowW = Math.max(Math.round(tWidth * scanScale), 4);
+    const windowH = Math.max(Math.round(tHeight * scanScale), 4);
+
+    console.log(`[Template] Scan: ${scanWidth}x${scanHeight}, window: ${windowW}x${windowH}, step: ${stepX}x${stepY}`);
+
+    const matches = [];
+
+    for (let sy = 0; sy < scanHeight - windowH; sy += stepY) {
+      for (let sx = 0; sx < scanWidth - windowW; sx += stepX) {
+        // Compute average color of this window
+        let wR = 0, wG = 0, wB = 0, wCount = 0;
+        for (let wy = 0; wy < windowH && (sy + wy) < scanHeight; wy++) {
+          for (let wx = 0; wx < windowW && (sx + wx) < scanWidth; wx++) {
+            const idx = ((sy + wy) * scanWidth + (sx + wx)) * 3;
+            if (idx + 2 < fullPixels.length) {
+              wR += fullPixels[idx];
+              wG += fullPixels[idx + 1];
+              wB += fullPixels[idx + 2];
+              wCount++;
+            }
+          }
+        }
+        if (wCount === 0) continue;
+        wR /= wCount; wG /= wCount; wB /= wCount;
+
+        // Color distance (normalized 0-1, 0 = identical)
+        const dist = Math.sqrt(
+          Math.pow(tR - wR, 2) + Math.pow(tG - wG, 2) + Math.pow(tB - wB, 2)
+        ) / 441.67; // max possible distance = sqrt(255^2 * 3)
+
+        const similarity = 1 - dist;
+
+        if (similarity >= threshold) {
+          const cx = (sx + windowW / 2) / scanWidth;
+          const cy = (sy + windowH / 2) / scanHeight;
+
+          // Check if too close to an existing match (dedup)
+          const tooClose = matches.some(m =>
+            Math.abs(m.x - cx) < (windowW / scanWidth) * 1.5 &&
+            Math.abs(m.y - cy) < (windowH / scanHeight) * 1.5
+          );
+
+          if (!tooClose) {
+            matches.push({ x: cx, y: cy, similarity: Math.round(similarity * 100) / 100 });
+          }
+        }
+      }
+    }
+
+    // Sort by similarity descending
+    matches.sort((a, b) => b.similarity - a.similarity);
+
+    console.log(`[Template] Found ${matches.length} matches above threshold ${threshold}`);
+    res.json({ matches, count: matches.length });
+  } catch (err) {
+    console.error('Error matching template:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =====================
 // AI MAP PIN DETECTION
 // =====================
 
