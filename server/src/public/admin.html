@@ -1410,24 +1410,33 @@ function renderMapPins() {
   overlay.innerHTML = mapEditorPins.map((pin, i) => {
     const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', Custom: '#6b7280' };
     const color = colors[pin.pinType] || '#6b7280';
-    return `<div class="map-pin-draggable" data-index="${i}" style="position:absolute;left:${pin.x * 100}%;top:${pin.y * 100}%;transform:translate(-50%,-50%);cursor:grab;touch-action:none" title="${pin.label} — drag to move">
-      <div style="width:20px;height:20px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center">
+    const selected = selectedMapPinIndex === i;
+    const border = selected ? '3px solid #f59e0b' : '2px solid white';
+    const size = selected ? '24px' : '20px';
+    return `<div class="map-pin-draggable" data-index="${i}" style="position:absolute;left:${pin.x * 100}%;top:${pin.y * 100}%;transform:translate(-50%,-50%);cursor:grab;touch-action:none" title="${pin.label} — drag to move, click to edit">
+      <div style="width:${size};height:${size};border-radius:50%;background:${color};border:${border};box-shadow:0 1px 3px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;transition:all 0.15s">
         <span style="color:white;font-size:8px;font-weight:bold">${i + 1}</span>
       </div>
     </div>`;
   }).join('');
 
-  // Attach drag handlers
+  // Attach drag and click handlers
   overlay.querySelectorAll('.map-pin-draggable').forEach(el => {
     let dragging = false;
+    let moved = false;
+    let startX = 0, startY = 0;
     el.addEventListener('mousedown', (e) => {
       e.stopPropagation();
       dragging = true;
+      moved = false;
+      startX = e.clientX;
+      startY = e.clientY;
       el.style.cursor = 'grabbing';
       el.style.zIndex = '100';
     });
     document.addEventListener('mousemove', (e) => {
       if (!dragging) return;
+      if (Math.abs(e.clientX - startX) > 3 || Math.abs(e.clientY - startY) > 3) moved = true;
       const container = document.getElementById('mapImageContainer');
       const rect = container.getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
@@ -1466,6 +1475,11 @@ function renderMapPins() {
         } catch(e) { console.error('Failed to update pin position:', e); }
       }
       // Don't re-render list on drag — avoids scroll jump
+
+      // If barely moved, treat as click to select for editing
+      if (!moved) {
+        selectMapPin(index);
+      }
     });
   });
 }
@@ -1494,9 +1508,75 @@ function renderMapPinsList() {
   }).join('');
 }
 
+let selectedMapPinIndex = null;
+
 function selectMapPin(index) {
   const pin = mapEditorPins[index];
-  toast(`Pin ${index + 1}: ${pin.label} (${pin.pinType})`);
+  selectedMapPinIndex = index;
+
+  // Populate the form fields with this pin's data
+  document.getElementById('mapPinType').value = pin.pinType;
+  document.getElementById('mapPinLabel').value = pin.label;
+  document.getElementById('mapPinDescription').value = pin.description || '';
+
+  // Show update button
+  const existing = document.getElementById('updatePinBtn');
+  if (existing) existing.remove();
+
+  const controls = document.getElementById('pinControls');
+  const btn = document.createElement('div');
+  btn.id = 'updatePinBtn';
+  btn.className = 'actions';
+  btn.style.marginTop = '8px';
+  btn.innerHTML = `
+    <button class="btn-primary" onclick="updateSelectedPin()" style="font-size:13px">Update Pin ${index + 1}</button>
+    <button class="btn-secondary" onclick="deselectPin()" style="font-size:13px">Cancel</button>
+  `;
+  controls.appendChild(btn);
+
+  // Highlight the pin
+  renderMapPins();
+  toast(`Editing pin ${index + 1}: ${pin.label}`);
+}
+
+function deselectPin() {
+  selectedMapPinIndex = null;
+  document.getElementById('mapPinLabel').value = '';
+  document.getElementById('mapPinDescription').value = '';
+  const btn = document.getElementById('updatePinBtn');
+  if (btn) btn.remove();
+  renderMapPins();
+}
+
+async function updateSelectedPin() {
+  if (selectedMapPinIndex === null) return;
+  const pin = mapEditorPins[selectedMapPinIndex];
+  const newLabel = document.getElementById('mapPinLabel').value.trim();
+  const newType = document.getElementById('mapPinType').value;
+  const newDesc = document.getElementById('mapPinDescription').value.trim();
+
+  if (!newLabel) { toast('Enter a label'); return; }
+
+  // Delete old and recreate with new metadata at same position
+  try {
+    if (pin.id) {
+      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+    }
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
+      method: 'POST', headers: adminHeaders(),
+      body: JSON.stringify({ label: newLabel, pinType: newType, x: pin.x, y: pin.y, description: newDesc })
+    });
+    if (res.ok) {
+      const saved = await res.json();
+      mapEditorPins[selectedMapPinIndex] = { id: saved.id, label: newLabel, pinType: newType, x: pin.x, y: pin.y, description: newDesc };
+    }
+    deselectPin();
+    renderMapPins();
+    renderMapPinsList();
+    toast('Pin updated');
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
 }
 
 async function placePin(x, y) {
