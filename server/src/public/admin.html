@@ -505,8 +505,12 @@
 
       <!-- Pin placement controls -->
       <div id="pinControls">
-        <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">
-          Click on the map to place a pin. Select a pin type and label first.
+          <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button class="tab" id="modePlaceBtn" onclick="setPinMode('place')" style="flex:1;font-size:12px;padding:6px">+ Place Pins</button>
+          <button class="tab active" id="modeEditBtn" onclick="setPinMode('edit')" style="flex:1;font-size:12px;padding:6px">✏️ Edit Pins</button>
+        </div>
+        <p id="pinModeHint" style="color:#94a3b8;font-size:12px;margin-bottom:12px">
+          Click a pin to select it for editing, dragging, or deleting.
         </p>
 
         <div class="form-row" style="margin-bottom:12px">
@@ -1314,6 +1318,17 @@ function showMapEditor() {
   loadMapPins();
 }
 
+function setPinMode(mode) {
+  pinMode = mode;
+  document.getElementById('modePlaceBtn').classList.toggle('active', mode === 'place');
+  document.getElementById('modeEditBtn').classList.toggle('active', mode === 'edit');
+  document.getElementById('pinModeHint').textContent = mode === 'place'
+    ? 'Click the map to place pins. Set type and label above.'
+    : 'Click a pin to select it for editing, dragging, or deleting.';
+  document.getElementById('mapImageContainer').style.cursor = mode === 'place' ? 'crosshair' : 'default';
+  if (mode === 'place') deselectPin();
+}
+
 function setMapMode(mode) {
   mapMode = mode;
   document.getElementById('tabPlacePin').classList.toggle('active', mode === 'pin');
@@ -1353,9 +1368,10 @@ function loadMapImage(url) {
       document.getElementById(label).textContent = `Point ${settingCalPoint + 1} set: (${x.toFixed(3)}, ${y.toFixed(3)})`;
       settingCalPoint = (settingCalPoint + 1) % 2;
       renderCalibrationOverlay();
-    } else {
+    } else if (pinMode === 'place') {
       placePin(x, y);
     }
+    // In edit mode, clicks on the background do nothing — pin clicks handled by pin elements
   };
 }
 
@@ -1406,7 +1422,7 @@ function renderMapPins() {
   const img = document.getElementById('mapImage');
   if (img.style.display === 'none') return;
 
-  overlay.style.pointerEvents = 'auto';
+  overlay.style.pointerEvents = pinMode === 'edit' ? 'auto' : 'none';
   overlay.innerHTML = mapEditorPins.map((pin, i) => {
     const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', Custom: '#6b7280' };
     const color = colors[pin.pinType] || '#6b7280';
@@ -1476,8 +1492,8 @@ function renderMapPins() {
       }
       // Don't re-render list on drag — avoids scroll jump
 
-      // If barely moved, treat as click to select for editing
-      if (!moved) {
+      // If barely moved, treat as click to select (edit mode only)
+      if (!moved && pinMode === 'edit') {
         selectMapPin(index);
       }
     });
@@ -1767,6 +1783,7 @@ async function autoPlacePins() {
 
 // ---- Template Matching ----
 
+let pinMode = 'edit'; // 'place' or 'edit'
 let templateMode = false;
 let templateDragStart = null;
 let templateRegion = null; // {x, y, w, h} in 0-1 coords
