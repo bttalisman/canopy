@@ -66,11 +66,45 @@ enum TransitStepType: String {
 
 struct RealTimeArrival: Identifiable {
     let id = UUID()
+    let routeId: String
     let routeName: String
     let headsign: String
     let minutesUntilArrival: Int
     let isRealTime: Bool
     let stopName: String
+}
+
+// MARK: - OpenTripPlanner API Response Models
+
+struct OTPResponse: Codable {
+    let plan: OTPPlan?
+}
+
+struct OTPPlan: Codable {
+    let itineraries: [OTPItinerary]
+}
+
+struct OTPItinerary: Codable {
+    let duration: Int // seconds
+    let startTime: Int64 // epoch ms
+    let endTime: Int64 // epoch ms
+    let legs: [OTPLeg]
+}
+
+struct OTPLeg: Codable {
+    let mode: String // WALK, BUS, RAIL, TRAM, FERRY
+    let route: String?
+    let routeShortName: String?
+    let duration: Double // seconds
+    let distance: Double // meters
+    let from: OTPPlace
+    let to: OTPPlace
+}
+
+struct OTPPlace: Codable {
+    let name: String
+    let lat: Double?
+    let lon: Double?
 }
 
 // MARK: - OneBusAway API Response Models
@@ -100,6 +134,7 @@ struct OBAArrivalEntry: Codable {
 }
 
 struct OBAArrival: Codable {
+    let routeId: String?
     let routeShortName: String?
     let tripHeadsign: String?
     let predictedArrivalTime: Int64

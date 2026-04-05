@@ -27,19 +27,6 @@ struct TransitDirectionsView: View {
                 .fontWeight(.semibold)
 
             // Apple Maps transit button (always show)
-            Button {
-                openInAppleMaps()
-            } label: {
-                Label("Get Transit Directions", systemImage: "map.fill")
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.blue)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-            .accessibilityLabel("Open transit directions to \(venueName) in Apple Maps")
-
             if isLoadingRoutes {
                 HStack(spacing: 8) {
                     ProgressView()
@@ -48,6 +35,19 @@ struct TransitDirectionsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            } else if routes.isEmpty && realTimeArrivals.isEmpty && !isLoadingArrivals {
+                Button {
+                    openInAppleMaps()
+                } label: {
+                    Label("Open in Apple Maps", systemImage: "map.fill")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.blue)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .accessibilityLabel("Open transit directions to \(venueName) in Apple Maps")
             } else if !routes.isEmpty {
                 // Route selector (if multiple)
                 if routes.count > 1 {
@@ -150,7 +150,7 @@ struct TransitDirectionsView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Nearby Departures")
+                            Text("Routes to Venue")
                                 .font(.caption)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.secondary)
@@ -270,9 +270,11 @@ struct TransitDirectionsView: View {
             return
         }
 
-        let arrivals = await TransitService.shared.fetchRealTimeArrivals(
-            latitude: userLoc.coordinate.latitude,
-            longitude: userLoc.coordinate.longitude
+        let arrivals = await TransitService.shared.fetchTransitArrivals(
+            userLatitude: userLoc.coordinate.latitude,
+            userLongitude: userLoc.coordinate.longitude,
+            venueLatitude: venueLatitude,
+            venueLongitude: venueLongitude
         )
         realTimeArrivals = arrivals
         isLoadingArrivals = false

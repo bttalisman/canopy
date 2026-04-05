@@ -8,6 +8,7 @@ actor TransitService {
     private let session = URLSession.shared
     private let decoder = JSONDecoder()
     private let obaBaseURL = "https://api.pugetsound.onebusaway.org/api/where"
+    private let otpBaseURL = "https://otp.prod.sound.obaweb.org/otp/routers/default"
 
     // Cache
     private var routeCache: [String: CachedRoutes] = [:]
@@ -31,7 +32,7 @@ actor TransitService {
         return "\(fLat),\(fLng)->\(tLat),\(tLng)"
     }
 
-    // MARK: - Transit Routes via MKDirections
+    // MARK: - Transit Routes via OpenTripPlanner
 
     func fetchTransitRoutes(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) async throws -> [TransitRoute] {
         let key = routeCacheKey(from: origin, to: destination)
@@ -39,101 +40,74 @@ actor TransitService {
             return cached.routes
         }
 
-        let request = MKDirections.Request()
-        request.source = MKMapItem(placemark: MKPlacemark(coordinate: origin))
-        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
-        request.transportType = .transit
+        var components = URLComponents(string: "\(otpBaseURL)/plan")!
+        components.queryItems = [
+            URLQueryItem(name: "fromPlace", value: "\(origin.latitude),\(origin.longitude)"),
+            URLQueryItem(name: "toPlace", value: "\(destination.latitude),\(destination.longitude)"),
+            URLQueryItem(name: "mode", value: "TRANSIT,WALK"),
+            URLQueryItem(name: "arriveBy", value: "false"),
+            URLQueryItem(name: "maxWalkDistance", value: "800"),
+            URLQueryItem(name: "numItineraries", value: "3"),
+        ]
 
-        let directions = MKDirections(request: request)
+        guard let url = components.url else { throw TransitError.invalidURL }
 
-        do {
-            let response = try await directions.calculate()
-            let routes = response.routes.map { mapRoute($0) }
-            routeCache[key] = CachedRoutes(routes: routes, fetchedAt: Date())
-            return routes
-        } catch {
-            print("[Transit] MKDirections error: \(error.localizedDescription)")
+        print("[Transit] OTP URL: \(url)")
+
+        let (data, response) = try await session.data(from: url)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            print("[Transit] OTP error: HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
             return []
         }
+
+        let otpResponse = try decoder.decode(OTPResponse.self, from: data)
+        guard let itineraries = otpResponse.plan?.itineraries else { return [] }
+
+        let routes = itineraries.map { mapItinerary($0) }
+        print("[Transit] OTP found \(routes.count) routes")
+        routeCache[key] = CachedRoutes(routes: routes, fetchedAt: Date())
+        return routes
     }
 
-    private nonisolated func mapRoute(_ mkRoute: MKRoute) -> TransitRoute {
-        let steps = mkRoute.steps
-            .filter { !$0.instructions.isEmpty }
-            .map { step -> TransitStep in
-                let type = mapTransportType(step)
-                let lineName = extractLineName(from: step.instructions, type: type)
+    private nonisolated func mapItinerary(_ itinerary: OTPItinerary) -> TransitRoute {
+        let steps = itinerary.legs.map { leg -> TransitStep in
+            let type = mapOTPMode(leg.mode)
+            let routeName = leg.routeShortName ?? leg.route
 
-                return TransitStep(
-                    instruction: step.instructions,
-                    transportType: type,
-                    lineName: lineName,
-                    departureStopName: nil,
-                    arrivalStopName: nil,
-                    distance: step.distance > 0 ? step.distance : nil,
-                    duration: step.distance > 0 ? step.distance / 1.4 : 0 // ~walking speed estimate
-                )
+            let instruction: String
+            if type == .walk {
+                instruction = "Walk to \(leg.to.name)"
+            } else {
+                instruction = "Take \(routeName ?? leg.mode) to \(leg.to.name)"
             }
+
+            return TransitStep(
+                instruction: instruction,
+                transportType: type,
+                lineName: routeName,
+                departureStopName: leg.from.name,
+                arrivalStopName: leg.to.name,
+                distance: leg.distance,
+                duration: leg.duration
+            )
+        }
 
         return TransitRoute(
             steps: steps,
-            totalTravelTime: mkRoute.expectedTravelTime,
-            expectedDepartureTime: Date(),
-            expectedArrivalTime: Date().addingTimeInterval(mkRoute.expectedTravelTime)
+            totalTravelTime: Double(itinerary.duration),
+            expectedDepartureTime: Date(timeIntervalSince1970: Double(itinerary.startTime) / 1000),
+            expectedArrivalTime: Date(timeIntervalSince1970: Double(itinerary.endTime) / 1000)
         )
     }
 
-    private nonisolated func mapTransportType(_ step: MKRoute.Step) -> TransitStepType {
-        let instruction = step.instructions.lowercased()
-
-        if step.transportType == .walking || instruction.contains("walk") {
-            return .walk
+    private nonisolated func mapOTPMode(_ mode: String) -> TransitStepType {
+        switch mode.uppercased() {
+        case "WALK": return .walk
+        case "BUS": return .bus
+        case "RAIL", "TRAM", "SUBWAY": return .train
+        case "FERRY": return .ferry
+        default: return .other
         }
-        if instruction.contains("light rail") || instruction.contains("link") || instruction.contains("train") || instruction.contains("sounder") {
-            return .train
-        }
-        if instruction.contains("ferry") || instruction.contains("water taxi") {
-            return .ferry
-        }
-        if instruction.contains("bus") || instruction.contains("route") || instruction.contains("line") {
-            return .bus
-        }
-        if step.transportType == .transit {
-            return .bus
-        }
-        return .walk
-    }
-
-    private nonisolated func extractLineName(from instruction: String, type: TransitStepType) -> String? {
-        guard type != .walk else { return nil }
-
-        // Try to extract route/line name from instruction text
-        // Common patterns: "Take Route 8", "Board Link Light Rail", "Take the 40"
-        let patterns = [
-            "take (route \\d+)",
-            "take the (\\d+)",
-            "board (.+?) (?:toward|to|at)",
-            "take (.+?) (?:toward|to|at)",
-            "(route \\d+)",
-            "(line \\d+)",
-        ]
-
-        for pattern in patterns {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-               let match = regex.firstMatch(in: instruction, range: NSRange(instruction.startIndex..., in: instruction)),
-               match.numberOfRanges > 1,
-               let range = Range(match.range(at: 1), in: instruction) {
-                return String(instruction[range]).capitalized
-            }
-        }
-
-        // If it's a transit step but we can't extract the name, use the first few words
-        if type != .walk {
-            let words = instruction.split(separator: " ").prefix(4).joined(separator: " ")
-            return words
-        }
-
-        return nil
     }
 
     // MARK: - OneBusAway: Nearby Stops
@@ -212,6 +186,7 @@ actor TransitService {
             guard minutesAway >= 0 else { return nil }
 
             return RealTimeArrival(
+                routeId: arrival.routeId ?? "",
                 routeName: arrival.routeShortName ?? "?",
                 headsign: arrival.tripHeadsign ?? "Unknown",
                 minutesUntilArrival: minutesAway,
@@ -224,25 +199,45 @@ actor TransitService {
         return arrivals
     }
 
-    // MARK: - Convenience: Real-time arrivals near user
+    // MARK: - Filtered arrivals: only routes that go to the venue
 
-    func fetchRealTimeArrivals(latitude: Double, longitude: Double) async -> [RealTimeArrival] {
+    func fetchTransitArrivals(
+        userLatitude: Double, userLongitude: Double,
+        venueLatitude: Double, venueLongitude: Double
+    ) async -> [RealTimeArrival] {
         do {
-            let stops = try await fetchNearbyStops(latitude: latitude, longitude: longitude)
-            let userLoc = CLLocation(latitude: latitude, longitude: longitude)
+            // 1. Find stops near the venue and collect route IDs that serve it
+            let venueStops = try await fetchNearbyStops(latitude: venueLatitude, longitude: venueLongitude, radius: 500)
+            let venueRouteIds = Set(venueStops.flatMap { $0.routeIds ?? [] })
+            print("[Transit] Venue has \(venueRouteIds.count) routes serving \(venueStops.count) nearby stops")
 
-            // Sort by distance and take closest 3
-            let closest = stops
+            guard !venueRouteIds.isEmpty else { return [] }
+
+            // 2. Find stops near the user
+            let userStops = try await fetchNearbyStops(latitude: userLatitude, longitude: userLongitude, radius: 500)
+            let userLoc = CLLocation(latitude: userLatitude, longitude: userLongitude)
+
+            // 3. Filter to stops that share at least one route with the venue
+            let relevantStops = userStops
+                .filter { stop in
+                    guard let stopRoutes = stop.routeIds else { return false }
+                    return !Set(stopRoutes).isDisjoint(with: venueRouteIds)
+                }
                 .sorted { CLLocation(latitude: $0.lat, longitude: $0.lon).distance(from: userLoc) < CLLocation(latitude: $1.lat, longitude: $1.lon).distance(from: userLoc) }
-                .prefix(3)
 
+            print("[Transit] \(relevantStops.count) of \(userStops.count) user stops have venue-bound routes")
+
+            guard !relevantStops.isEmpty else { return [] }
+
+            // 4. Get arrivals at the relevant stops, filtered to venue-bound routes only
             var allArrivals: [RealTimeArrival] = []
-            for stop in closest {
+            for stop in relevantStops.prefix(5) {
                 do {
                     let arrivals = try await fetchArrivals(stopId: stop.id)
-                    print("[Transit] Got \(arrivals.count) arrivals for stop \(stop.name)")
-                    let withStopName = arrivals.map { arrival in
+                    let filtered = arrivals.filter { venueRouteIds.contains($0.routeId) }
+                    let withStopName = filtered.map { arrival in
                         RealTimeArrival(
+                            routeId: arrival.routeId,
                             routeName: arrival.routeName,
                             headsign: arrival.headsign,
                             minutesUntilArrival: arrival.minutesUntilArrival,
@@ -250,13 +245,14 @@ actor TransitService {
                             stopName: stop.name
                         )
                     }
+                    print("[Transit] \(filtered.count) of \(arrivals.count) arrivals at \(stop.name) go to venue")
                     allArrivals.append(contentsOf: withStopName)
                 } catch {
                     print("[Transit] Arrivals error for stop \(stop.name): \(error)")
                 }
             }
 
-            // Deduplicate by route+headsign (keep soonest), return top 8
+            // 5. Deduplicate and return
             var seen: Set<String> = []
             return allArrivals
                 .sorted { $0.minutesUntilArrival < $1.minutesUntilArrival }
