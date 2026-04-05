@@ -2159,9 +2159,12 @@ async function deleteAllPins() {
     }
   }
   mapEditorPins = [];
+  selectedMapPinIndex = null;
   document.getElementById('mapPinCount').textContent = '0 pins';
-  renderMapPins();
-  renderMapPinsList();
+  document.getElementById('mapPinsOverlay').innerHTML = '';
+  document.getElementById('mapPinsList').innerHTML = '<div class="empty">No pins yet. Click on the map to place one.</div>';
+  const btn = document.getElementById('updatePinBtn');
+  if (btn) btn.remove();
   toast('All pins deleted');
 }
 
