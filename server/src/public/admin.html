@@ -565,8 +565,13 @@
 
         <div class="actions" style="margin-bottom:12px">
           <button class="btn-primary" onclick="saveCalibration()">Save Calibration</button>
-          <button class="btn-secondary" onclick="autoPlacePins()">Auto-Place Pins from GPS</button>
+          <button class="btn-secondary" onclick="autoPlacePins()">Auto-Place from GPS</button>
         </div>
+      </div>
+
+      <!-- AI Detection (shown in both modes) -->
+      <div style="margin-bottom:12px">
+        <button class="btn-primary" onclick="aiDetectPins()" id="aiDetectBtn" style="width:100%">🤖 AI Detect Pins from Map Image</button>
       </div>
 
       <!-- Map image with clickable overlay -->
@@ -1573,6 +1578,81 @@ async function autoPlacePins() {
   renderMapPins();
   renderMapPinsList();
   toast(`Auto-placed ${placed} pins`);
+}
+
+async function aiDetectPins() {
+  const mapURL = document.getElementById('mapImageURL').value.trim();
+  if (!mapURL) { toast('Set a map image URL first'); return; }
+
+  const btn = document.getElementById('aiDetectBtn');
+  btn.textContent = '🤖 Analyzing map...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/admin/detect-map-pins`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        mapImageURL: mapURL,
+        eventName: currentEventData?.name || ''
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Detection failed');
+    }
+
+    const data = await res.json();
+    const detected = data.pins || [];
+
+    if (detected.length === 0) {
+      toast('No locations detected on this map');
+      return;
+    }
+
+    // Show detected pins as a review list before placing
+    let placed = 0;
+    for (const pin of detected) {
+      // Skip if label already exists
+      if (mapEditorPins.some(p => p.label === pin.label)) continue;
+
+      try {
+        const saveRes = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
+          method: 'POST',
+          headers: adminHeaders(),
+          body: JSON.stringify({
+            label: pin.label,
+            pinType: pin.pinType || 'Custom',
+            x: pin.x,
+            y: pin.y,
+            description: pin.description || ''
+          })
+        });
+        if (!saveRes.ok) continue;
+        const saved = await saveRes.json();
+        mapEditorPins.push({
+          id: saved.id,
+          label: pin.label,
+          pinType: pin.pinType || 'Custom',
+          x: pin.x,
+          y: pin.y,
+          description: pin.description || ''
+        });
+        placed++;
+      } catch(e) {}
+    }
+
+    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+    renderMapPins();
+    renderMapPinsList();
+    toast(`AI detected ${detected.length} locations, placed ${placed} new pins`);
+  } catch (e) {
+    toast('Error: ' + e.message);
+  } finally {
+    btn.textContent = '🤖 AI Detect Pins from Map Image';
+    btn.disabled = false;
+  }
 }
 
 async function deleteAllPins() {

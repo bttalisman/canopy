@@ -578,4 +578,93 @@ ${text}`
   }
 });
 
+// =====================
+// AI MAP PIN DETECTION
+// =====================
+
+// POST /api/admin/detect-map-pins — use Claude Vision to detect pins/landmarks on a map image
+router.post('/detect-map-pins', async (req, res) => {
+  try {
+    const { mapImageURL, eventName } = req.body;
+
+    if (!mapImageURL) {
+      return res.status(400).json({ error: 'mapImageURL is required' });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured on server' });
+    }
+
+    // Fetch the image and convert to base64
+    const imgResponse = await fetch(mapImageURL);
+    if (!imgResponse.ok) {
+      throw new Error(`Failed to fetch map image: HTTP ${imgResponse.status}`);
+    }
+
+    const imgBuffer = await imgResponse.arrayBuffer();
+    const base64 = Buffer.from(imgBuffer).toString('base64');
+
+    // Determine media type
+    const contentType = imgResponse.headers.get('content-type') || 'image/png';
+    const mediaType = contentType.includes('jpeg') || contentType.includes('jpg') ? 'image/jpeg' : 'image/png';
+
+    const client = new Anthropic();
+
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mediaType,
+              data: base64,
+            }
+          },
+          {
+            type: 'text',
+            text: `Analyze this venue/event map image${eventName ? ` for "${eventName}"` : ''}. Identify all notable locations, landmarks, facilities, and points of interest visible on the map.
+
+For each location found, provide:
+- label: the name as shown on the map (or a descriptive name if no label visible)
+- pinType: one of "Stage", "Food", "Restroom", "First Aid", "Exit", or "Custom"
+- x: horizontal position as a decimal from 0 (left edge) to 1 (right edge)
+- y: vertical position as a decimal from 0 (top edge) to 1 (bottom edge)
+- description: brief description of what this location is
+
+Look for:
+- Stages, performance areas, theaters, amphitheaters → "Stage"
+- Food courts, restaurants, bars, concessions, food trucks → "Food"
+- Restrooms, bathrooms, toilets → "Restroom"
+- First aid stations, medical → "First Aid"
+- Entrances, exits, gates, parking → "Exit"
+- Everything else (landmarks, attractions, info booths, etc.) → "Custom"
+
+Return ONLY a JSON array of objects. If you can't identify any locations, return [].
+Be as precise as possible with x,y coordinates — estimate the center of each location on the map image.`
+          }
+        ]
+      }]
+    });
+
+    const content = message.content[0].text.trim();
+
+    // Extract JSON
+    let jsonStr = content;
+    const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      jsonStr = codeBlockMatch[1].trim();
+    }
+
+    const pins = JSON.parse(jsonStr);
+    res.json({ pins, count: pins.length });
+  } catch (err) {
+    console.error('Error detecting map pins:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
