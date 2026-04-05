@@ -1648,7 +1648,9 @@ async function aiDetectPins() {
     renderMapPinsList();
     toast(`AI detected ${detected.length} locations, placed ${placed} new pins`);
   } catch (e) {
-    toast('Error: ' + e.message);
+    console.error('AI detect error:', e);
+    document.getElementById('mapPinsList').innerHTML = `<div class="empty" style="color:#f87171">Error: ${e.message}</div>`;
+    toast('AI detection failed — see error below');
   } finally {
     btn.textContent = '🤖 AI Detect Pins from Map Image';
     btn.disabled = false;

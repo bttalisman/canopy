@@ -603,13 +603,17 @@ router.post('/detect-map-pins', async (req, res) => {
 
     const imgBuffer = await imgResponse.arrayBuffer();
     const base64 = Buffer.from(imgBuffer).toString('base64');
+    const sizeKB = Math.round(base64.length / 1024);
+    console.log(`[AI Map] Image fetched: ${sizeKB}KB base64`);
 
     // Determine media type
     const contentType = imgResponse.headers.get('content-type') || 'image/png';
     const mediaType = contentType.includes('jpeg') || contentType.includes('jpg') ? 'image/jpeg' : 'image/png';
+    console.log(`[AI Map] Media type: ${mediaType}`);
 
     const client = new Anthropic();
 
+    console.log('[AI Map] Sending to Claude Vision...');
     const message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
