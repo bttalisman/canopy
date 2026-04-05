@@ -1465,7 +1465,7 @@ function renderMapPins() {
           }
         } catch(e) { console.error('Failed to update pin position:', e); }
       }
-      renderMapPinsList();
+      // Don't re-render list on drag — avoids scroll jump
     });
   });
 }
