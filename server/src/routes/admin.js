@@ -642,25 +642,28 @@ router.post('/detect-map-pins', async (req, res) => {
           },
           {
             type: 'text',
-            text: `Analyze this venue/event map image${eventName ? ` for "${eventName}"` : ''}. Identify all notable locations, landmarks, facilities, and points of interest visible on the map.
+            text: `This is a venue map image${eventName ? ` for "${eventName}"` : ''}. I need you to find the EXACT positions of icons and symbols drawn on this map.
 
-For each location found, provide:
-- label: the name as shown on the map (or a descriptive name if no label visible)
+Look carefully at the map for these specific visual symbols/icons:
+- Fork and knife icons, food/dining symbols → pinType: "Food"
+- Restroom/bathroom/toilet icons (person figures, WC signs) → pinType: "Restroom"
+- Medical cross, first aid symbols → pinType: "First Aid"
+- Arrow signs, gate markers, entrance/exit signs → pinType: "Exit"
+- Stage icons, music notes, performance area markers → pinType: "Stage"
+- Any other labeled icons, numbered markers, or symbols → pinType: "Custom"
+
+Also identify labeled buildings, venues, and landmarks that have text labels on the map.
+
+For EACH icon or labeled location, return:
+- label: the text label nearest to it, or a descriptive name (e.g. "Food Service", "Restrooms")
 - pinType: one of "Stage", "Food", "Restroom", "First Aid", "Exit", or "Custom"
-- x: horizontal position as a decimal from 0 (left edge) to 1 (right edge)
-- y: vertical position as a decimal from 0 (top edge) to 1 (bottom edge)
-- description: brief description of what this location is
+- x: the EXACT horizontal position of the CENTER of the icon/symbol, as a decimal from 0.0 (left edge of image) to 1.0 (right edge of image)
+- y: the EXACT vertical position of the CENTER of the icon/symbol, as a decimal from 0.0 (top edge of image) to 1.0 (bottom edge of image)
+- description: what this location is
 
-Look for:
-- Stages, performance areas, theaters, amphitheaters → "Stage"
-- Food courts, restaurants, bars, concessions, food trucks → "Food"
-- Restrooms, bathrooms, toilets → "Restroom"
-- First aid stations, medical → "First Aid"
-- Entrances, exits, gates, parking → "Exit"
-- Everything else (landmarks, attractions, info booths, etc.) → "Custom"
+CRITICAL: The x,y coordinates must point to the EXACT CENTER of each icon as drawn on the map. Be extremely precise — measure carefully relative to the full image dimensions. Do not guess approximate locations; find the actual drawn symbols and icons.
 
-Return ONLY a JSON array of objects. If you can't identify any locations, return [].
-Be as precise as possible with x,y coordinates — estimate the center of each location on the map image.`
+Return ONLY a JSON array. If no icons found, return [].`
           }
         ]
       }]
