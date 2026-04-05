@@ -585,7 +585,7 @@ ${text}`
 // POST /api/admin/match-template — find all instances of a selected icon region in the map
 router.post('/match-template', async (req, res) => {
   try {
-    const { mapImageURL, template, threshold = 0.85 } = req.body;
+    const { mapImageURL, template, threshold = 0.75 } = req.body;
 
     if (!mapImageURL || !template) {
       return res.status(400).json({ error: 'mapImageURL and template region required' });
@@ -598,108 +598,130 @@ router.post('/match-template', async (req, res) => {
     if (!imgResponse.ok) throw new Error(`Failed to fetch image: ${imgResponse.status}`);
     const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
 
-    const metadata = await sharp(imgBuffer).metadata();
-    const imgWidth = metadata.width;
-    const imgHeight = metadata.height;
+    // Scale image down for processing speed
+    const maxScanWidth = 800;
+    const origMeta = await sharp(imgBuffer).metadata();
+    const scale = Math.min(1, maxScanWidth / origMeta.width);
+    const scanWidth = Math.round(origMeta.width * scale);
+    const scanHeight = Math.round(origMeta.height * scale);
 
-    // Extract the template region
-    const tLeft = Math.round(template.x * imgWidth);
-    const tTop = Math.round(template.y * imgHeight);
-    const tWidth = Math.max(Math.round(template.w * imgWidth), 1);
-    const tHeight = Math.max(Math.round(template.h * imgHeight), 1);
-
-    console.log(`[Template] Image: ${imgWidth}x${imgHeight}, template region: ${tLeft},${tTop} ${tWidth}x${tHeight}`);
-
-    // Get raw pixel data for both template and full image
-    const templatePixels = await sharp(imgBuffer)
-      .extract({ left: tLeft, top: tTop, width: tWidth, height: tHeight })
-      .resize(Math.min(tWidth, 32), Math.min(tHeight, 32), { fit: 'fill' }) // normalize size for comparison
+    const scanBuffer = await sharp(imgBuffer)
+      .resize(scanWidth, scanHeight)
+      .removeAlpha()
       .raw()
       .toBuffer();
 
-    const templateSize = Math.min(tWidth, 32);
-    const templateSizeH = Math.min(tHeight, 32);
+    // Extract template region at scan resolution
+    const tLeft = Math.max(Math.round(template.x * scanWidth), 0);
+    const tTop = Math.max(Math.round(template.y * scanHeight), 0);
+    const tW = Math.max(Math.round(template.w * scanWidth), 2);
+    const tH = Math.max(Math.round(template.h * scanHeight), 2);
 
-    // Scale down the full image for faster scanning
-    const scanScale = Math.min(1, 1000 / imgWidth);
-    const scanWidth = Math.round(imgWidth * scanScale);
-    const scanHeight = Math.round(imgHeight * scanScale);
-    const scanTemplateW = Math.round(templateSize * scanScale * (imgWidth / tWidth) * (tWidth / Math.min(tWidth, 32)));
-    const scanTemplateH = Math.round(templateSizeH * scanScale * (imgHeight / tHeight) * (tHeight / Math.min(tHeight, 32)));
+    console.log(`[Template] Scan: ${scanWidth}x${scanHeight}, template: ${tW}x${tH} at (${tLeft},${tTop})`);
 
-    const fullPixels = await sharp(imgBuffer)
-      .resize(scanWidth, scanHeight, { fit: 'fill' })
-      .raw()
-      .toBuffer();
-
-    // Compute average color of template
-    let tR = 0, tG = 0, tB = 0, tCount = 0;
-    for (let i = 0; i < templatePixels.length; i += 3) {
-      tR += templatePixels[i];
-      tG += templatePixels[i + 1];
-      tB += templatePixels[i + 2];
-      tCount++;
+    // Extract template pixels
+    const tPixels = [];
+    for (let ty = 0; ty < tH; ty++) {
+      for (let tx = 0; tx < tW; tx++) {
+        const si = ((tTop + ty) * scanWidth + (tLeft + tx)) * 3;
+        tPixels.push(scanBuffer[si], scanBuffer[si+1], scanBuffer[si+2]);
+      }
     }
-    tR /= tCount; tG /= tCount; tB /= tCount;
 
-    console.log(`[Template] Template avg color: R${Math.round(tR)} G${Math.round(tG)} B${Math.round(tB)}`);
+    // Compute template mean
+    let tMeanR = 0, tMeanG = 0, tMeanB = 0;
+    const tLen = tW * tH;
+    for (let i = 0; i < tLen; i++) {
+      tMeanR += tPixels[i*3];
+      tMeanG += tPixels[i*3+1];
+      tMeanB += tPixels[i*3+2];
+    }
+    tMeanR /= tLen; tMeanG /= tLen; tMeanB /= tLen;
 
-    // Slide a window across the full image and compare color similarity
-    const stepX = Math.max(Math.round(tWidth * scanScale * 0.3), 2);
-    const stepY = Math.max(Math.round(tHeight * scanScale * 0.3), 2);
-    const windowW = Math.max(Math.round(tWidth * scanScale), 4);
-    const windowH = Math.max(Math.round(tHeight * scanScale), 4);
+    // Precompute template denominator for NCC
+    let tDenom = 0;
+    for (let i = 0; i < tLen; i++) {
+      const dr = tPixels[i*3] - tMeanR;
+      const dg = tPixels[i*3+1] - tMeanG;
+      const db = tPixels[i*3+2] - tMeanB;
+      tDenom += dr*dr + dg*dg + db*db;
+    }
+    tDenom = Math.sqrt(tDenom);
 
-    console.log(`[Template] Scan: ${scanWidth}x${scanHeight}, window: ${windowW}x${windowH}, step: ${stepX}x${stepY}`);
+    if (tDenom < 1) {
+      return res.json({ matches: [], count: 0, error: 'Template is too uniform (solid color)' });
+    }
 
+    // Slide template across the image, compute NCC
+    const step = Math.max(Math.round(Math.min(tW, tH) * 0.4), 1);
     const matches = [];
 
-    for (let sy = 0; sy < scanHeight - windowH; sy += stepY) {
-      for (let sx = 0; sx < scanWidth - windowW; sx += stepX) {
-        // Compute average color of this window
-        let wR = 0, wG = 0, wB = 0, wCount = 0;
-        for (let wy = 0; wy < windowH && (sy + wy) < scanHeight; wy++) {
-          for (let wx = 0; wx < windowW && (sx + wx) < scanWidth; wx++) {
-            const idx = ((sy + wy) * scanWidth + (sx + wx)) * 3;
-            if (idx + 2 < fullPixels.length) {
-              wR += fullPixels[idx];
-              wG += fullPixels[idx + 1];
-              wB += fullPixels[idx + 2];
-              wCount++;
-            }
+    for (let sy = 0; sy <= scanHeight - tH; sy += step) {
+      for (let sx = 0; sx <= scanWidth - tW; sx += step) {
+        // Skip the original template location
+        if (Math.abs(sx - tLeft) < tW && Math.abs(sy - tTop) < tH) continue;
+
+        // Compute window mean
+        let wMeanR = 0, wMeanG = 0, wMeanB = 0;
+        for (let ty = 0; ty < tH; ty++) {
+          for (let tx = 0; tx < tW; tx++) {
+            const si = ((sy + ty) * scanWidth + (sx + tx)) * 3;
+            wMeanR += scanBuffer[si];
+            wMeanG += scanBuffer[si+1];
+            wMeanB += scanBuffer[si+2];
           }
         }
-        if (wCount === 0) continue;
-        wR /= wCount; wG /= wCount; wB /= wCount;
+        wMeanR /= tLen; wMeanG /= tLen; wMeanB /= tLen;
 
-        // Color distance (normalized 0-1, 0 = identical)
-        const dist = Math.sqrt(
-          Math.pow(tR - wR, 2) + Math.pow(tG - wG, 2) + Math.pow(tB - wB, 2)
-        ) / 441.67; // max possible distance = sqrt(255^2 * 3)
+        // Compute NCC
+        let num = 0, wDenom = 0;
+        for (let ty = 0; ty < tH; ty++) {
+          for (let tx = 0; tx < tW; tx++) {
+            const si = ((sy + ty) * scanWidth + (sx + tx)) * 3;
+            const ti = (ty * tW + tx) * 3;
+            const dr = scanBuffer[si] - wMeanR;
+            const dg = scanBuffer[si+1] - wMeanG;
+            const db = scanBuffer[si+2] - wMeanB;
+            const tr = tPixels[ti] - tMeanR;
+            const tg = tPixels[ti+1] - tMeanG;
+            const tb = tPixels[ti+2] - tMeanB;
+            num += dr*tr + dg*tg + db*tb;
+            wDenom += dr*dr + dg*dg + db*db;
+          }
+        }
+        wDenom = Math.sqrt(wDenom);
 
-        const similarity = 1 - dist;
+        if (wDenom < 1) continue;
 
-        if (similarity >= threshold) {
-          const cx = (sx + windowW / 2) / scanWidth;
-          const cy = (sy + windowH / 2) / scanHeight;
+        const ncc = num / (tDenom * wDenom);
 
-          // Check if too close to an existing match (dedup)
+        if (ncc >= threshold) {
+          const cx = (sx + tW/2) / scanWidth;
+          const cy = (sy + tH/2) / scanHeight;
+
+          // Deduplicate nearby
+          const minDist = Math.min(tW, tH) / scanWidth;
           const tooClose = matches.some(m =>
-            Math.abs(m.x - cx) < (windowW / scanWidth) * 1.5 &&
-            Math.abs(m.y - cy) < (windowH / scanHeight) * 1.5
+            Math.abs(m.x - cx) < minDist && Math.abs(m.y - cy) < minDist
           );
 
           if (!tooClose) {
-            matches.push({ x: cx, y: cy, similarity: Math.round(similarity * 100) / 100 });
+            matches.push({ x: cx, y: cy, similarity: Math.round(ncc * 100) / 100 });
           }
         }
       }
     }
 
-    // Sort by similarity descending
+    // Add the original template location too
+    matches.push({
+      x: (tLeft + tW/2) / scanWidth,
+      y: (tTop + tH/2) / scanHeight,
+      similarity: 1.0
+    });
+
     matches.sort((a, b) => b.similarity - a.similarity);
 
-    console.log(`[Template] Found ${matches.length} matches above threshold ${threshold}`);
+    console.log(`[Template] Found ${matches.length} matches (threshold: ${threshold})`);
     res.json({ matches, count: matches.length });
   } catch (err) {
     console.error('Error matching template:', err);
