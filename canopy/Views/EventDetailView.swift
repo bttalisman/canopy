@@ -34,7 +34,8 @@ struct EventDetailView: View {
                         case .success(let image):
                             image
                                 .resizable()
-                                .aspectRatio(16/9, contentMode: .fill)
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity)
                                 .frame(height: 200)
                                 .clipped()
                         case .failure:

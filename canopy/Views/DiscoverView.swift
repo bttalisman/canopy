@@ -7,6 +7,9 @@ struct DiscoverView: View {
     @State private var searchText = ""
     @State private var selectedCategory: EventCategory?
     @State private var selectedTimeFilter: TimeFilter = .all
+    @State private var selectedNeighborhood: String?
+    @State private var showMapView = false
+    @State private var selectedMapEvent: Event?
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var lastFetchedCount: Int?
@@ -26,6 +29,10 @@ struct DiscoverView: View {
         var id: String { rawValue }
     }
 
+    var neighborhoods: [String] {
+        Array(Set(events.filter { $0.isActive && !$0.neighborhood.isEmpty }.map(\.neighborhood))).sorted()
+    }
+
     var filteredEvents: [Event] {
         var result = events.filter { $0.isActive }
 
@@ -39,6 +46,10 @@ struct DiscoverView: View {
 
         if let category = selectedCategory {
             result = result.filter { $0.category == category }
+        }
+
+        if let neighborhood = selectedNeighborhood {
+            result = result.filter { $0.neighborhood == neighborhood }
         }
 
         let now = Date()
@@ -91,6 +102,19 @@ struct DiscoverView: View {
                     .accessibilityLabel("Canopy Seattle")
 
                     Spacer()
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showMapView.toggle()
+                            selectedMapEvent = nil
+                        }
+                    } label: {
+                        Image(systemName: showMapView ? "list.bullet" : "map")
+                            .font(.title3)
+                            .foregroundStyle(.green)
+                            .frame(width: 36, height: 36)
+                    }
+                    .accessibilityLabel(showMapView ? "Show list view" : "Show map view")
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
@@ -184,62 +208,111 @@ struct DiscoverView: View {
                         }
                         .padding(.horizontal)
                     }
-                }
-                .padding(.bottom, 8)
-
-                // Scrollable event list
-                ScrollView {
-                    VStack(spacing: 16) {
-                        // Status messages
-                        if isLoading {
-                            ProgressView("Fetching Seattle events...")
-                                .padding(.top, 40)
-                        } else if let error = errorMessage {
-                            VStack(spacing: 12) {
-                                Label(error, systemImage: "exclamationmark.triangle")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.orange)
-                                    .multilineTextAlignment(.center)
-
-                                Button("Retry") {
-                                    Task { await fetchEvents() }
+                    // Neighborhood filter pills
+                    if neighborhoods.count > 1 {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                Button {
+                                    withAnimation { selectedNeighborhood = nil }
+                                } label: {
+                                    Label("All Areas", systemImage: "mappin.and.ellipse")
+                                        .font(.subheadline)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            Capsule()
+                                                .fill(selectedNeighborhood == nil ? Color.orange.opacity(0.15) : Color(.systemGray6))
+                                        )
+                                        .foregroundStyle(selectedNeighborhood == nil ? .orange : .secondary)
                                 }
-                                .buttonStyle(.bordered)
-                            }
-                            .padding(.top, 40)
-                            .padding(.horizontal)
-                        } else if let count = lastFetchedCount {
-                            Text("Imported \(count) new events from Ticketmaster")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                                .padding(.horizontal)
-                        }
 
-                        if filteredEvents.isEmpty && !isLoading && errorMessage == nil {
-                            ContentUnavailableView(
-                                "No Events Found",
-                                systemImage: "calendar.badge.exclamationmark",
-                                description: Text(hasAPIKey
-                                    ? "Try adjusting your filters or pull to refresh."
-                                    : "API key not configured. See Config.xcconfig.")
-                            )
-                            .padding(.top, 60)
-                        } else {
-                            LazyVStack(spacing: 16) {
-                                ForEach(filteredEvents) { event in
-                                    NavigationLink(value: event) {
-                                        EventCard(event: event)
+                                ForEach(neighborhoods, id: \.self) { hood in
+                                    Button {
+                                        withAnimation { selectedNeighborhood = hood }
+                                    } label: {
+                                        Text(hood)
+                                            .font(.subheadline)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 6)
+                                            .background(
+                                                Capsule()
+                                                    .fill(selectedNeighborhood == hood ? Color.orange.opacity(0.15) : Color(.systemGray6))
+                                            )
+                                            .foregroundStyle(selectedNeighborhood == hood ? .orange : .secondary)
+                                            .accessibilityLabel("\(hood) neighborhood filter")
+                                            .accessibilityAddTraits(selectedNeighborhood == hood ? .isSelected : [])
                                     }
-                                    .buttonStyle(.plain)
                                 }
                             }
                             .padding(.horizontal)
                         }
                     }
-                    .padding(.vertical, 8)
                 }
-                .refreshable {
-                    await fetchEvents()
+                .padding(.bottom, 8)
+
+                if showMapView {
+                    // Map view
+                    DiscoverMapView(
+                        events: filteredEvents,
+                        selectedEvent: $selectedMapEvent
+                    )
+                    .toolbar(.visible, for: .tabBar)
+                } else {
+                    // List view
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            if isLoading {
+                                ProgressView("Fetching Seattle events...")
+                                    .padding(.top, 40)
+                            } else if let error = errorMessage {
+                                VStack(spacing: 12) {
+                                    Label(error, systemImage: "exclamationmark.triangle")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.orange)
+                                        .multilineTextAlignment(.center)
+
+                                    Button("Retry") {
+                                        Task { await fetchEvents() }
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+                                .padding(.top, 40)
+                                .padding(.horizontal)
+                            } else if let count = lastFetchedCount {
+                                Text("Imported \(count) new events from Ticketmaster")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                    .padding(.horizontal)
+                            }
+
+                            if filteredEvents.isEmpty && !isLoading && errorMessage == nil {
+                                ContentUnavailableView(
+                                    "No Events Found",
+                                    systemImage: "calendar.badge.exclamationmark",
+                                    description: Text(hasAPIKey
+                                        ? "Try adjusting your filters or pull to refresh."
+                                        : "API key not configured. See Config.xcconfig.")
+                                )
+                                .padding(.top, 60)
+                            } else {
+                                LazyVStack(spacing: 16) {
+                                    ForEach(filteredEvents) { event in
+                                        NavigationLink(value: event) {
+                                            EventCard(event: event)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .transition(.opacity.combined(with: .move(edge: .top)))
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .animation(.easeInOut(duration: 0.25), value: filteredEvents.map(\.id))
+                    }
+                    .refreshable {
+                        await fetchEvents()
+                    }
                 }
             }
             .navigationBarHidden(true)

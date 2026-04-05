@@ -115,7 +115,21 @@ actor CanopyAPIService {
             let existing = (try? context.fetch(descriptor)) ?? []
             if !existing.isEmpty {
                 if let event = existing.first {
-                    print("[CanopyAPI] Existing event: \(event.name), slug=\(event.slug)")
+                    // Update event-level fields from backend
+                    event.name = apiEvent.name
+                    event.eventDescription = apiEvent.description ?? event.eventDescription
+                    event.startDate = startDate
+                    event.endDate = endDate
+                    event.location = apiEvent.location
+                    event.neighborhood = apiEvent.neighborhood ?? event.neighborhood
+                    event.logoSystemImage = apiEvent.logoSystemImage ?? event.logoSystemImage
+                    event.imageURL = apiEvent.imageURL
+                    event.ticketingURL = apiEvent.ticketingURL
+                    event.latitude = apiEvent.latitude ?? event.latitude
+                    event.longitude = apiEvent.longitude ?? event.longitude
+                    event.category = mapCategory(apiEvent.category ?? event.category.rawValue)
+
+                    print("[CanopyAPI] Updated event: \(event.name), slug=\(event.slug)")
                     print("[CanopyAPI]   Local pins: \(event.mapPins.count), API pins: \(apiEvent.mapPins?.count ?? 0)")
                     print("[CanopyAPI]   Local stages: \(event.stages.count), API stages: \(apiEvent.stages?.count ?? 0)")
                     print("[CanopyAPI]   Local schedule: \(event.scheduleItems.count), API schedule: \(apiEvent.scheduleItems?.count ?? 0)")
