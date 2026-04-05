@@ -585,7 +585,7 @@ ${text}`
 // POST /api/admin/match-template — find all instances of a selected icon region in the map
 router.post('/match-template', async (req, res) => {
   try {
-    const { mapImageURL, template, threshold = 0.75 } = req.body;
+    const { mapImageURL, template, threshold = 0.55 } = req.body;
 
     if (!mapImageURL || !template) {
       return res.status(400).json({ error: 'mapImageURL and template region required' });
@@ -614,105 +614,113 @@ router.post('/match-template', async (req, res) => {
     // Extract template region at scan resolution
     const tLeft = Math.max(Math.round(template.x * scanWidth), 0);
     const tTop = Math.max(Math.round(template.y * scanHeight), 0);
-    const tW = Math.max(Math.round(template.w * scanWidth), 2);
-    const tH = Math.max(Math.round(template.h * scanHeight), 2);
+    const tW = Math.max(Math.round(template.w * scanWidth), 1);
+    const tH = Math.max(Math.round(template.h * scanHeight), 1);
 
     console.log(`[Template] Scan: ${scanWidth}x${scanHeight}, template: ${tW}x${tH} at (${tLeft},${tTop})`);
 
-    // Extract template pixels
-    const tPixels = [];
-    for (let ty = 0; ty < tH; ty++) {
-      for (let tx = 0; tx < tW; tx++) {
-        const si = ((tTop + ty) * scanWidth + (tLeft + tx)) * 3;
-        tPixels.push(scanBuffer[si], scanBuffer[si+1], scanBuffer[si+2]);
+    // NCC matching at a given scale
+    function matchAtScale(scanBuf, sW, sH, tw, th, origX, origY) {
+      // Resize template to target size
+      const tPixels = [];
+      for (let ty = 0; ty < th; ty++) {
+        for (let tx = 0; tx < tw; tx++) {
+          const srcY = Math.round(tTop + ty * (tH / th));
+          const srcX = Math.round(tLeft + tx * (tW / tw));
+          const si = (srcY * scanWidth + srcX) * 3;
+          tPixels.push(scanBuffer[si] || 0, scanBuffer[si+1] || 0, scanBuffer[si+2] || 0);
+        }
       }
+
+      const tLen = tw * th;
+      let tMeanR = 0, tMeanG = 0, tMeanB = 0;
+      for (let i = 0; i < tLen; i++) {
+        tMeanR += tPixels[i*3]; tMeanG += tPixels[i*3+1]; tMeanB += tPixels[i*3+2];
+      }
+      tMeanR /= tLen; tMeanG /= tLen; tMeanB /= tLen;
+
+      let tDenom = 0;
+      for (let i = 0; i < tLen; i++) {
+        const dr = tPixels[i*3] - tMeanR;
+        const dg = tPixels[i*3+1] - tMeanG;
+        const db = tPixels[i*3+2] - tMeanB;
+        tDenom += dr*dr + dg*dg + db*db;
+      }
+      tDenom = Math.sqrt(tDenom);
+      if (tDenom < 1) return [];
+
+      const step = Math.max(Math.round(Math.min(tw, th) * 0.3), 1);
+      const results = [];
+
+      for (let sy = 0; sy <= sH - th; sy += step) {
+        for (let sx = 0; sx <= sW - tw; sx += step) {
+          if (Math.abs(sx - origX) < tw && Math.abs(sy - origY) < th) continue;
+
+          let wMeanR = 0, wMeanG = 0, wMeanB = 0;
+          for (let ty = 0; ty < th; ty++) {
+            for (let tx = 0; tx < tw; tx++) {
+              const si = ((sy + ty) * sW + (sx + tx)) * 3;
+              wMeanR += scanBuf[si]; wMeanG += scanBuf[si+1]; wMeanB += scanBuf[si+2];
+            }
+          }
+          wMeanR /= tLen; wMeanG /= tLen; wMeanB /= tLen;
+
+          let num = 0, wDenom = 0;
+          for (let ty = 0; ty < th; ty++) {
+            for (let tx = 0; tx < tw; tx++) {
+              const si = ((sy + ty) * sW + (sx + tx)) * 3;
+              const ti = (ty * tw + tx) * 3;
+              const dr = scanBuf[si] - wMeanR;
+              const dg = scanBuf[si+1] - wMeanG;
+              const db = scanBuf[si+2] - wMeanB;
+              const tr = tPixels[ti] - tMeanR;
+              const tg = tPixels[ti+1] - tMeanG;
+              const tb = tPixels[ti+2] - tMeanB;
+              num += dr*tr + dg*tg + db*tb;
+              wDenom += dr*dr + dg*dg + db*db;
+            }
+          }
+          wDenom = Math.sqrt(wDenom);
+          if (wDenom < 1) continue;
+
+          const ncc = num / (tDenom * wDenom);
+          if (ncc >= threshold) {
+            results.push({
+              x: (sx + tw/2) / sW,
+              y: (sy + th/2) / sH,
+              similarity: Math.round(ncc * 100) / 100
+            });
+          }
+        }
+      }
+      return results;
     }
 
-    // Compute template mean
-    let tMeanR = 0, tMeanG = 0, tMeanB = 0;
-    const tLen = tW * tH;
-    for (let i = 0; i < tLen; i++) {
-      tMeanR += tPixels[i*3];
-      tMeanG += tPixels[i*3+1];
-      tMeanB += tPixels[i*3+2];
-    }
-    tMeanR /= tLen; tMeanG /= tLen; tMeanB /= tLen;
+    // Match at multiple scales: 100%, 80%, 120%
+    const scales = [1.0, 0.8, 1.2, 0.6, 1.4];
+    let allMatches = [];
 
-    // Precompute template denominator for NCC
-    let tDenom = 0;
-    for (let i = 0; i < tLen; i++) {
-      const dr = tPixels[i*3] - tMeanR;
-      const dg = tPixels[i*3+1] - tMeanG;
-      const db = tPixels[i*3+2] - tMeanB;
-      tDenom += dr*dr + dg*dg + db*db;
-    }
-    tDenom = Math.sqrt(tDenom);
-
-    if (tDenom < 1) {
-      return res.json({ matches: [], count: 0, error: 'Template is too uniform (solid color)' });
+    for (const s of scales) {
+      const tw = Math.max(Math.round(tW * s), 1);
+      const th = Math.max(Math.round(tH * s), 1);
+      if (tw > scanWidth / 2 || th > scanHeight / 2) continue;
+      console.log(`[Template] Matching at scale ${s}: ${tw}x${th}`);
+      const results = matchAtScale(scanBuffer, scanWidth, scanHeight, tw, th, tLeft, tTop);
+      allMatches.push(...results);
     }
 
-    // Slide template across the image, compute NCC
-    const step = Math.max(Math.round(Math.min(tW, tH) * 0.4), 1);
+    // Deduplicate across scales
+    const minDist = Math.max(tW, tH) / scanWidth * 0.8;
     const matches = [];
-
-    for (let sy = 0; sy <= scanHeight - tH; sy += step) {
-      for (let sx = 0; sx <= scanWidth - tW; sx += step) {
-        // Skip the original template location
-        if (Math.abs(sx - tLeft) < tW && Math.abs(sy - tTop) < tH) continue;
-
-        // Compute window mean
-        let wMeanR = 0, wMeanG = 0, wMeanB = 0;
-        for (let ty = 0; ty < tH; ty++) {
-          for (let tx = 0; tx < tW; tx++) {
-            const si = ((sy + ty) * scanWidth + (sx + tx)) * 3;
-            wMeanR += scanBuffer[si];
-            wMeanG += scanBuffer[si+1];
-            wMeanB += scanBuffer[si+2];
-          }
-        }
-        wMeanR /= tLen; wMeanG /= tLen; wMeanB /= tLen;
-
-        // Compute NCC
-        let num = 0, wDenom = 0;
-        for (let ty = 0; ty < tH; ty++) {
-          for (let tx = 0; tx < tW; tx++) {
-            const si = ((sy + ty) * scanWidth + (sx + tx)) * 3;
-            const ti = (ty * tW + tx) * 3;
-            const dr = scanBuffer[si] - wMeanR;
-            const dg = scanBuffer[si+1] - wMeanG;
-            const db = scanBuffer[si+2] - wMeanB;
-            const tr = tPixels[ti] - tMeanR;
-            const tg = tPixels[ti+1] - tMeanG;
-            const tb = tPixels[ti+2] - tMeanB;
-            num += dr*tr + dg*tg + db*tb;
-            wDenom += dr*dr + dg*dg + db*db;
-          }
-        }
-        wDenom = Math.sqrt(wDenom);
-
-        if (wDenom < 1) continue;
-
-        const ncc = num / (tDenom * wDenom);
-
-        if (ncc >= threshold) {
-          const cx = (sx + tW/2) / scanWidth;
-          const cy = (sy + tH/2) / scanHeight;
-
-          // Deduplicate nearby
-          const minDist = Math.min(tW, tH) / scanWidth;
-          const tooClose = matches.some(m =>
-            Math.abs(m.x - cx) < minDist && Math.abs(m.y - cy) < minDist
-          );
-
-          if (!tooClose) {
-            matches.push({ x: cx, y: cy, similarity: Math.round(ncc * 100) / 100 });
-          }
-        }
-      }
+    allMatches.sort((a, b) => b.similarity - a.similarity);
+    for (const m of allMatches) {
+      const tooClose = matches.some(existing =>
+        Math.abs(existing.x - m.x) < minDist && Math.abs(existing.y - m.y) < minDist
+      );
+      if (!tooClose) matches.push(m);
     }
 
-    // Add the original template location too
+    // Add the original template location
     matches.push({
       x: (tLeft + tW/2) / scanWidth,
       y: (tTop + tH/2) / scanHeight,
@@ -721,7 +729,7 @@ router.post('/match-template', async (req, res) => {
 
     matches.sort((a, b) => b.similarity - a.similarity);
 
-    console.log(`[Template] Found ${matches.length} matches (threshold: ${threshold})`);
+    console.log(`[Template] Found ${matches.length} matches across ${scales.length} scales (threshold: ${threshold})`);
     res.json({ matches, count: matches.length });
   } catch (err) {
     console.error('Error matching template:', err);
