@@ -116,7 +116,6 @@ struct CustomMapView: View {
         GeometryReader { imgGeo in
             ForEach(pins) { pin in
                 pinMarker(pin)
-                    .scaleEffect(1.0 / scale)
                     .position(
                         x: pin.x * imgGeo.size.width,
                         y: pin.y * imgGeo.size.height
