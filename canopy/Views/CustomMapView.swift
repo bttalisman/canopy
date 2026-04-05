@@ -158,6 +158,11 @@ struct CustomMapView: View {
         case .exit: return .green
         case .wifi: return .cyan
         case .accessible: return .indigo
+        case .atm: return .yellow
+        case .parking: return .blue
+        case .info: return .teal
+        case .giftShop: return .pink
+        case .bus: return .green
         case .custom: return .gray
         }
     }

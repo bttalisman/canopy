@@ -532,6 +532,11 @@
               <option value="Exit">Exit</option>
               <option value="WiFi">WiFi</option>
               <option value="Accessible">Accessible</option>
+              <option value="ATM">ATM</option>
+              <option value="Parking">Parking</option>
+              <option value="Info">Info</option>
+              <option value="Gift Shop">Gift Shop</option>
+              <option value="Bus">Bus</option>
               <option value="Custom">Custom</option>
             </select>
           </div>
@@ -1453,7 +1458,7 @@ function renderMapPins() {
 
   overlay.style.pointerEvents = pinMode === 'edit' ? 'auto' : 'none';
   overlay.innerHTML = mapEditorPins.map((pin, i) => {
-    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', Custom: '#6b7280' };
+    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', WiFi: '#06b6d4', Accessible: '#6366f1', ATM: '#eab308', Parking: '#3b82f6', Info: '#14b8a6', 'Gift Shop': '#ec4899', Bus: '#22c55e', Custom: '#6b7280' };
     const color = colors[pin.pinType] || '#6b7280';
     const selected = selectedMapPinIndex === i;
     const border = selected ? '3px solid #f59e0b' : '2px solid white';
@@ -1536,7 +1541,7 @@ function renderMapPinsList() {
     return;
   }
   list.innerHTML = mapEditorPins.map((pin, i) => {
-    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', Custom: '#6b7280' };
+    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', WiFi: '#06b6d4', Accessible: '#6366f1', ATM: '#eab308', Parking: '#3b82f6', Info: '#14b8a6', 'Gift Shop': '#ec4899', Bus: '#22c55e', Custom: '#6b7280' };
     const color = colors[pin.pinType] || '#6b7280';
     return `<div class="schedule-item" style="align-items:center">
       <div style="display:flex;align-items:center;gap:10px">
@@ -1960,7 +1965,7 @@ function onToleranceChange() {
   // Preview matches on map overlay
   const overlay = document.getElementById('mapPinsOverlay');
   const existingPinHtml = mapEditorPins.map((pin, i) => {
-    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', Custom: '#6b7280' };
+    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', WiFi: '#06b6d4', Accessible: '#6366f1', ATM: '#eab308', Parking: '#3b82f6', Info: '#14b8a6', 'Gift Shop': '#ec4899', Bus: '#22c55e', Custom: '#6b7280' };
     const color = colors[pin.pinType] || '#6b7280';
     return `<div style="position:absolute;left:${pin.x * 100}%;top:${pin.y * 100}%;transform:translate(-50%,-50%)" title="${pin.label}">
       <div style="width:20px;height:20px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center">

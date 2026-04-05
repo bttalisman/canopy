@@ -36,6 +36,11 @@ enum MapPinType: String, Codable, CaseIterable, Identifiable {
     case exit = "Exit"
     case wifi = "WiFi"
     case accessible = "Accessible"
+    case atm = "ATM"
+    case parking = "Parking"
+    case info = "Info"
+    case giftShop = "Gift Shop"
+    case bus = "Bus"
     case custom = "Custom"
 
     var id: String { rawValue }
@@ -49,6 +54,11 @@ enum MapPinType: String, Codable, CaseIterable, Identifiable {
         case .exit: return "arrow.right.square"
         case .wifi: return "wifi"
         case .accessible: return "figure.roll"
+        case .atm: return "banknote"
+        case .parking: return "car.fill"
+        case .info: return "info.circle.fill"
+        case .giftShop: return "bag.fill"
+        case .bus: return "bus.fill"
         case .custom: return "mappin"
         }
     }
@@ -62,6 +72,11 @@ enum MapPinType: String, Codable, CaseIterable, Identifiable {
         case .exit: return "green"
         case .wifi: return "cyan"
         case .accessible: return "indigo"
+        case .atm: return "yellow"
+        case .parking: return "blue"
+        case .info: return "teal"
+        case .giftShop: return "pink"
+        case .bus: return "green"
         case .custom: return "gray"
         }
     }
