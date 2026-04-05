@@ -26,29 +26,29 @@ struct TransitDirectionsView: View {
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
+            // Apple Maps transit button (always show)
+            Button {
+                openInAppleMaps()
+            } label: {
+                Label("Get Transit Directions", systemImage: "map.fill")
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.blue)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .accessibilityLabel("Open transit directions to \(venueName) in Apple Maps")
+
             if isLoadingRoutes {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Finding transit routes...")
+                    Text("Finding routes...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 8)
-            } else if routes.isEmpty {
-                VStack(spacing: 8) {
-                    if let error = routeError {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("No transit routes found")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    appleMapsButton
-                }
-            } else {
+            } else if !routes.isEmpty {
                 // Route selector (if multiple)
                 if routes.count > 1 {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -141,15 +141,14 @@ struct TransitDirectionsView: View {
                     Text("Total: \(route.totalMinutes) min")
                         .font(.caption)
                         .fontWeight(.semibold)
-                    Spacer()
-                    appleMapsButton
                 }
+            }
 
-                // Real-time arrivals
-                if !realTimeArrivals.isEmpty {
-                    Divider()
+            // Real-time arrivals (shown independently of MKDirections routes)
+            if !realTimeArrivals.isEmpty {
+                Divider()
 
-                    VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Nearby Departures")
                                 .font(.caption)
@@ -204,6 +203,16 @@ struct TransitDirectionsView: View {
                             .accessibilityLabel("\(arrival.routeName) toward \(arrival.headsign), \(arrival.minutesUntilArrival == 0 ? "arriving now" : "in \(arrival.minutesUntilArrival) minutes")\(arrival.isRealTime ? ", real-time" : "")")
                         }
                     }
+                }
+
+
+            if isLoadingArrivals && realTimeArrivals.isEmpty && routes.isEmpty {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Checking nearby departures...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }

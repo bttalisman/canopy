@@ -140,7 +140,11 @@ actor TransitService {
 
     func fetchNearbyStops(latitude: Double, longitude: Double, radius: Int = 400) async throws -> [OBAStop] {
         let apiKey = Secrets.oneBusAwayAPIKey
-        guard !apiKey.isEmpty, apiKey != "YOUR_OBA_KEY_HERE" else { return [] }
+        print("[Transit] OBA API key: '\(apiKey)'")
+        guard !apiKey.isEmpty, apiKey != "YOUR_OBA_KEY_HERE" else {
+            print("[Transit] OBA key not configured, skipping")
+            return []
+        }
 
         var components = URLComponents(string: "\(obaBaseURL)/stops-for-location.json")!
         components.queryItems = [
@@ -152,12 +156,23 @@ actor TransitService {
 
         guard let url = components.url else { throw TransitError.invalidURL }
 
+        print("[Transit] OBA stops URL: \(url)")
+
         let (data, response) = try await session.data(from: url)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+        guard let http = response as? HTTPURLResponse else {
+            throw TransitError.serverError
+        }
+
+        print("[Transit] OBA stops response: \(http.statusCode)")
+
+        guard http.statusCode == 200 else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            print("[Transit] OBA stops error body: \(body.prefix(200))")
             throw TransitError.serverError
         }
 
         let obaResponse = try decoder.decode(OBAResponse<OBAStopListData>.self, from: data)
+        print("[Transit] Found \(obaResponse.data.list.count) stops")
         return obaResponse.data.list
     }
 
@@ -223,7 +238,9 @@ actor TransitService {
 
             var allArrivals: [RealTimeArrival] = []
             for stop in closest {
-                if let arrivals = try? await fetchArrivals(stopId: stop.id) {
+                do {
+                    let arrivals = try await fetchArrivals(stopId: stop.id)
+                    print("[Transit] Got \(arrivals.count) arrivals for stop \(stop.name)")
                     let withStopName = arrivals.map { arrival in
                         RealTimeArrival(
                             routeName: arrival.routeName,
@@ -234,6 +251,8 @@ actor TransitService {
                         )
                     }
                     allArrivals.append(contentsOf: withStopName)
+                } catch {
+                    print("[Transit] Arrivals error for stop \(stop.name): \(error)")
                 }
             }
 
