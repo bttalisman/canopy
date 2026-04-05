@@ -45,7 +45,7 @@ router.post('/events', async (req, res) => {
 router.put('/events/:id', async (req, res) => {
   try {
     const { name, description, startDate, endDate, location, neighborhood,
-            logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, isActive } = req.body;
+            logoSystemImage, imageURL, mapImageURL, mapCalibration, ticketingURL, latitude, longitude, category, isActive } = req.body;
 
     const { rows } = await pool.query(`
       UPDATE events SET
@@ -58,16 +58,17 @@ router.put('/events/:id', async (req, res) => {
         logo_system_image = COALESCE($8, logo_system_image),
         image_url = COALESCE($9, image_url),
         map_image_url = COALESCE($10, map_image_url),
-        ticketing_url = COALESCE($11, ticketing_url),
-        latitude = COALESCE($12, latitude),
-        longitude = COALESCE($13, longitude),
-        category = COALESCE($14, category),
-        is_active = COALESCE($15, is_active),
+        map_calibration = COALESCE($11, map_calibration),
+        ticketing_url = COALESCE($12, ticketing_url),
+        latitude = COALESCE($13, latitude),
+        longitude = COALESCE($14, longitude),
+        category = COALESCE($15, category),
+        is_active = COALESCE($16, is_active),
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `, [req.params.id, name, description, startDate, endDate, location, neighborhood,
-        logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, isActive]);
+        logoSystemImage, imageURL, mapImageURL, mapCalibration, ticketingURL, latitude, longitude, category, isActive]);
 
     if (rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     res.json(rows[0]);

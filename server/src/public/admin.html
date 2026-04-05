@@ -497,31 +497,76 @@
         <span class="badge green" id="mapPinCount">0 pins</span>
       </div>
 
-      <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">
-        Click on the map to place a pin. Select a pin type and label first.
-      </p>
+      <!-- Mode selector -->
+      <div class="tabs" style="margin-bottom:12px">
+        <div class="tab active" id="tabPlacePin" onclick="setMapMode('pin')">Place Pins</div>
+        <div class="tab" id="tabCalibrate" onclick="setMapMode('calibrate')">Calibrate</div>
+      </div>
 
-      <div class="form-row" style="margin-bottom:12px">
-        <div class="form-group" style="margin-bottom:0">
-          <label>Pin Type</label>
-          <select id="mapPinType">
-            <option value="Stage">Stage</option>
-            <option value="Food">Food</option>
-            <option value="Restroom">Restroom</option>
-            <option value="First Aid">First Aid</option>
-            <option value="Exit">Exit</option>
-            <option value="Custom">Custom</option>
-          </select>
+      <!-- Pin placement controls -->
+      <div id="pinControls">
+        <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">
+          Click on the map to place a pin. Select a pin type and label first.
+        </p>
+
+        <div class="form-row" style="margin-bottom:12px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Pin Type</label>
+            <select id="mapPinType">
+              <option value="Stage">Stage</option>
+              <option value="Food">Food</option>
+              <option value="Restroom">Restroom</option>
+              <option value="First Aid">First Aid</option>
+              <option value="Exit">Exit</option>
+              <option value="Custom">Custom</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Label</label>
+            <input type="text" id="mapPinLabel" placeholder="e.g. Main Stage" />
+          </div>
         </div>
-        <div class="form-group" style="margin-bottom:0">
-          <label>Label</label>
-          <input type="text" id="mapPinLabel" placeholder="e.g. Main Stage" />
+
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Description (optional)</label>
+          <input type="text" id="mapPinDescription" placeholder="e.g. Headliner performances" />
         </div>
       </div>
 
-      <div class="form-group" style="margin-bottom:12px">
-        <label>Description (optional)</label>
-        <input type="text" id="mapPinDescription" placeholder="e.g. Headliner performances" />
+      <!-- Calibration controls -->
+      <div id="calibrateControls" style="display:none">
+        <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">
+          Click two known locations on the map and enter their GPS coordinates. This lets us auto-place pins from GPS data.
+        </p>
+
+        <div class="form-row" style="margin-bottom:8px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Point 1 — Latitude</label>
+            <input type="number" step="any" id="cal1Lat" placeholder="47.6215" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Point 1 — Longitude</label>
+            <input type="number" step="any" id="cal1Lng" placeholder="-122.3510" />
+          </div>
+        </div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:12px" id="cal1Status">Click the map to set Point 1 position</div>
+
+        <div class="form-row" style="margin-bottom:8px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Point 2 — Latitude</label>
+            <input type="number" step="any" id="cal2Lat" placeholder="47.6235" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Point 2 — Longitude</label>
+            <input type="number" step="any" id="cal2Lng" placeholder="-122.3490" />
+          </div>
+        </div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:12px" id="cal2Status">Click the map to set Point 2 position</div>
+
+        <div class="actions" style="margin-bottom:12px">
+          <button class="btn-primary" onclick="saveCalibration()">Save Calibration</button>
+          <button class="btn-secondary" onclick="autoPlacePins()">Auto-Place Pins from GPS</button>
+        </div>
       </div>
 
       <!-- Map image with clickable overlay -->
@@ -530,12 +575,16 @@
           Set a map image URL above to start placing pins
         </div>
         <img id="mapImage" style="width:100%;display:none" />
-        <div id="mapPinsOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%"></div>
+        <div id="mapPinsOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
+        <div id="mapCalOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
       </div>
 
       <!-- Pin list -->
       <div style="margin-top:12px">
-        <h3 style="margin-bottom:8px">Pins</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3>Pins</h3>
+          <button class="btn-secondary" onclick="deleteAllPins()" style="font-size:11px;padding:3px 10px">Delete All</button>
+        </div>
         <div id="mapPinsList"></div>
       </div>
     </div>
@@ -1185,14 +1234,35 @@ async function sendItemPush(itemId, itemTitle) {
 // ---- Map Pin Editor ----
 
 let mapEditorPins = [];
+let mapMode = 'pin'; // 'pin' or 'calibrate'
+let calPoints = [null, null]; // [{x,y}, {x,y}]
+let settingCalPoint = 0; // which calibration point to set next (0 or 1)
 
 function showMapEditor() {
   hideAll();
   document.getElementById('mapEditorView').style.display = 'block';
+  mapMode = 'pin';
+  setMapMode('pin');
 
-  // Set current map image URL
   const mapURL = currentEventData?.mapImageURL || currentEventData?.map_image_url || '';
   document.getElementById('mapImageURL').value = mapURL;
+
+  // Load existing calibration
+  const calStr = currentEventData?.mapCalibration || currentEventData?.map_calibration || '';
+  if (calStr) {
+    try {
+      const cal = JSON.parse(calStr);
+      if (cal.length === 2) {
+        calPoints = [{x: cal[0].x, y: cal[0].y}, {x: cal[1].x, y: cal[1].y}];
+        document.getElementById('cal1Lat').value = cal[0].lat;
+        document.getElementById('cal1Lng').value = cal[0].lng;
+        document.getElementById('cal2Lat').value = cal[1].lat;
+        document.getElementById('cal2Lng').value = cal[1].lng;
+        document.getElementById('cal1Status').textContent = `Point 1: (${cal[0].x.toFixed(2)}, ${cal[0].y.toFixed(2)})`;
+        document.getElementById('cal2Status').textContent = `Point 2: (${cal[1].x.toFixed(2)}, ${cal[1].y.toFixed(2)})`;
+      }
+    } catch(e) {}
+  }
 
   if (mapURL) {
     loadMapImage(mapURL);
@@ -1204,6 +1274,16 @@ function showMapEditor() {
   loadMapPins();
 }
 
+function setMapMode(mode) {
+  mapMode = mode;
+  document.getElementById('tabPlacePin').classList.toggle('active', mode === 'pin');
+  document.getElementById('tabCalibrate').classList.toggle('active', mode === 'calibrate');
+  document.getElementById('pinControls').style.display = mode === 'pin' ? 'block' : 'none';
+  document.getElementById('calibrateControls').style.display = mode === 'calibrate' ? 'block' : 'none';
+  settingCalPoint = 0;
+  renderCalibrationOverlay();
+}
+
 function loadMapImage(url) {
   const img = document.getElementById('mapImage');
   const noImg = document.getElementById('mapNoImage');
@@ -1212,6 +1292,7 @@ function loadMapImage(url) {
     img.style.display = 'block';
     noImg.style.display = 'none';
     renderMapPins();
+    renderCalibrationOverlay();
   };
   img.onerror = () => {
     img.style.display = 'none';
@@ -1219,15 +1300,35 @@ function loadMapImage(url) {
     noImg.textContent = 'Failed to load map image';
   };
 
-  // Click handler for placing pins
   const container = document.getElementById('mapImageContainer');
   container.onclick = (e) => {
     if (img.style.display === 'none') return;
     const rect = container.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    placePin(x, y);
+
+    if (mapMode === 'calibrate') {
+      calPoints[settingCalPoint] = {x, y};
+      const label = settingCalPoint === 0 ? 'cal1Status' : 'cal2Status';
+      document.getElementById(label).textContent = `Point ${settingCalPoint + 1} set: (${x.toFixed(3)}, ${y.toFixed(3)})`;
+      settingCalPoint = (settingCalPoint + 1) % 2;
+      renderCalibrationOverlay();
+    } else {
+      placePin(x, y);
+    }
   };
+}
+
+function renderCalibrationOverlay() {
+  const overlay = document.getElementById('mapCalOverlay');
+  overlay.innerHTML = calPoints.map((pt, i) => {
+    if (!pt) return '';
+    const color = i === 0 ? '#f59e0b' : '#3b82f6';
+    return `<div style="position:absolute;left:${pt.x*100}%;top:${pt.y*100}%;transform:translate(-50%,-50%)">
+      <div style="width:16px;height:16px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,0.5)"></div>
+      <div style="color:white;font-size:10px;font-weight:bold;text-align:center;margin-top:2px;text-shadow:0 1px 2px black">P${i+1}</div>
+    </div>`;
+  }).join('');
 }
 
 async function saveMapImageURL() {
@@ -1343,6 +1444,151 @@ async function placePin(x, y) {
   } catch (e) {
     toast('Error: ' + e.message);
   }
+}
+
+async function saveCalibration() {
+  const lat1 = parseFloat(document.getElementById('cal1Lat').value);
+  const lng1 = parseFloat(document.getElementById('cal1Lng').value);
+  const lat2 = parseFloat(document.getElementById('cal2Lat').value);
+  const lng2 = parseFloat(document.getElementById('cal2Lng').value);
+
+  if (!calPoints[0] || !calPoints[1] || isNaN(lat1) || isNaN(lng1) || isNaN(lat2) || isNaN(lng2)) {
+    toast('Set both points on the map and enter GPS coordinates');
+    return;
+  }
+
+  const calibration = JSON.stringify([
+    {x: calPoints[0].x, y: calPoints[0].y, lat: lat1, lng: lng1},
+    {x: calPoints[1].x, y: calPoints[1].y, lat: lat2, lng: lng2}
+  ]);
+
+  try {
+    await fetch(`${API}/api/admin/events/${currentEventId}`, {
+      method: 'PUT',
+      headers: adminHeaders(),
+      body: JSON.stringify({ mapCalibration: calibration })
+    });
+    if (currentEventData) currentEventData.mapCalibration = calibration;
+    toast('Calibration saved!');
+  } catch (e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+function gpsToMapXY(lat, lng) {
+  // Use calibration to convert GPS to map x,y
+  let calStr = currentEventData?.mapCalibration || currentEventData?.map_calibration || '';
+  if (!calStr) return null;
+
+  let cal;
+  try { cal = JSON.parse(calStr); } catch(e) { return null; }
+  if (!cal || cal.length !== 2) return null;
+
+  const p1 = cal[0], p2 = cal[1];
+  // Linear interpolation between the two reference points
+  const dLat = p2.lat - p1.lat;
+  const dLng = p2.lng - p1.lng;
+  const dX = p2.x - p1.x;
+  const dY = p2.y - p1.y;
+
+  if (Math.abs(dLat) < 0.000001 && Math.abs(dLng) < 0.000001) return null;
+
+  // Solve: x = p1.x + ((lat - p1.lat) * dX/dLat) ... but need to handle 2D mapping
+  // For axis-aligned maps: lat maps to y, lng maps to x independently
+  const x = p1.x + ((lng - p1.lng) / dLng) * dX;
+  const y = p1.y + ((lat - p1.lat) / dLat) * dY;
+
+  return {x, y};
+}
+
+async function autoPlacePins() {
+  // Get venue's known pins from the event's location
+  const eventLat = currentEventData?.latitude;
+  const eventLng = currentEventData?.longitude;
+  const location = currentEventData?.location || '';
+
+  if (!currentEventData?.mapCalibration && !currentEventData?.map_calibration) {
+    toast('Save calibration first');
+    return;
+  }
+
+  // Fetch the known venues list from the backend to get existing pins with GPS coords
+  // Since VenueMapData is iOS-only, we'll use the event's existing MapKit pins
+  // which have GPS coordinates derivable from the venue template
+  // For now, use a predefined set of common Seattle Center landmarks
+  const landmarks = {
+    'seattle center': [
+      {label: 'Space Needle', type: 'Custom', lat: 47.6205, lng: -122.3493, desc: 'Iconic observation tower'},
+      {label: 'Climate Pledge Arena', type: 'Stage', lat: 47.6220, lng: -122.3540, desc: 'Major concert venue'},
+      {label: 'Mural Amphitheatre', type: 'Stage', lat: 47.6210, lng: -122.3518, desc: 'Outdoor stage'},
+      {label: 'Fisher Pavilion', type: 'Stage', lat: 47.6225, lng: -122.3525, desc: 'Covered event space'},
+      {label: 'Armory (Food Hall)', type: 'Food', lat: 47.6213, lng: -122.3508, desc: 'Indoor food court'},
+      {label: 'International Fountain', type: 'Custom', lat: 47.6230, lng: -122.3513, desc: 'Iconic fountain and gathering area'},
+      {label: 'Memorial Stadium', type: 'Stage', lat: 47.6245, lng: -122.3503, desc: 'Outdoor stadium'},
+      {label: 'KEXP Studio', type: 'Custom', lat: 47.6245, lng: -122.3560, desc: 'KEXP radio station'},
+      {label: 'Restrooms - Armory', type: 'Restroom', lat: 47.6215, lng: -122.3512},
+      {label: 'Restrooms - Fountain', type: 'Restroom', lat: 47.6228, lng: -122.3520},
+      {label: 'First Aid', type: 'First Aid', lat: 47.6218, lng: -122.3505},
+      {label: 'Entrance - 5th Ave', type: 'Exit', lat: 47.6208, lng: -122.3490},
+      {label: 'Entrance - Mercer St', type: 'Exit', lat: 47.6250, lng: -122.3510},
+    ]
+  };
+
+  const key = Object.keys(landmarks).find(k => location.toLowerCase().includes(k));
+  if (!key) {
+    toast('No landmark data for this venue. Place pins manually.');
+    return;
+  }
+
+  const pins = landmarks[key];
+  let placed = 0;
+
+  for (const pin of pins) {
+    const pos = gpsToMapXY(pin.lat, pin.lng);
+    if (!pos || pos.x < 0 || pos.x > 1 || pos.y < 0 || pos.y > 1) continue;
+
+    // Check if a pin with this label already exists
+    if (mapEditorPins.some(p => p.label === pin.label)) continue;
+
+    try {
+      const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          label: pin.label,
+          pinType: pin.type,
+          x: pos.x,
+          y: pos.y,
+          description: pin.desc || ''
+        })
+      });
+      if (!res.ok) continue;
+      const saved = await res.json();
+      mapEditorPins.push({id: saved.id, label: pin.label, pinType: pin.type, x: pos.x, y: pos.y, description: pin.desc || ''});
+      placed++;
+    } catch(e) {}
+  }
+
+  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+  renderMapPins();
+  renderMapPinsList();
+  toast(`Auto-placed ${placed} pins`);
+}
+
+async function deleteAllPins() {
+  if (!confirm(`Delete all ${mapEditorPins.length} pins?`)) return;
+  for (const pin of mapEditorPins) {
+    if (pin.id) {
+      try {
+        await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+      } catch(e) {}
+    }
+  }
+  mapEditorPins = [];
+  document.getElementById('mapPinCount').textContent = '0 pins';
+  renderMapPins();
+  renderMapPinsList();
+  toast('All pins deleted');
 }
 
 async function deleteMapPin(index) {

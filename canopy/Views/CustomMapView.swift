@@ -9,65 +9,49 @@ struct CustomMapView: View {
     @State private var lastScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
-    @State private var imageSize: CGSize = .zero
+    @State private var cachedImage: UIImage?
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 Color(.systemGray6)
 
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        let rendered = image.resizable().scaledToFit()
+                if let uiImage = cachedImage {
+                    let image = Image(uiImage: uiImage)
 
-                        ZStack(alignment: .topLeading) {
-                            rendered
-                                .background(
-                                    GeometryReader { imgGeo in
-                                        Color.clear.onAppear {
-                                            imageSize = imgGeo.size
-                                        }
-                                        .onChange(of: imgGeo.size) { _, newSize in
-                                            imageSize = newSize
-                                        }
-                                    }
-                                )
-
-                            if imageSize.width > 0 && imageSize.height > 0 {
-                                ForEach(pins) { pin in
-                                    Button {
-                                        selectedPin = pin
-                                    } label: {
-                                        pinMarker(pin)
-                                    }
-                                    .position(
-                                        x: pin.x * imageSize.width,
-                                        y: pin.y * imageSize.height
-                                    )
-                                    .accessibilityLabel(pin.label)
-                                }
-                            }
-                        }
-                        .frame(width: geo.size.width, height: geo.size.width * (imageSize.height / max(imageSize.width, 1)))
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .overlay(pinOverlay)
+                        .drawingGroup()
                         .scaleEffect(scale)
                         .offset(offset)
-                        .gesture(
+                        .simultaneousGesture(
                             MagnificationGesture()
                                 .onChanged { value in
-                                    scale = lastScale * value
+                                    scale = min(lastScale * value, 4.0)
                                 }
-                                .onEnded { value in
-                                    lastScale = max(scale, 1.0)
+                                .onEnded { _ in
+                                    lastScale = min(max(scale, 1.0), 4.0)
                                     scale = lastScale
+                                    clampOffset(containerWidth: geo.size.width)
                                 }
                         )
-                        .simultaneousGesture(
-                            DragGesture()
+                        .gesture(
+                            DragGesture(minimumDistance: scale > 1.05 ? 5 : 10000)
                                 .onChanged { value in
-                                    offset = CGSize(
+                                    let raw = CGSize(
                                         width: lastOffset.width + value.translation.width,
                                         height: lastOffset.height + value.translation.height
+                                    )
+                                    guard let img = cachedImage else { offset = raw; return }
+                                    let ar = img.size.height / img.size.width
+                                    let w = geo.size.width
+                                    let maxX = max((scale * w - w) / 2, 0)
+                                    let maxY = max((scale * w * ar - 400) / 2, 0)
+                                    offset = CGSize(
+                                        width: min(max(raw.width, -maxX), maxX),
+                                        height: min(max(raw.height, -maxY), maxY)
                                     )
                                 }
                                 .onEnded { _ in
@@ -75,31 +59,71 @@ struct CustomMapView: View {
                                 }
                         )
                         .onTapGesture(count: 2) {
-                            withAnimation {
-                                scale = scale > 1.5 ? 1.0 : 2.5
-                                lastScale = scale
-                                if scale == 1.0 {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                if scale > 1.5 {
+                                    scale = 1.0
+                                    lastScale = 1.0
                                     offset = .zero
                                     lastOffset = .zero
+                                } else {
+                                    scale = 3.0
+                                    lastScale = 3.0
                                 }
                             }
                         }
-
-                    case .empty:
-                        ProgressView()
-
-                    default:
-                        Image(systemName: "map")
-                            .font(.largeTitle)
-                            .foregroundStyle(.secondary)
-                    }
+                } else {
+                    ProgressView()
                 }
             }
         }
         .frame(height: 400)
+        .contentShape(Rectangle())
+        .clipped()
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .padding(.horizontal)
-        .accessibilityLabel("Custom venue map. Double tap to zoom. Pinch to zoom in and out.")
+        .task {
+            guard cachedImage == nil else { return }
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                cachedImage = UIImage(data: data)
+            } catch {
+                print("[Map] Failed to load map image: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func clampOffset(containerWidth: CGFloat) {
+        // The image is scaledToFit inside the container
+        // We need the actual rendered image size to compute bounds
+        guard let img = cachedImage else { return }
+        let aspectRatio = img.size.height / img.size.width
+        let imageWidth = containerWidth
+        let imageHeight = containerWidth * aspectRatio
+
+        let maxX = max((scale * imageWidth - containerWidth) / 2, 0)
+        let maxY = max((scale * imageHeight - 400) / 2, 0) // 400 = frame height
+
+        print("[MapClamp] imgW: \(imageWidth), imgH: \(imageHeight), scaledW: \(scale * imageWidth), scaledH: \(scale * imageHeight)")
+        print("[MapClamp] maxX: \(maxX), maxY: \(maxY), offsetX: \(offset.width), offsetY: \(offset.height)")
+
+        offset.width = min(max(offset.width, -maxX), maxX)
+        offset.height = min(max(offset.height, -maxY), maxY)
+        lastOffset = offset
+    }
+
+    private var pinOverlay: some View {
+        GeometryReader { imgGeo in
+            ForEach(pins) { pin in
+                pinMarker(pin)
+                    .scaleEffect(1.0 / scale)
+                    .position(
+                        x: pin.x * imgGeo.size.width,
+                        y: pin.y * imgGeo.size.height
+                    )
+                    .allowsHitTesting(false)
+                    .accessibilityLabel(pin.label)
+            }
+        }
     }
 
     private func pinMarker(_ pin: MapPin) -> some View {
