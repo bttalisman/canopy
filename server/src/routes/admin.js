@@ -696,8 +696,8 @@ router.post('/match-template', async (req, res) => {
       return results;
     }
 
-    // Match at multiple scales: 100%, 80%, 120%
-    const scales = [1.0, 0.8, 1.2, 0.6, 1.4];
+    // Match at many scales for arbitrary size variation
+    const scales = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.7, 2.0];
     let allMatches = [];
 
     for (const s of scales) {
@@ -719,13 +719,6 @@ router.post('/match-template', async (req, res) => {
       );
       if (!tooClose) matches.push(m);
     }
-
-    // Add the original template location
-    matches.push({
-      x: (tLeft + tW/2) / scanWidth,
-      y: (tTop + tH/2) / scanHeight,
-      similarity: 1.0
-    });
 
     matches.sort((a, b) => b.similarity - a.similarity);
 

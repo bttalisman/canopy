@@ -579,12 +579,24 @@
           <p style="color:#94a3b8;font-size:12px;margin-bottom:8px">
             Click and drag on the map to select one icon. Then we'll find all copies.
           </p>
-          <div style="display:flex;gap:8px;align-items:center">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
             <canvas id="templatePreview" width="48" height="48" style="border:1px solid #334155;border-radius:4px;background:#0f172a"></canvas>
             <div style="flex:1">
               <div id="templateStatus" style="color:#64748b;font-size:12px">Draw a rectangle on the map</div>
             </div>
-            <button class="btn-primary" onclick="findTemplateMatches()" id="findMatchesBtn" disabled style="font-size:12px;padding:4px 12px">Find All</button>
+            <button class="btn-primary" onclick="findTemplateMatches()" id="findMatchesBtn" disabled style="font-size:12px;padding:4px 12px">Scan</button>
+          </div>
+          <div id="toleranceControls" style="display:none">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <label style="font-size:12px;color:#94a3b8;white-space:nowrap">Tolerance</label>
+              <input type="range" id="toleranceSlider" min="30" max="95" value="55" style="flex:1;accent-color:#4ade80" oninput="onToleranceChange()" />
+              <span id="toleranceValue" style="font-size:12px;color:#94a3b8;min-width:40px">55%</span>
+              <span id="toleranceMatchCount" class="badge green" style="min-width:50px;text-align:center">0</span>
+            </div>
+            <div class="actions">
+              <button class="btn-primary" onclick="placeFilteredMatches()" id="placeMatchesBtn" style="font-size:12px">Place Pins</button>
+              <button class="btn-secondary" onclick="cancelTemplateSelect()" style="font-size:12px">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1608,6 +1620,7 @@ async function autoPlacePins() {
 let templateMode = false;
 let templateDragStart = null;
 let templateRegion = null; // {x, y, w, h} in 0-1 coords
+let allTemplateMatches = []; // all matches from server, filtered by slider
 
 function startTemplateSelect() {
   templateMode = true;
@@ -1682,19 +1695,19 @@ function startTemplateSelect() {
 function cancelTemplateSelect() {
   templateMode = false;
   templateRegion = null;
+  allTemplateMatches = [];
   document.getElementById('templateControls').style.display = 'none';
+  document.getElementById('toleranceControls').style.display = 'none';
   document.getElementById('mapSelectOverlay').style.display = 'none';
   document.getElementById('mapSelectOverlay').style.pointerEvents = 'none';
   document.getElementById('selectRect').style.display = 'none';
+  renderMapPins(); // restore normal pin overlay
 }
 
 async function findTemplateMatches() {
   if (!templateRegion) return;
 
   const mapURL = document.getElementById('mapImageURL').value.trim();
-  const label = document.getElementById('mapPinLabel').value.trim() || 'Detected Icon';
-  const pinType = document.getElementById('mapPinType').value;
-  const description = document.getElementById('mapPinDescription').value.trim();
 
   const btn = document.getElementById('findMatchesBtn');
   btn.textContent = 'Scanning...';
@@ -1707,7 +1720,7 @@ async function findTemplateMatches() {
       body: JSON.stringify({
         mapImageURL: mapURL,
         template: templateRegion,
-        threshold: 0.85
+        threshold: 0.3 // get everything, slider will filter
       })
     });
 
@@ -1717,53 +1730,100 @@ async function findTemplateMatches() {
     }
 
     const data = await res.json();
-    const matches = data.matches || [];
+    allTemplateMatches = (data.matches || []).filter(m => m.similarity < 1.0); // exclude the original
 
-    if (matches.length === 0) {
-      toast('No matches found — try selecting a larger or clearer icon');
+    if (allTemplateMatches.length === 0) {
+      toast('No matches found — try selecting a different icon');
       return;
     }
 
-    // Place pins at each match
-    let placed = 0;
-    for (const match of matches) {
-      try {
-        const saveRes = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
-          method: 'POST',
-          headers: adminHeaders(),
-          body: JSON.stringify({
-            label: matches.length > 1 ? `${label} ${placed + 1}` : label,
-            pinType,
-            x: match.x,
-            y: match.y,
-            description
-          })
-        });
-        if (!saveRes.ok) continue;
-        const saved = await saveRes.json();
-        mapEditorPins.push({
-          id: saved.id,
-          label: matches.length > 1 ? `${label} ${placed + 1}` : label,
+    // Show tolerance slider
+    document.getElementById('toleranceControls').style.display = 'block';
+    document.getElementById('toleranceSlider').value = 55;
+    onToleranceChange();
+    toast(`Found ${allTemplateMatches.length} candidates — adjust the slider`);
+  } catch (e) {
+    toast('Error: ' + e.message);
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function getFilteredMatches() {
+  const tolerance = parseInt(document.getElementById('toleranceSlider').value) / 100;
+  return allTemplateMatches.filter(m => m.similarity >= tolerance);
+}
+
+function onToleranceChange() {
+  const val = document.getElementById('toleranceSlider').value;
+  document.getElementById('toleranceValue').textContent = val + '%';
+  const filtered = getFilteredMatches();
+  document.getElementById('toleranceMatchCount').textContent = `${filtered.length} match${filtered.length !== 1 ? 'es' : ''}`;
+
+  // Preview matches on map overlay
+  const overlay = document.getElementById('mapPinsOverlay');
+  const existingPinHtml = mapEditorPins.map((pin, i) => {
+    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', Custom: '#6b7280' };
+    const color = colors[pin.pinType] || '#6b7280';
+    return `<div style="position:absolute;left:${pin.x * 100}%;top:${pin.y * 100}%;transform:translate(-50%,-50%)" title="${pin.label}">
+      <div style="width:20px;height:20px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center">
+        <span style="color:white;font-size:8px;font-weight:bold">${i + 1}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const matchHtml = filtered.map(m => {
+    return `<div style="position:absolute;left:${m.x * 100}%;top:${m.y * 100}%;transform:translate(-50%,-50%)">
+      <div style="width:18px;height:18px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 6px rgba(245,158,11,0.6);opacity:0.9"></div>
+    </div>`;
+  }).join('');
+
+  overlay.innerHTML = existingPinHtml + matchHtml;
+}
+
+async function placeFilteredMatches() {
+  const filtered = getFilteredMatches();
+  if (filtered.length === 0) { toast('No matches at this tolerance'); return; }
+
+  const label = document.getElementById('mapPinLabel').value.trim() || 'Detected Icon';
+  const pinType = document.getElementById('mapPinType').value;
+  const description = document.getElementById('mapPinDescription').value.trim();
+
+  let placed = 0;
+  for (const match of filtered) {
+    try {
+      const saveRes = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          label: filtered.length > 1 ? `${label} ${placed + 1}` : label,
           pinType,
           x: match.x,
           y: match.y,
           description
-        });
-        placed++;
-      } catch(e) {}
-    }
-
-    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-    renderMapPins();
-    renderMapPinsList();
-    cancelTemplateSelect();
-    toast(`Found ${matches.length} matches, placed ${placed} pins`);
-  } catch (e) {
-    toast('Error: ' + e.message);
-  } finally {
-    btn.textContent = 'Find All';
-    btn.disabled = false;
+        })
+      });
+      if (!saveRes.ok) continue;
+      const saved = await saveRes.json();
+      mapEditorPins.push({
+        id: saved.id,
+        label: filtered.length > 1 ? `${label} ${placed + 1}` : label,
+        pinType,
+        x: match.x,
+        y: match.y,
+        description
+      });
+      placed++;
+    } catch(e) {}
   }
+
+  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+  allTemplateMatches = [];
+  renderMapPins();
+  renderMapPinsList();
+  cancelTemplateSelect();
+  toast(`Placed ${placed} pins`);
 }
 
 async function aiDetectPins() {
