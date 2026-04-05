@@ -14,10 +14,9 @@ struct DiscoverView: View {
     @State private var errorMessage: String?
     @State private var lastFetchedCount: Int?
 
-    private var apiKey: String { Secrets.ticketmasterAPIKey }
-
-    private var hasAPIKey: Bool {
-        !apiKey.isEmpty && apiKey != "YOUR_KEY_HERE"
+    private var hasBackend: Bool {
+        let url = Secrets.canopyAPIBaseURL
+        return !url.isEmpty && url != "YOUR_API_URL_HERE"
     }
 
     enum TimeFilter: String, CaseIterable, Identifiable {
@@ -63,11 +62,17 @@ struct DiscoverView: View {
             result = result.filter { $0.startDate <= endOfWeek && $0.endDate >= now }
         case .thisWeekend:
             let weekday = calendar.component(.weekday, from: now)
-            let daysUntilSaturday = (7 - weekday) % 7
-            let saturday = calendar.date(byAdding: .day, value: daysUntilSaturday == 0 && weekday != 7 ? 6 : daysUntilSaturday, to: now)!
+            // weekday: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
+            let daysToSaturday: Int
+            switch weekday {
+            case 1: daysToSaturday = -1  // Sunday → go back to Saturday
+            case 7: daysToSaturday = 0   // Already Saturday
+            default: daysToSaturday = 7 - weekday  // Mon-Fri → next Saturday
+            }
+            let saturday = calendar.date(byAdding: .day, value: daysToSaturday, to: now)!
             let sunday = calendar.date(byAdding: .day, value: 1, to: saturday)!
-            let endOfSunday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: sunday)!
             let startOfSaturday = calendar.startOfDay(for: saturday)
+            let endOfSunday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: sunday)!
             result = result.filter { $0.startDate <= endOfSunday && $0.endDate >= startOfSaturday }
         case .thisMonth:
             let endOfMonth = calendar.date(byAdding: .month, value: 1, to: now)!
@@ -289,9 +294,9 @@ struct DiscoverView: View {
                                 ContentUnavailableView(
                                     "No Events Found",
                                     systemImage: "calendar.badge.exclamationmark",
-                                    description: Text(hasAPIKey
+                                    description: Text(hasBackend
                                         ? "Try adjusting your filters or pull to refresh."
-                                        : "API key not configured. See Config.xcconfig.")
+                                        : "Backend not configured.")
                                 )
                                 .padding(.top, 60)
                             } else {
@@ -332,7 +337,7 @@ struct DiscoverView: View {
     }
 
     private func fetchEvents() async {
-        print("[Fetch] fetchEvents() called, hasAPIKey=\(hasAPIKey)")
+        print("[Fetch] fetchEvents() called, hasBackend=\(hasBackend)")
         isLoading = true
         errorMessage = nil
         lastFetchedCount = nil
@@ -360,14 +365,13 @@ struct DiscoverView: View {
             print("[Fetch] Canopy API error: \(error.localizedDescription)")
         }
 
-        // 2. Fetch from Ticketmaster (event discovery)
-        if hasAPIKey {
+        // 2. Fetch from Ticketmaster (via backend proxy)
+        if hasBackend {
             do {
                 let formatter = ISO8601DateFormatter()
                 let startDT = formatter.string(from: Date())
 
                 let response = try await TicketmasterService.shared.searchEvents(
-                    apiKey: apiKey,
                     startDateTime: startDT
                 )
 

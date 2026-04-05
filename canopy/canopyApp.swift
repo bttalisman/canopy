@@ -22,7 +22,7 @@ struct canopyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema(versionedSchema: CanopySchemaV1.self)
+        let schema = Schema(versionedSchema: CanopySchemaV2.self)
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {

@@ -4,47 +4,26 @@ import SwiftData
 actor TicketmasterService {
     static let shared = TicketmasterService()
 
-    private let baseURL = "https://app.ticketmaster.com/discovery/v2"
     private let session = URLSession.shared
 
-    // MARK: - Fetch Events
+    // MARK: - Fetch Events (via backend proxy)
 
     func searchEvents(
-        apiKey: String,
-        city: String = "Seattle",
-        stateCode: String = "WA",
-        page: Int = 0,
-        size: Int = 50,
-        sort: String = "date,asc",
-        classificationName: String? = nil,
-        keyword: String? = nil,
-        startDateTime: String? = nil,
-        endDateTime: String? = nil
+        startDateTime: String? = nil
     ) async throws -> TMResponse {
-        var components = URLComponents(string: "\(baseURL)/events.json")!
-        var queryItems = [
-            URLQueryItem(name: "apikey", value: apiKey),
-            URLQueryItem(name: "city", value: city),
-            URLQueryItem(name: "stateCode", value: stateCode),
-            URLQueryItem(name: "page", value: String(page)),
-            URLQueryItem(name: "size", value: String(size)),
-            URLQueryItem(name: "sort", value: sort),
-        ]
+        let baseURL = Secrets.canopyAPIBaseURL
+        guard !baseURL.isEmpty, baseURL != "YOUR_API_URL_HERE" else {
+            throw TicketmasterError.noAPIKey
+        }
 
-        if let classificationName {
-            queryItems.append(URLQueryItem(name: "classificationName", value: classificationName))
-        }
-        if let keyword, !keyword.isEmpty {
-            queryItems.append(URLQueryItem(name: "keyword", value: keyword))
-        }
+        var components = URLComponents(string: "\(baseURL)/api/events/ticketmaster/search")!
+        var queryItems: [URLQueryItem] = []
+
         if let startDateTime {
             queryItems.append(URLQueryItem(name: "startDateTime", value: startDateTime))
         }
-        if let endDateTime {
-            queryItems.append(URLQueryItem(name: "endDateTime", value: endDateTime))
-        }
 
-        components.queryItems = queryItems
+        components.queryItems = queryItems.isEmpty ? nil : queryItems
 
         guard let url = components.url else {
             throw TicketmasterError.invalidURL

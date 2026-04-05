@@ -150,6 +150,42 @@ router.get('/:slug', async (req, res) => {
   }
 });
 
+// GET /api/events/ticketmaster/search — proxy Ticketmaster API to keep key server-side
+router.get('/ticketmaster/search', async (req, res) => {
+  try {
+    const apiKey = process.env.TICKETMASTER_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Ticketmaster API key not configured' });
+    }
+
+    const params = new URLSearchParams({
+      apikey: apiKey,
+      city: req.query.city || 'Seattle',
+      stateCode: req.query.stateCode || 'WA',
+      page: req.query.page || '0',
+      size: req.query.size || '50',
+      sort: req.query.sort || 'date,asc',
+    });
+
+    if (req.query.startDateTime) params.set('startDateTime', req.query.startDateTime);
+    if (req.query.endDateTime) params.set('endDateTime', req.query.endDateTime);
+    if (req.query.classificationName) params.set('classificationName', req.query.classificationName);
+    if (req.query.keyword) params.set('keyword', req.query.keyword);
+
+    const response = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${params}`);
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: `Ticketmaster API error: ${response.status}` });
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Error proxying Ticketmaster:', err);
+    res.status(500).json({ error: 'Failed to fetch from Ticketmaster' });
+  }
+});
+
 function groupBy(arr, key) {
   return arr.reduce((acc, item) => {
     const k = item[key];
