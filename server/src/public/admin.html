@@ -1530,6 +1530,7 @@ function selectMapPin(index) {
   btn.style.marginTop = '8px';
   btn.innerHTML = `
     <button class="btn-primary" onclick="updateSelectedPin()" style="font-size:13px">Update Pin ${index + 1}</button>
+    <button class="btn-danger" onclick="deleteSelectedPin()" style="font-size:13px">Delete</button>
     <button class="btn-secondary" onclick="deselectPin()" style="font-size:13px">Cancel</button>
   `;
   controls.appendChild(btn);
@@ -1546,6 +1547,24 @@ function deselectPin() {
   const btn = document.getElementById('updatePinBtn');
   if (btn) btn.remove();
   renderMapPins();
+}
+
+async function deleteSelectedPin() {
+  if (selectedMapPinIndex === null) return;
+  const pin = mapEditorPins[selectedMapPinIndex];
+  try {
+    if (pin.id) {
+      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+    }
+    mapEditorPins.splice(selectedMapPinIndex, 1);
+    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+    deselectPin();
+    renderMapPins();
+    renderMapPinsList();
+    toast('Pin deleted');
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
 }
 
 async function updateSelectedPin() {
@@ -1609,8 +1628,6 @@ async function placePin(x, y) {
     });
 
     document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-    document.getElementById('mapPinLabel').value = '';
-    document.getElementById('mapPinDescription').value = '';
     renderMapPins();
     renderMapPinsList();
     toast(`Placed: ${label}`);
