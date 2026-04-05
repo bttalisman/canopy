@@ -325,8 +325,8 @@ struct DiscoverView: View {
                 EventDetailView(event: event)
             }
             .task {
-                // Backfill map data for any events missing it
-                for event in events where event.mapPins.isEmpty {
+                // Backfill map data for events missing it (skip events with custom map images)
+                for event in events where event.mapPins.isEmpty && event.mapImageURL == nil {
                     VenueMapData.attachMapData(to: event, using: modelContext)
                 }
 

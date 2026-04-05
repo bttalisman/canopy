@@ -212,8 +212,8 @@ actor CanopyAPIService {
                 context.insert(pin)
             }
 
-            // Also attach local venue map data if API didn't provide pins
-            if (apiEvent.mapPins ?? []).isEmpty {
+            // Also attach local venue map data if API didn't provide pins or custom map
+            if (apiEvent.mapPins ?? []).isEmpty && apiEvent.mapImageURL == nil {
                 VenueMapData.attachMapData(to: event, using: context)
             }
 
