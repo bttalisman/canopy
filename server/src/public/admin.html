@@ -212,8 +212,38 @@
   <div id="eventListView">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2>Events</h2>
-      <button class="btn-primary" onclick="showCreateEvent()">+ New Event</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secondary" onclick="showSeattleImport()" style="font-size:13px">📊 Import from Seattle Data</button>
+        <button class="btn-primary" onclick="showCreateEvent()">+ New Event</button>
+      </div>
     </div>
+
+    <!-- Seattle Data Import Panel -->
+    <div id="seattleImportPanel" style="display:none;margin-bottom:16px">
+      <div class="card">
+        <h3 style="margin-bottom:8px">Import from Seattle Open Data</h3>
+        <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">
+          Import permitted special events from data.seattle.gov. Filter by minimum attendance and year.
+        </p>
+        <div class="form-row" style="margin-bottom:12px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Minimum Attendance</label>
+            <input type="number" id="seattleMinAttendance" value="500" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Year</label>
+            <input type="number" id="seattleYear" value="2025" />
+          </div>
+        </div>
+        <div class="actions" style="margin-bottom:12px">
+          <button class="btn-secondary" onclick="previewSeattleEvents()" id="seattlePreviewBtn">Preview</button>
+          <button class="btn-primary" onclick="importSeattleEvents()" id="seattleImportBtn" disabled>Import All New</button>
+          <button class="btn-secondary" onclick="document.getElementById('seattleImportPanel').style.display='none'">Close</button>
+        </div>
+        <div id="seattlePreviewList"></div>
+      </div>
+    </div>
+
     <div id="eventList"><div class="empty">Loading events...</div></div>
   </div>
 
@@ -2150,6 +2180,87 @@ async function deleteMapPin(index) {
     toast('Pin deleted');
   } catch (e) {
     toast('Error: ' + e.message);
+  }
+}
+
+// ---- Seattle Open Data Import ----
+
+function showSeattleImport() {
+  document.getElementById('seattleImportPanel').style.display = 'block';
+  document.getElementById('seattlePreviewList').innerHTML = '';
+  document.getElementById('seattleImportBtn').disabled = true;
+}
+
+async function previewSeattleEvents() {
+  const minAttendance = document.getElementById('seattleMinAttendance').value;
+  const year = document.getElementById('seattleYear').value;
+  const btn = document.getElementById('seattlePreviewBtn');
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/admin/seattle-events-preview?minAttendance=${minAttendance}&year=${year}`, {
+      headers: adminHeaders()
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    const events = data.events || [];
+
+    if (events.length === 0) {
+      document.getElementById('seattlePreviewList').innerHTML = '<div class="empty">No events found matching criteria</div>';
+      return;
+    }
+
+    const newCount = events.filter(e => !e.alreadyImported).length;
+    document.getElementById('seattleImportBtn').disabled = newCount === 0;
+
+    document.getElementById('seattlePreviewList').innerHTML = `
+      <div style="margin-bottom:8px;font-size:13px;color:#94a3b8">${events.length} events found, ${newCount} new</div>
+      ${events.map(e => `
+        <div class="schedule-item" style="opacity:${e.alreadyImported ? '0.5' : '1'}">
+          <div>
+            <div class="title">${e.name} ${e.alreadyImported ? '<span class="badge">already imported</span>' : ''}</div>
+            <div class="detail">
+              ${e.startDate ? e.startDate.slice(0,10) : '?'}
+              ${e.category ? ' · ' + e.category : ''}
+              ${e.neighborhood ? ' · ' + e.neighborhood : ''}
+              ${e.attendance ? ' · ' + e.attendance.toLocaleString() + ' expected' : ''}
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    `;
+  } catch (e) {
+    document.getElementById('seattlePreviewList').innerHTML = `<div class="empty" style="color:#f87171">Error: ${e.message}</div>`;
+  } finally {
+    btn.textContent = 'Preview';
+    btn.disabled = false;
+  }
+}
+
+async function importSeattleEvents() {
+  const minAttendance = document.getElementById('seattleMinAttendance').value;
+  const year = document.getElementById('seattleYear').value;
+  const btn = document.getElementById('seattleImportBtn');
+  btn.textContent = 'Importing...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/admin/import-seattle-events`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ minAttendance: parseInt(minAttendance), year: parseInt(year) })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    toast(data.message);
+    document.getElementById('seattleImportPanel').style.display = 'none';
+    loadEvents();
+  } catch (e) {
+    toast('Error: ' + e.message);
+  } finally {
+    btn.textContent = 'Import All New';
+    btn.disabled = false;
   }
 }
 

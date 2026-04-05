@@ -839,4 +839,125 @@ Return ONLY a JSON array. If no icons found, return [].`
   }
 });
 
+// =====================
+// SEATTLE OPEN DATA IMPORT
+// =====================
+
+// POST /api/admin/import-seattle-events — import from Seattle Special Events Permits
+router.post('/import-seattle-events', async (req, res) => {
+  try {
+    const { minAttendance = 500, year = new Date().getFullYear() } = req.body;
+
+    // Fetch permitted events from Seattle Open Data
+    const soqlUrl = `https://data.seattle.gov/resource/dm95-f8w5.json?$limit=200&$where=event_start_date>'${year}-01-01' AND permit_status!='Cancelled' AND attendance>${minAttendance}&$order=event_start_date`;
+
+    console.log(`[Seattle Data] Fetching: ${soqlUrl}`);
+    const response = await fetch(soqlUrl);
+    if (!response.ok) throw new Error(`Seattle API error: ${response.status}`);
+
+    const events = await response.json();
+    console.log(`[Seattle Data] Got ${events.length} events with attendance > ${minAttendance}`);
+
+    let imported = 0;
+    let skipped = 0;
+
+    for (const e of events) {
+      const name = e.name_of_event;
+      if (!name || !e.event_start_date) { skipped++; continue; }
+
+      // Generate slug
+      const slug = `seattle-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').slice(0, 50)}-${year}`;
+
+      // Check for duplicates
+      const existing = await pool.query('SELECT id FROM events WHERE slug = $1', [slug]);
+      if (existing.rows.length > 0) { skipped++; continue; }
+
+      // Map category
+      let category = 'community';
+      const cat = (e.event_category || '').toLowerCase();
+      const subCat = (e.event_sub_category || '').toLowerCase();
+      if (cat === 'athletic' || subCat.includes('run') || subCat.includes('cycling')) category = 'community';
+      if (cat === 'commercial') category = 'fair';
+      if (subCat.includes('music') || subCat.includes('concert')) category = 'concert';
+      if (subCat.includes('festival')) category = 'festival';
+
+      const startDate = e.event_start_date;
+      const endDate = e.event_end_date || e.event_start_date;
+      const neighborhood = e.neighborhood_s || '';
+      const location = e.park_name || neighborhood || 'Seattle';
+      const attendance = parseInt(e.attendance) || 0;
+
+      const description = [
+        e.event_category ? `${e.event_category} event` : '',
+        e.event_sub_category ? `(${e.event_sub_category})` : '',
+        attendance ? `Expected attendance: ${attendance.toLocaleString()}` : '',
+        e.organization ? `Organized by ${e.organization}` : '',
+      ].filter(Boolean).join('. ');
+
+      const { rows } = await pool.query(`
+        INSERT INTO events (name, slug, description, start_date, end_date, location, neighborhood, category, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+        RETURNING id, name
+      `, [name, slug, description, startDate, endDate, location, neighborhood, category]);
+
+      if (rows.length > 0) {
+        imported++;
+        console.log(`[Seattle Data] Imported: ${rows[0].name}`);
+      }
+    }
+
+    res.json({
+      total: events.length,
+      imported,
+      skipped,
+      message: `Imported ${imported} events, skipped ${skipped} (duplicates or incomplete)`
+    });
+  } catch (err) {
+    console.error('Error importing Seattle events:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/seattle-events-preview — preview what would be imported
+router.get('/seattle-events-preview', async (req, res) => {
+  try {
+    const minAttendance = parseInt(req.query.minAttendance) || 500;
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+
+    const soqlUrl = `https://data.seattle.gov/resource/dm95-f8w5.json?$limit=200&$where=event_start_date>'${year}-01-01' AND permit_status!='Cancelled' AND attendance>${minAttendance}&$order=event_start_date`;
+
+    const response = await fetch(soqlUrl);
+    if (!response.ok) throw new Error(`Seattle API error: ${response.status}`);
+
+    const events = await response.json();
+
+    // Check which ones already exist
+    const previews = [];
+    for (const e of events) {
+      const name = e.name_of_event;
+      if (!name || !e.event_start_date) continue;
+
+      const slug = `seattle-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').slice(0, 50)}-${year}`;
+      const existing = await pool.query('SELECT id FROM events WHERE slug = $1', [slug]);
+
+      previews.push({
+        name,
+        startDate: e.event_start_date,
+        endDate: e.event_end_date,
+        category: e.event_category,
+        subCategory: e.event_sub_category,
+        neighborhood: e.neighborhood_s,
+        location: e.park_name,
+        attendance: parseInt(e.attendance) || 0,
+        status: e.permit_status,
+        alreadyImported: existing.rows.length > 0,
+      });
+    }
+
+    res.json({ events: previews, total: previews.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
