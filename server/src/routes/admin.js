@@ -601,15 +601,27 @@ router.post('/detect-map-pins', async (req, res) => {
       throw new Error(`Failed to fetch map image: HTTP ${imgResponse.status}`);
     }
 
-    const imgBuffer = await imgResponse.arrayBuffer();
-    const base64 = Buffer.from(imgBuffer).toString('base64');
-    const sizeKB = Math.round(base64.length / 1024);
-    console.log(`[AI Map] Image fetched: ${sizeKB}KB base64`);
+    const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+    let sizeKB = Math.round(imgBuffer.length / 1024);
+    console.log(`[AI Map] Image fetched: ${sizeKB}KB`);
 
-    // Determine media type
-    const contentType = imgResponse.headers.get('content-type') || 'image/png';
-    const mediaType = contentType.includes('jpeg') || contentType.includes('jpg') ? 'image/jpeg' : 'image/png';
-    console.log(`[AI Map] Media type: ${mediaType}`);
+    // Resize if over 4MB to stay under the 5MB base64 limit
+    let finalBuffer = imgBuffer;
+    let mediaType = 'image/jpeg'; // always send as JPEG for smaller size
+
+    const sharp = require('sharp');
+    const metadata = await sharp(imgBuffer).metadata();
+    console.log(`[AI Map] Image dimensions: ${metadata.width}x${metadata.height}`);
+
+    // Scale down to max 2000px wide and convert to JPEG
+    finalBuffer = await sharp(imgBuffer)
+      .resize({ width: Math.min(metadata.width, 2000), withoutEnlargement: true })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+
+    const base64 = finalBuffer.toString('base64');
+    sizeKB = Math.round(base64.length / 1024);
+    console.log(`[AI Map] Resized to ${sizeKB}KB base64, sending as ${mediaType}`);
 
     const client = new Anthropic();
 
