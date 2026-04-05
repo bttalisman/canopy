@@ -599,7 +599,7 @@ router.post('/match-template', async (req, res) => {
     const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
 
     // Scale image down for processing speed
-    const maxScanWidth = 800;
+    const maxScanWidth = 1200;
     const origMeta = await sharp(imgBuffer).metadata();
     const scale = Math.min(1, maxScanWidth / origMeta.width);
     const scanWidth = Math.round(origMeta.width * scale);
@@ -649,7 +649,7 @@ router.post('/match-template', async (req, res) => {
       tDenom = Math.sqrt(tDenom);
       if (tDenom < 1) return [];
 
-      const step = Math.max(Math.round(Math.min(tw, th) * 0.3), 1);
+      const step = Math.max(Math.round(Math.min(tw, th) * 0.25), 1);
       const results = [];
 
       for (let sy = 0; sy <= sH - th; sy += step) {
