@@ -22,13 +22,15 @@ struct canopyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema(versionedSchema: CanopySchemaV2.self)
+        let schema = Schema([
+            Event.self, Stage.self, ScheduleItem.self,
+            MapPin.self, UserSavedItem.self,
+        ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
             return try ModelContainer(
                 for: schema,
-                migrationPlan: CanopyMigrationPlan.self,
                 configurations: [modelConfiguration]
             )
         } catch {
