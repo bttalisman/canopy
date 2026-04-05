@@ -4,6 +4,7 @@ struct CustomMapView: View {
     let url: URL
     let pins: [MapPin]
     @Binding var selectedPin: MapPin?
+    var pinSize: CGFloat = 22
 
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
@@ -129,9 +130,9 @@ struct CustomMapView: View {
     private func pinMarker(_ pin: MapPin) -> some View {
         VStack(spacing: 1) {
             Image(systemName: pin.pinType.systemImage)
-                .font(.system(size: 10))
+                .font(.system(size: pinSize * 0.45))
                 .foregroundStyle(.white)
-                .frame(width: 22, height: 22)
+                .frame(width: pinSize, height: pinSize)
                 .background(pinColor(pin.pinType))
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.4), radius: 2)
@@ -155,6 +156,8 @@ struct CustomMapView: View {
         case .stage: return .purple
         case .firstAid: return .red
         case .exit: return .green
+        case .wifi: return .cyan
+        case .accessible: return .indigo
         case .custom: return .gray
         }
     }

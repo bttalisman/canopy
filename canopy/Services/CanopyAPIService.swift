@@ -15,6 +15,7 @@ struct APIEvent: Codable, Identifiable {
     let logoSystemImage: String?
     let imageURL: String?
     let mapImageURL: String?
+    let mapPinSize: Double?
     let ticketingURL: String?
     let latitude: Double?
     let longitude: Double?
@@ -126,6 +127,7 @@ actor CanopyAPIService {
                     event.logoSystemImage = apiEvent.logoSystemImage ?? event.logoSystemImage
                     event.imageURL = apiEvent.imageURL
                     event.mapImageURL = apiEvent.mapImageURL
+                    event.mapPinSize = apiEvent.mapPinSize ?? event.mapPinSize
                     event.ticketingURL = apiEvent.ticketingURL
                     event.latitude = apiEvent.latitude ?? event.latitude
                     event.longitude = apiEvent.longitude ?? event.longitude
@@ -160,6 +162,7 @@ actor CanopyAPIService {
             )
             event.imageURL = apiEvent.imageURL
             event.mapImageURL = apiEvent.mapImageURL
+            event.mapPinSize = apiEvent.mapPinSize
             event.latitude = apiEvent.latitude
             event.longitude = apiEvent.longitude
 

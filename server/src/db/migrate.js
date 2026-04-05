@@ -92,6 +92,7 @@ const schema = `
   );
 
   ALTER TABLE events ADD COLUMN IF NOT EXISTS map_image_url TEXT;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS map_pin_size DOUBLE PRECISION;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS map_calibration TEXT;
 
   ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_name TEXT;

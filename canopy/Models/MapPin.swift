@@ -34,6 +34,8 @@ enum MapPinType: String, Codable, CaseIterable, Identifiable {
     case stage = "Stage"
     case firstAid = "First Aid"
     case exit = "Exit"
+    case wifi = "WiFi"
+    case accessible = "Accessible"
     case custom = "Custom"
 
     var id: String { rawValue }
@@ -45,6 +47,8 @@ enum MapPinType: String, Codable, CaseIterable, Identifiable {
         case .stage: return "music.mic"
         case .firstAid: return "cross.case.fill"
         case .exit: return "arrow.right.square"
+        case .wifi: return "wifi"
+        case .accessible: return "figure.roll"
         case .custom: return "mappin"
         }
     }
@@ -56,6 +60,8 @@ enum MapPinType: String, Codable, CaseIterable, Identifiable {
         case .stage: return "purple"
         case .firstAid: return "red"
         case .exit: return "green"
+        case .wifi: return "cyan"
+        case .accessible: return "indigo"
         case .custom: return "gray"
         }
     }
