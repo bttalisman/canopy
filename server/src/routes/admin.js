@@ -617,21 +617,28 @@ router.post('/match-template', async (req, res) => {
     const tW = Math.max(Math.round(template.w * scanWidth), 1);
     const tH = Math.max(Math.round(template.h * scanHeight), 1);
 
+    // Extract template at original resolution, then resize with sharp for quality
+    const templateCrop = await sharp(imgBuffer)
+      .extract({
+        left: Math.round(template.x * origMeta.width),
+        top: Math.round(template.y * origMeta.height),
+        width: Math.max(Math.round(template.w * origMeta.width), 1),
+        height: Math.max(Math.round(template.h * origMeta.height), 1)
+      })
+      .toBuffer();
+
     console.log(`[Template] Scan: ${scanWidth}x${scanHeight}, template: ${tW}x${tH} at (${tLeft},${tTop})`);
 
     // NCC matching at a given scale
-    function matchAtScale(scanBuf, sW, sH, tw, th, origX, origY) {
-      // Resize template to target size
-      const tPixels = [];
-      for (let ty = 0; ty < th; ty++) {
-        for (let tx = 0; tx < tw; tx++) {
-          const srcY = Math.round(tTop + ty * (tH / th));
-          const srcX = Math.round(tLeft + tx * (tW / tw));
-          const si = (srcY * scanWidth + srcX) * 3;
-          tPixels.push(scanBuffer[si] || 0, scanBuffer[si+1] || 0, scanBuffer[si+2] || 0);
-        }
-      }
+    async function matchAtScale(scanBuf, sW, sH, tw, th, origX, origY) {
+      // Resize the high-res template crop to the target scan size
+      const resizedTemplate = await sharp(templateCrop)
+        .resize(tw, th, { fit: 'fill' })
+        .removeAlpha()
+        .raw()
+        .toBuffer();
 
+      const tPixels = Array.from(resizedTemplate);
       const tLen = tw * th;
       let tMeanR = 0, tMeanG = 0, tMeanB = 0;
       for (let i = 0; i < tLen; i++) {
@@ -696,16 +703,17 @@ router.post('/match-template', async (req, res) => {
       return results;
     }
 
-    // Match at many scales for arbitrary size variation
-    const scales = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.7, 2.0];
+    // Match at multiple scales
+    const scales = [0.5, 0.7, 0.85, 1.0, 1.15, 1.3, 1.6, 2.0];
     let allMatches = [];
 
     for (const s of scales) {
-      const tw = Math.max(Math.round(tW * s), 1);
-      const th = Math.max(Math.round(tH * s), 1);
+      const tw = Math.max(Math.round(tW * s), 2);
+      const th = Math.max(Math.round(tH * s), 2);
       if (tw > scanWidth / 2 || th > scanHeight / 2) continue;
+      if (tw < 2 || th < 2) continue;
       console.log(`[Template] Matching at scale ${s}: ${tw}x${th}`);
-      const results = matchAtScale(scanBuffer, scanWidth, scanHeight, tw, th, tLeft, tTop);
+      const results = await matchAtScale(scanBuffer, scanWidth, scanHeight, tw, th, tLeft, tTop);
       allMatches.push(...results);
     }
 
