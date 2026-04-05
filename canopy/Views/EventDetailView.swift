@@ -165,7 +165,7 @@ struct EventDetailView: View {
     }
 
     private var hasSchedule: Bool { !event.scheduleItems.isEmpty }
-    private var hasMap: Bool { !event.mapPins.isEmpty }
+    private var hasMap: Bool { !event.mapPins.isEmpty || event.mapImageURL != nil }
 
     private var availableTabs: [DetailTab] {
         var tabs: [DetailTab] = []
@@ -529,15 +529,67 @@ struct EventMapView: View {
                 .padding(.horizontal)
             }
 
-            if event.mapPins.isEmpty {
+            if event.mapPins.isEmpty && event.mapImageURL == nil {
                 ContentUnavailableView(
                     "No Map Data",
                     systemImage: "map",
                     description: Text("Venue map details haven't been added yet.")
                 )
                 .padding(.top, 40)
+            } else if let mapImageURL = event.mapImageURL, let url = URL(string: mapImageURL) {
+                // Custom venue map image with pin overlays
+                GeometryReader { geo in
+                    ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                        ZStack(alignment: .topLeading) {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFit()
+                                case .empty:
+                                    Rectangle()
+                                        .fill(Color(.systemGray5))
+                                        .overlay(ProgressView())
+                                default:
+                                    Rectangle()
+                                        .fill(Color(.systemGray5))
+                                        .overlay(
+                                            Image(systemName: "map")
+                                                .font(.largeTitle)
+                                                .foregroundStyle(.secondary)
+                                        )
+                                }
+                            }
+                            .frame(minWidth: geo.size.width)
+
+                            // Pin overlays at relative positions
+                            ForEach(filteredPins) { pin in
+                                Button {
+                                    selectedPin = pin
+                                } label: {
+                                    Image(systemName: pin.pinType.systemImage)
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 24, height: 24)
+                                        .background(pinColor(pin.pinType))
+                                        .clipShape(Circle())
+                                        .shadow(color: .black.opacity(0.3), radius: 2)
+                                }
+                                .position(
+                                    x: pin.x * geo.size.width,
+                                    y: pin.y * geo.size.width * 0.75 // assume ~4:3 aspect ratio
+                                )
+                                .accessibilityLabel(pin.label)
+                            }
+                        }
+                    }
+                }
+                .frame(height: 380)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal)
             } else {
-                // Real MapKit map with annotation pins
+                // MapKit map with annotation pins
                 Map(position: $mapPosition) {
                     UserAnnotation()
 

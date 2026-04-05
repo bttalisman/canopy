@@ -24,15 +24,15 @@ router.use(requireAuth);
 router.post('/events', async (req, res) => {
   try {
     const { name, slug, description, startDate, endDate, location, neighborhood,
-            logoSystemImage, imageURL, ticketingURL, latitude, longitude, category } = req.body;
+            logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category } = req.body;
 
     const { rows } = await pool.query(`
       INSERT INTO events (name, slug, description, start_date, end_date, location, neighborhood,
-                          logo_system_image, image_url, ticketing_url, latitude, longitude, category)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                          logo_system_image, image_url, map_image_url, ticketing_url, latitude, longitude, category)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `, [name, slug, description || '', startDate, endDate, location, neighborhood || '',
-        logoSystemImage || 'party.popper', imageURL, ticketingURL, latitude, longitude, category || 'community']);
+        logoSystemImage || 'party.popper', imageURL, mapImageURL || null, ticketingURL, latitude, longitude, category || 'community']);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -45,7 +45,7 @@ router.post('/events', async (req, res) => {
 router.put('/events/:id', async (req, res) => {
   try {
     const { name, description, startDate, endDate, location, neighborhood,
-            logoSystemImage, imageURL, ticketingURL, latitude, longitude, category, isActive } = req.body;
+            logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, isActive } = req.body;
 
     const { rows } = await pool.query(`
       UPDATE events SET
@@ -57,16 +57,17 @@ router.put('/events/:id', async (req, res) => {
         neighborhood = COALESCE($7, neighborhood),
         logo_system_image = COALESCE($8, logo_system_image),
         image_url = COALESCE($9, image_url),
-        ticketing_url = COALESCE($10, ticketing_url),
-        latitude = COALESCE($11, latitude),
-        longitude = COALESCE($12, longitude),
-        category = COALESCE($13, category),
-        is_active = COALESCE($14, is_active),
+        map_image_url = COALESCE($10, map_image_url),
+        ticketing_url = COALESCE($11, ticketing_url),
+        latitude = COALESCE($12, latitude),
+        longitude = COALESCE($13, longitude),
+        category = COALESCE($14, category),
+        is_active = COALESCE($15, is_active),
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `, [req.params.id, name, description, startDate, endDate, location, neighborhood,
-        logoSystemImage, imageURL, ticketingURL, latitude, longitude, category, isActive]);
+        logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, isActive]);
 
     if (rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     res.json(rows[0]);

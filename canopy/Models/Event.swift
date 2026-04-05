@@ -14,6 +14,7 @@ final class Event {
     var logoSystemImage: String
     var ticketingURL: String?
     var imageURL: String?
+    var mapImageURL: String?
     var latitude: Double?
     var longitude: Double?
     var isActive: Bool

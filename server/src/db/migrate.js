@@ -91,6 +91,8 @@ const schema = `
     UNIQUE(device_token, schedule_item_id)
   );
 
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS map_image_url TEXT;
+
   ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_name TEXT;
   ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_bio TEXT;
   ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_image_url TEXT;
