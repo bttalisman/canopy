@@ -66,6 +66,7 @@ struct PerformerProfileView: View {
                             .font(.body)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     // Social links
@@ -97,11 +98,12 @@ struct PerformerProfileView: View {
                             Text(item.itemDescription)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 50)
             }
         }
         .navigationTitle(item.performerName ?? item.title)

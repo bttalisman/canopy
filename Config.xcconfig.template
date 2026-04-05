@@ -2,3 +2,4 @@
 // Config.xcconfig is gitignored and will not be committed.
 TICKETMASTER_API_KEY = YOUR_KEY_HERE
 CANOPY_API_BASE_URL = https:/$()/your-api-url.example.com
+ONEBUSAWAY_API_KEY = YOUR_OBA_KEY_HERE

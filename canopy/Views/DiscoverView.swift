@@ -100,6 +100,11 @@ struct DiscoverView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
                     TextField("Search events, venues...", text: $searchText)
+                        .onChange(of: searchText) { oldValue, newValue in
+                            if newValue.isEmpty && !oldValue.isEmpty {
+                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            }
+                        }
                     if !searchText.isEmpty {
                         Button {
                             searchText = ""
@@ -332,7 +337,8 @@ struct EventCard: View {
                     case .success(let image):
                         image
                             .resizable()
-                            .aspectRatio(16/9, contentMode: .fill)
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
                             .frame(height: 140)
                             .clipped()
                     case .failure:
@@ -433,38 +439,18 @@ struct EventCard: View {
     }
 
     private var fallbackHeader: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Gradient background using category color
+        ZStack {
             LinearGradient(
                 colors: [categoryColor.opacity(0.3), categoryColor.opacity(0.1), Color(.secondarySystemBackground)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
-            // Decorative category icon, large and faded
             Image(systemName: event.logoSystemImage)
-                .font(.system(size: 70, weight: .thin))
-                .foregroundStyle(categoryColor.opacity(0.15))
-                .rotationEffect(.degrees(-12))
-                .offset(x: 220, y: -10)
-
-            // Event name and date overlay
-            VStack(alignment: .leading, spacing: 4) {
-                Text(event.neighborhood.isEmpty ? event.location : event.neighborhood)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(categoryColor)
-                    .textCase(.uppercase)
-                    .tracking(1)
-
-                Text(event.startDate, format: .dateTime.month(.wide).day())
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(14)
+                .font(.system(size: 50, weight: .thin))
+                .foregroundStyle(categoryColor.opacity(0.2))
         }
         .frame(height: 100)
-        .clipped()
     }
 }
 

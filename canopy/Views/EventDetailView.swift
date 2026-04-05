@@ -105,22 +105,24 @@ struct EventDetailView: View {
                             .accessibilityHint("Opens ticketing website")
                         }
 
-                        Button {
-                            toggleEventSave()
-                        } label: {
-                            Label(
-                                eventSaved ? "Saved" : "Save",
-                                systemImage: eventSaved ? "bookmark.fill" : "bookmark"
-                            )
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(eventSaved ? Color.green.opacity(0.15) : Color(.systemGray5))
-                            .foregroundStyle(eventSaved ? .green : .primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        if event.scheduleItems.count != 1 {
+                            Button {
+                                toggleEventSave()
+                            } label: {
+                                Label(
+                                    eventSaved ? "Saved" : "Save",
+                                    systemImage: eventSaved ? "bookmark.fill" : "bookmark"
+                                )
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(eventSaved ? Color.green.opacity(0.15) : Color(.systemGray5))
+                                .foregroundStyle(eventSaved ? .green : .primary)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .accessibilityLabel(eventSaved ? "Remove \(event.name) from saved events" : "Save \(event.name) to my schedule")
+                            .accessibilityAddTraits(eventSaved ? .isSelected : [])
                         }
-                        .accessibilityLabel(eventSaved ? "Remove \(event.name) from saved events" : "Save \(event.name) to my schedule")
-                        .accessibilityAddTraits(eventSaved ? .isSelected : [])
                     }
                     .padding(.horizontal)
                 }
@@ -234,7 +236,7 @@ struct EventScheduleView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if !event.stages.isEmpty {
+            if event.stages.count > 1 && event.scheduleItems.count > 1 {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         Button {
@@ -722,6 +724,9 @@ struct EventInfoView: View {
             if let lat = event.latitude, let lng = event.longitude {
                 Divider()
                 RideShareView(venueName: event.location, venueLatitude: lat, venueLongitude: lng)
+
+                Divider()
+                TransitDirectionsView(venueName: event.location, venueLatitude: lat, venueLongitude: lng)
             }
 
             if let url = event.ticketingURL, let ticketURL = URL(string: url) {

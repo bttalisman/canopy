@@ -54,10 +54,11 @@ struct TMEvent: Codable, Identifiable {
     }
 
     var primaryImage: TMImage? {
-        // Prefer 16:9 ratio, non-fallback
-        images?.first(where: { $0.ratio == "16_9" && $0.fallback != true })
-        ?? images?.first(where: { $0.ratio == "16_9" })
-        ?? images?.first
+        // Prefer largest 16:9 ratio, non-fallback
+        let candidates = images?.filter { $0.fallback != true } ?? images ?? []
+        let wideImages = candidates.filter { $0.ratio == "16_9" }
+        let best = wideImages.max(by: { ($0.width ?? 0) < ($1.width ?? 0) })
+        return best ?? candidates.max(by: { ($0.width ?? 0) < ($1.width ?? 0) })
     }
 
     var venue: TMVenue? {
