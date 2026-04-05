@@ -1611,12 +1611,19 @@ async function aiDetectPins() {
       return;
     }
 
-    // Show detected pins as a review list before placing
+    // Delete all existing pins first
+    for (const pin of mapEditorPins) {
+      if (pin.id) {
+        try {
+          await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+        } catch(e) {}
+      }
+    }
+    mapEditorPins = [];
+
+    // Place all detected pins
     let placed = 0;
     for (const pin of detected) {
-      // Skip if label already exists
-      if (mapEditorPins.some(p => p.label === pin.label)) continue;
-
       try {
         const saveRes = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
           method: 'POST',
