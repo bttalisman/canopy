@@ -19,6 +19,7 @@ struct DiscoverMapView: View {
     var allEvents: [Event] = []
     @Binding var selectedEvent: Event?
     var showDateSlider: Bool = true
+    var selectedNeighborhood: String? = nil
     @State private var selectedCluster: VenueCluster?
     @State private var dateRange: ClosedRange<Date> = {
         let now = Calendar.current.startOfDay(for: Date())
@@ -233,6 +234,29 @@ struct DiscoverMapView: View {
             }
         }
         } // close outer VStack
+        .onChange(of: selectedNeighborhood) { _, _ in
+            panToFilteredEvents()
+        }
+    }
+
+    private func panToFilteredEvents() {
+        let eventsWithCoords = dateFilteredEvents.filter { $0.latitude != nil && $0.longitude != nil }
+        guard !eventsWithCoords.isEmpty else { return }
+
+        let lats = eventsWithCoords.compactMap(\.latitude)
+        let lngs = eventsWithCoords.compactMap(\.longitude)
+        let centerLat = (lats.min()! + lats.max()!) / 2
+        let centerLng = (lngs.min()! + lngs.max()!) / 2
+        let spanLat = max((lats.max()! - lats.min()!) * 1.5, 0.01)
+        let spanLng = max((lngs.max()! - lngs.min()!) * 1.5, 0.01)
+
+        withAnimation(.easeInOut(duration: 0.4)) {
+            position = .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLng),
+                span: MKCoordinateSpan(latitudeDelta: spanLat, longitudeDelta: spanLng)
+            ))
+        }
+        selectedCluster = nil
     }
 
     private func categoryThumb(_ category: EventCategory) -> some View {
