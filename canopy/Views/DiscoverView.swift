@@ -323,7 +323,9 @@ struct DiscoverView: View {
                         .animation(.easeInOut(duration: 0.25), value: filteredEvents.map(\.id))
                     }
                     .refreshable {
-                        await fetchEvents()
+                        await Task { @MainActor in
+                            await fetchEvents()
+                        }.value
                     }
                 }
             }
@@ -338,7 +340,9 @@ struct DiscoverView: View {
                 }
 
                 // Always sync from backend on launch
-                await fetchEvents()
+                await Task { @MainActor in
+                    await fetchEvents()
+                }.value
             }
         }
     }
