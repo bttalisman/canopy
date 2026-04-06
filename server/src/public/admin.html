@@ -537,19 +537,17 @@
 
       <!-- Mode selector -->
       <div class="tabs" style="margin-bottom:12px">
-        <div class="tab active" id="tabPlacePin" onclick="setMapMode('pin')">Place Pins</div>
-        <div class="tab" id="tabCalibrate" onclick="setMapMode('calibrate')">Calibrate</div>
+        <div class="tab active" id="modeEditBtn" onclick="setEditorMode('edit')">✏️ Edit</div>
+        <div class="tab" id="modePlaceBtn" onclick="setEditorMode('place')">+ Place</div>
+        <div class="tab" id="tabCalibrate" onclick="setEditorMode('calibrate')">📐 Calibrate</div>
       </div>
 
-      <!-- Pin placement controls -->
+      <p id="pinModeHint" style="color:#94a3b8;font-size:12px;margin-bottom:12px">
+        Click a pin to select it for editing, dragging, or deleting.
+      </p>
+
+      <!-- Pin placement controls (shown in edit and place modes) -->
       <div id="pinControls">
-          <div style="display:flex;gap:6px;margin-bottom:12px">
-          <button class="tab" id="modePlaceBtn" onclick="setPinMode('place')" style="flex:1;font-size:12px;padding:6px">+ Place Pins</button>
-          <button class="tab active" id="modeEditBtn" onclick="setPinMode('edit')" style="flex:1;font-size:12px;padding:6px">✏️ Edit Pins</button>
-        </div>
-        <p id="pinModeHint" style="color:#94a3b8;font-size:12px;margin-bottom:12px">
-          Click a pin to select it for editing, dragging, or deleting.
-        </p>
 
         <div class="form-row" style="margin-bottom:12px">
           <div class="form-group" style="margin-bottom:0">
@@ -1362,8 +1360,7 @@ document.addEventListener('keydown', (e) => {
 function showMapEditor() {
   hideAll();
   document.getElementById('mapEditorView').style.display = 'block';
-  mapMode = 'pin';
-  setMapMode('pin');
+  setEditorMode('edit');
 
   const mapURL = currentEventData?.mapImageURL || currentEventData?.map_image_url || '';
   document.getElementById('mapImageURL').value = mapURL;
@@ -1442,25 +1439,29 @@ function onPinTypeChange() {
   }
 }
 
-function setPinMode(mode) {
-  pinMode = mode;
-  document.getElementById('modePlaceBtn').classList.toggle('active', mode === 'place');
-  document.getElementById('modeEditBtn').classList.toggle('active', mode === 'edit');
-  document.getElementById('pinModeHint').textContent = mode === 'place'
-    ? 'Click the map to place pins. Set type and label above.'
-    : 'Click a pin to select it for editing, dragging, or deleting.';
-  document.getElementById('mapImageContainer').style.cursor = mode === 'place' ? 'crosshair' : 'default';
-  if (mode === 'place') deselectPin();
-}
+function setEditorMode(mode) {
+  pinMode = mode === 'place' ? 'place' : 'edit';
+  mapMode = mode === 'calibrate' ? 'calibrate' : 'pin';
 
-function setMapMode(mode) {
-  mapMode = mode;
-  document.getElementById('tabPlacePin').classList.toggle('active', mode === 'pin');
+  document.getElementById('modeEditBtn').classList.toggle('active', mode === 'edit');
+  document.getElementById('modePlaceBtn').classList.toggle('active', mode === 'place');
   document.getElementById('tabCalibrate').classList.toggle('active', mode === 'calibrate');
-  document.getElementById('pinControls').style.display = mode === 'pin' ? 'block' : 'none';
+
+  document.getElementById('pinControls').style.display = mode !== 'calibrate' ? 'block' : 'none';
   document.getElementById('calibrateControls').style.display = mode === 'calibrate' ? 'block' : 'none';
-  settingCalPoint = 0;
+
+  const hints = {
+    edit: 'Click a pin to select it for editing, dragging, or deleting.',
+    place: 'Click the map to place pins. Set type and label below.',
+    calibrate: 'Click two known locations on the map and enter their GPS coordinates.'
+  };
+  document.getElementById('pinModeHint').textContent = hints[mode];
+  document.getElementById('mapImageContainer').style.cursor = mode === 'place' ? 'crosshair' : 'default';
+
+  if (mode === 'place') deselectPin();
+  if (mode === 'calibrate') settingCalPoint = 0;
   renderCalibrationOverlay();
+  renderMapPins();
 }
 
 function loadMapImage(url) {
