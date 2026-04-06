@@ -17,6 +17,16 @@ app.use(express.json());
 app.use('/maps', express.static(path.join(__dirname, 'public', 'maps')));
 app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
+// Support page
+app.get('/support', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'support.html'));
+});
+
+// Privacy policy
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+});
+
 // Admin dashboard
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
