@@ -39,7 +39,9 @@ struct DiscoverView: View {
             result = result.filter {
                 $0.name.localizedCaseInsensitiveContains(searchText) ||
                 $0.eventDescription.localizedCaseInsensitiveContains(searchText) ||
-                $0.neighborhood.localizedCaseInsensitiveContains(searchText)
+                $0.neighborhood.localizedCaseInsensitiveContains(searchText) ||
+                $0.location.localizedCaseInsensitiveContains(searchText) ||
+                $0.slug.localizedCaseInsensitiveContains(searchText)
             }
         }
 
