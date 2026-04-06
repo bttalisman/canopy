@@ -1327,6 +1327,20 @@ let mapMode = 'pin'; // 'pin' or 'calibrate'
 let calPoints = [null, null]; // [{x,y}, {x,y}]
 let settingCalPoint = 0; // which calibration point to set next (0 or 1)
 
+// Keyboard handler for map editor
+document.addEventListener('keydown', (e) => {
+  if (selectedMapPinIndex === null) return;
+  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT') return;
+
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+    deleteSelectedPin();
+  }
+  if (e.key === 'Escape') {
+    deselectPin();
+  }
+});
+
 function showMapEditor() {
   hideAll();
   document.getElementById('mapEditorView').style.display = 'block';
@@ -1524,7 +1538,7 @@ function renderMapPins() {
     });
     document.addEventListener('mousemove', (e) => {
       if (!dragging) return;
-      if (Math.abs(e.clientX - startX) > 3 || Math.abs(e.clientY - startY) > 3) moved = true;
+      if (Math.abs(e.clientX - startX) > 6 || Math.abs(e.clientY - startY) > 6) moved = true;
       const container = document.getElementById('mapImageContainer');
       const rect = container.getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
