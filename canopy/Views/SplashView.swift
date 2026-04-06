@@ -129,17 +129,17 @@ struct SplashView: View {
 
     private func animate() {
         // Phase 1: Drop down
-        withAnimation(.easeIn(duration: 0.4)) {
+        withAnimation(.easeIn(duration: 0.3)) {
             dropOffset = 0
         }
 
         // Continuous spin: starts fast during fall, decelerates to stop after landing
-        withAnimation(.easeOut(duration: 2.0)) {
+        withAnimation(.easeOut(duration: 1.5)) {
             rotation = 2160
         }
 
         // Phase 2: Squish on impact
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             withAnimation(.spring(response: 0.12, dampingFraction: 0.3)) {
                 squish = 0.75
             }
