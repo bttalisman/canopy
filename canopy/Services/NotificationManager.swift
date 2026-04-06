@@ -18,7 +18,6 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func registerToken(_ tokenData: Data) {
         let token = tokenData.map { String(format: "%02x", $0) }.joined()
         self.deviceToken = token
-        print("[Push] Device token: \(token)")
     }
 
     func registerTokenWithBackend(eventIds: [String], scheduleItemIds: [String] = []) {
@@ -40,16 +39,13 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        print("[Push] Registering — events: \(eventIds), items: \(scheduleItemIds)")
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error {
-                print("[Push] Registration error: \(error.localizedDescription)")
                 return
             }
             if let http = response as? HTTPURLResponse {
                 let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-                print("[Push] Registration response: \(http.statusCode) \(body)")
             }
         }.resume()
     }
@@ -59,9 +55,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func requestPermission() {
         center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error {
-                print("[Notifications] Permission error: \(error.localizedDescription)")
             }
-            print("[Notifications] Permission granted: \(granted)")
         }
     }
 
@@ -111,9 +105,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
         center.add(request) { error in
             if let error {
-                print("[Notifications] Failed to schedule: \(error.localizedDescription)")
             } else {
-                print("[Notifications] Scheduled reminder for '\(item.title)' at \(triggerDate)")
             }
         }
     }
@@ -123,7 +115,6 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func removeReminder(for item: ScheduleItem) {
         let id = "session-\(item.id.uuidString)"
         center.removePendingNotificationRequests(withIdentifiers: [id])
-        print("[Notifications] Removed reminder for '\(item.title)'")
     }
 
     // MARK: - Schedule Conflict Alert
@@ -176,9 +167,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
         center.add(request) { error in
             if let error {
-                print("[Notifications] Failed to schedule event eve: \(error.localizedDescription)")
             } else {
-                print("[Notifications] Scheduled eve reminder for '\(event.name)'")
             }
         }
     }
@@ -217,7 +206,6 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                     }
                 }
 
-                print("[Notifications] Synced \(savedItems.count) reminders")
 
                 // Sync device token with backend for push notifications
                 let eventIds = Array(scheduledEvents).map(\.uuidString)

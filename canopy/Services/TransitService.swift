@@ -52,11 +52,9 @@ actor TransitService {
 
         guard let url = components.url else { throw TransitError.invalidURL }
 
-        print("[Transit] OTP URL: \(url)")
 
         let (data, response) = try await session.data(from: url)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            print("[Transit] OTP error: HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
             return []
         }
 
@@ -64,7 +62,6 @@ actor TransitService {
         guard let itineraries = otpResponse.plan?.itineraries else { return [] }
 
         let routes = itineraries.map { mapItinerary($0) }
-        print("[Transit] OTP found \(routes.count) routes")
         routeCache[key] = CachedRoutes(routes: routes, fetchedAt: Date())
         return routes
     }
@@ -114,9 +111,7 @@ actor TransitService {
 
     func fetchNearbyStops(latitude: Double, longitude: Double, radius: Int = 400) async throws -> [OBAStop] {
         let apiKey = Secrets.oneBusAwayAPIKey
-        print("[Transit] OBA API key: '\(apiKey)'")
         guard !apiKey.isEmpty, apiKey != "YOUR_OBA_KEY_HERE" else {
-            print("[Transit] OBA key not configured, skipping")
             return []
         }
 
@@ -130,23 +125,19 @@ actor TransitService {
 
         guard let url = components.url else { throw TransitError.invalidURL }
 
-        print("[Transit] OBA stops URL: \(url)")
 
         let (data, response) = try await session.data(from: url)
         guard let http = response as? HTTPURLResponse else {
             throw TransitError.serverError
         }
 
-        print("[Transit] OBA stops response: \(http.statusCode)")
 
         guard http.statusCode == 200 else {
             let body = String(data: data, encoding: .utf8) ?? ""
-            print("[Transit] OBA stops error body: \(body.prefix(200))")
             throw TransitError.serverError
         }
 
         let obaResponse = try decoder.decode(OBAResponse<OBAStopListData>.self, from: data)
-        print("[Transit] Found \(obaResponse.data.list.count) stops")
         return obaResponse.data.list
     }
 
@@ -209,7 +200,6 @@ actor TransitService {
             // 1. Find stops near the venue and collect route IDs that serve it
             let venueStops = try await fetchNearbyStops(latitude: venueLatitude, longitude: venueLongitude, radius: 500)
             let venueRouteIds = Set(venueStops.flatMap { $0.routeIds ?? [] })
-            print("[Transit] Venue has \(venueRouteIds.count) routes serving \(venueStops.count) nearby stops")
 
             guard !venueRouteIds.isEmpty else { return [] }
 
@@ -225,7 +215,6 @@ actor TransitService {
                 }
                 .sorted { CLLocation(latitude: $0.lat, longitude: $0.lon).distance(from: userLoc) < CLLocation(latitude: $1.lat, longitude: $1.lon).distance(from: userLoc) }
 
-            print("[Transit] \(relevantStops.count) of \(userStops.count) user stops have venue-bound routes")
 
             guard !relevantStops.isEmpty else { return [] }
 
@@ -245,10 +234,8 @@ actor TransitService {
                             stopName: stop.name
                         )
                     }
-                    print("[Transit] \(filtered.count) of \(arrivals.count) arrivals at \(stop.name) go to venue")
                     allArrivals.append(contentsOf: withStopName)
                 } catch {
-                    print("[Transit] Arrivals error for stop \(stop.name): \(error)")
                 }
             }
 
@@ -260,7 +247,6 @@ actor TransitService {
                 .prefix(8)
                 .map { $0 }
         } catch {
-            print("[Transit] OBA error: \(error.localizedDescription)")
             return []
         }
     }

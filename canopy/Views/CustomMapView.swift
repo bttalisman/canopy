@@ -88,7 +88,6 @@ struct CustomMapView: View {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 cachedImage = UIImage(data: data)
             } catch {
-                print("[Map] Failed to load map image: \(error.localizedDescription)")
             }
         }
     }
@@ -104,8 +103,6 @@ struct CustomMapView: View {
         let maxX = max((scale * imageWidth - containerWidth) / 2, 0)
         let maxY = max((scale * imageHeight - 400) / 2, 0) // 400 = frame height
 
-        print("[MapClamp] imgW: \(imageWidth), imgH: \(imageHeight), scaledW: \(scale * imageWidth), scaledH: \(scale * imageHeight)")
-        print("[MapClamp] maxX: \(maxX), maxY: \(maxY), offsetX: \(offset.width), offsetY: \(offset.height)")
 
         offset.width = min(max(offset.width, -maxX), maxX)
         offset.height = min(max(offset.height, -maxY), maxY)

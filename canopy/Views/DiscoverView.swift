@@ -348,7 +348,6 @@ struct DiscoverView: View {
     }
 
     private func fetchEvents() async {
-        print("[Fetch] fetchEvents() called, hasBackend=\(hasBackend)")
         isLoading = true
         errorMessage = nil
         lastFetchedCount = nil
@@ -357,23 +356,16 @@ struct DiscoverView: View {
 
         // 1. Fetch from Canopy backend (schedule items, curated events)
         do {
-            print("[Fetch] Calling Canopy API at \(Secrets.canopyAPIBaseURL)")
             let apiEvents = try await CanopyAPIService.shared.fetchEvents()
-            print("[Fetch] Got \(apiEvents.count) events from backend")
             for e in apiEvents {
-                print("[Fetch]   \(e.name): \(e.scheduleItems?.count ?? 0) schedule, \(e.mapPins?.count ?? 0) pins, \(e.stages?.count ?? 0) stages")
             }
             let count = await CanopyAPIService.shared.importEvents(apiEvents, into: modelContext)
             totalImported += count
-            print("[Fetch] Imported \(count) new events")
         } catch let error as CanopyAPIError where error == .notConfigured {
-            print("[Fetch] Backend not configured, skipping")
         } catch is CancellationError {
-            print("[Fetch] Canopy API cancelled")
             isLoading = false
             return
         } catch {
-            print("[Fetch] Canopy API error: \(error.localizedDescription)")
         }
 
         // 2. Fetch from Ticketmaster (via backend proxy)
@@ -390,13 +382,11 @@ struct DiscoverView: View {
                 let count = await TicketmasterService.shared.importEvents(tmEvents, into: modelContext)
                 totalImported += count
             } catch is CancellationError {
-                print("[Fetch] Ticketmaster cancelled")
                 isLoading = false
                 return
             } catch {
                 if totalImported == 0 && !events.isEmpty {
                     // Don't show error if we already have cached events
-                    print("[Fetch] Ticketmaster error (cached data available): \(error.localizedDescription)")
                 } else if totalImported == 0 {
                     errorMessage = error.localizedDescription
                 }

@@ -13,7 +13,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("[Push] Failed to register for remote notifications: \(error.localizedDescription)")
     }
 }
 

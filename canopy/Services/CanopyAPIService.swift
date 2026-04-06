@@ -133,14 +133,9 @@ actor CanopyAPIService {
                     event.longitude = apiEvent.longitude ?? event.longitude
                     event.category = mapCategory(apiEvent.category ?? event.category.rawValue)
 
-                    print("[CanopyAPI] Updated event: \(event.name), slug=\(event.slug), imageURL=\(apiEvent.imageURL ?? "nil")")
-                    print("[CanopyAPI]   Local pins: \(event.mapPins.count), API pins: \(apiEvent.mapPins?.count ?? 0)")
-                    print("[CanopyAPI]   Local stages: \(event.stages.count), API stages: \(apiEvent.stages?.count ?? 0)")
-                    print("[CanopyAPI]   Local schedule: \(event.scheduleItems.count), API schedule: \(apiEvent.scheduleItems?.count ?? 0)")
                     updateScheduleItems(for: event, from: apiEvent, parseDate: parseDate, context: context)
                     updateMapPins(for: event, from: apiEvent, context: context)
                     updateStages(for: event, from: apiEvent, context: context)
-                    print("[CanopyAPI]   After update — pins: \(event.mapPins.count), stages: \(event.stages.count)")
                     try? context.save()
                 }
                 continue
@@ -262,19 +257,15 @@ actor CanopyAPIService {
     @MainActor
     private func updateMapPins(for event: Event, from apiEvent: APIEvent, context: ModelContext) {
         guard let apiPins = apiEvent.mapPins, !apiPins.isEmpty else {
-            print("[CanopyAPI] updateMapPins: no API pins (apiPins=\(apiEvent.mapPins?.count ?? -1))")
             return
         }
 
         let existingLabels = Set(event.mapPins.map(\.label))
-        print("[CanopyAPI] updateMapPins: \(apiPins.count) from API, existing labels: \(existingLabels)")
 
         for apiPin in apiPins {
             if existingLabels.contains(apiPin.label) {
-                print("[CanopyAPI]   Skip (exists): \(apiPin.label)")
                 continue
             }
-            print("[CanopyAPI]   Adding pin: \(apiPin.label)")
 
             let pin = MapPin(
                 label: apiPin.label,
