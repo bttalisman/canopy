@@ -15,6 +15,7 @@ app.use(express.json());
 
 // Static files (maps, images)
 app.use('/maps', express.static(path.join(__dirname, 'public', 'maps')));
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
 // Admin dashboard
 app.get('/admin', (req, res) => {
