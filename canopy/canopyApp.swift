@@ -49,7 +49,16 @@ struct canopyApp: App {
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("appearanceMode") private var appearanceMode = 0
     @State private var showSplash = true
+
+    private var colorScheme: ColorScheme? {
+        switch appearanceMode {
+        case 1: return .light
+        case 2: return .dark
+        default: return nil
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -72,6 +81,7 @@ struct RootView: View {
                 }
             }
         }
+        .preferredColorScheme(colorScheme)
         .onAppear {
             // Sync push token + saved items with backend on every launch
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {

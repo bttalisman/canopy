@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Query private var events: [Event]
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
     @AppStorage("quietHoursEnabled") private var quietHoursEnabled = false
+    @AppStorage("appearanceMode") private var appearanceMode = 0 // 0=system, 1=light, 2=dark
     @State private var showingClearConfirmation = false
 
     var body: some View {
@@ -22,6 +23,15 @@ struct SettingsView: View {
                     Button("Clear All Events", role: .destructive) {
                         showingClearConfirmation = true
                     }
+                }
+
+                Section("Appearance") {
+                    Picker("Theme", selection: $appearanceMode) {
+                        Text("System").tag(0)
+                        Text("Light").tag(1)
+                        Text("Dark").tag(2)
+                    }
+                    .pickerStyle(.segmented)
                 }
 
                 Section("Notifications") {
