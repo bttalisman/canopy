@@ -28,15 +28,17 @@ struct DateRangeSlider: View {
 
     var body: some View {
         GeometryReader { geo in
-            let width = geo.size.width
-            let lowerX = lowerFraction * width
-            let upperX = upperFraction * width
+            let thumbRadius: CGFloat = 10
+            let trackWidth = geo.size.width - thumbRadius * 2
+            let lowerX = thumbRadius + lowerFraction * trackWidth
+            let upperX = thumbRadius + upperFraction * trackWidth
 
             ZStack(alignment: .leading) {
                 // Track background
                 RoundedRectangle(cornerRadius: 2)
                     .fill(Color(.systemGray4))
                     .frame(height: 4)
+                    .padding(.horizontal, thumbRadius)
 
                 // Active range
                 RoundedRectangle(cornerRadius: 2)
@@ -47,39 +49,33 @@ struct DateRangeSlider: View {
                 // Lower thumb
                 Circle()
                     .fill(isDraggingLower ? Color.green : Color.white)
-                    .frame(width: 20, height: 20)
+                    .frame(width: thumbRadius * 2, height: thumbRadius * 2)
                     .shadow(color: .black.opacity(0.2), radius: 2)
-                    .offset(x: lowerX - 10)
+                    .offset(x: lowerX - thumbRadius)
                     .gesture(
                         DragGesture()
                             .onChanged { value in
                                 isDraggingLower = true
-                                let fraction = max(0, min(value.location.x / width, upperFraction - 0.02))
-                                let newDate = dateAt(fraction: fraction)
-                                range = newDate...range.upperBound
+                                let fraction = max(0, min((value.location.x - thumbRadius) / trackWidth, upperFraction - 0.02))
+                                range = dateAt(fraction: fraction)...range.upperBound
                             }
-                            .onEnded { _ in
-                                isDraggingLower = false
-                            }
+                            .onEnded { _ in isDraggingLower = false }
                     )
 
                 // Upper thumb
                 Circle()
                     .fill(isDraggingUpper ? Color.green : Color.white)
-                    .frame(width: 20, height: 20)
+                    .frame(width: thumbRadius * 2, height: thumbRadius * 2)
                     .shadow(color: .black.opacity(0.2), radius: 2)
-                    .offset(x: upperX - 10)
+                    .offset(x: upperX - thumbRadius)
                     .gesture(
                         DragGesture()
                             .onChanged { value in
                                 isDraggingUpper = true
-                                let fraction = max(lowerFraction + 0.02, min(1, value.location.x / width))
-                                let newDate = dateAt(fraction: fraction)
-                                range = range.lowerBound...newDate
+                                let fraction = max(lowerFraction + 0.02, min(1, (value.location.x - thumbRadius) / trackWidth))
+                                range = range.lowerBound...dateAt(fraction: fraction)
                             }
-                            .onEnded { _ in
-                                isDraggingUpper = false
-                            }
+                            .onEnded { _ in isDraggingUpper = false }
                     )
             }
         }
