@@ -1538,6 +1538,16 @@ function renderMapPins() {
       el.style.cursor = 'grab';
       el.style.zIndex = '';
       const index = parseInt(el.dataset.index);
+
+      if (!moved) {
+        // Click — select for editing
+        if (pinMode === 'edit') {
+          selectMapPin(index);
+        }
+        return;
+      }
+
+      // Drag — save new position
       const container = document.getElementById('mapImageContainer');
       const rect = container.getBoundingClientRect();
       const elRect = el.getBoundingClientRect();
@@ -1547,7 +1557,6 @@ function renderMapPins() {
       mapEditorPins[index].x = x;
       mapEditorPins[index].y = y;
 
-      // Save to backend
       const pin = mapEditorPins[index];
       if (pin.id) {
         try {
@@ -1561,12 +1570,6 @@ function renderMapPins() {
             mapEditorPins[index].id = saved.id;
           }
         } catch(e) { console.error('Failed to update pin position:', e); }
-      }
-      // Don't re-render list on drag — avoids scroll jump
-
-      // If barely moved, treat as click to select (edit mode only)
-      if (!moved && pinMode === 'edit') {
-        selectMapPin(index);
       }
     });
   });
