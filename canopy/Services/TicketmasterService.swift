@@ -70,6 +70,19 @@ actor TicketmasterService {
 
             if isDuplicate { continue }
 
+            // Skip if a curated event already covers this venue + date range
+            let venueName = tmEvent.venue?.name ?? ""
+            if !venueName.isEmpty {
+                let allEvents = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+                let coveredByCurated = allEvents.contains { curated in
+                    curated.location.localizedCaseInsensitiveContains(venueName) &&
+                    curated.startDate <= startDate &&
+                    curated.endDate >= startDate &&
+                    !curated.scheduleItems.isEmpty
+                }
+                if coveredByCurated { continue }
+            }
+
             let endDate = tmEvent.endDate ?? Calendar.current.date(byAdding: .hour, value: 3, to: startDate)!
 
             let category = mapCategory(tmEvent.segmentName)
