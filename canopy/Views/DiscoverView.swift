@@ -273,7 +273,7 @@ struct DiscoverView: View {
                     // List view
                     ScrollView {
                         VStack(spacing: 16) {
-                            if isLoading {
+                            if isLoading && events.isEmpty {
                                 ProgressView("Fetching Seattle events...")
                                     .padding(.top, 40)
                             } else if let error = errorMessage {
