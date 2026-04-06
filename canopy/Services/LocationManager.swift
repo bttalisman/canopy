@@ -7,7 +7,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
 
     // Toggle this to simulate being in Capitol Hill for testing
     // Set to false for real location
-    static let useDebugLocation = true
+    static let useDebugLocation = false
     private static let debugLocation = CLLocation(latitude: 47.6150, longitude: -122.3200) // Capitol Hill
 
     @Published var userLocation: CLLocation?
