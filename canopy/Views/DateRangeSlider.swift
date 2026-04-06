@@ -27,37 +27,41 @@ struct DateRangeSlider: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
-            let thumbRadius: CGFloat = 10
-            let trackWidth = geo.size.width - thumbRadius * 2
-            let lowerX = thumbRadius + lowerFraction * trackWidth
-            let upperX = thumbRadius + upperFraction * trackWidth
+        HStack(spacing: 0) {
+            // Left spacer (proportional to lower fraction)
+            Color.clear
+                .frame(width: 0)
 
-            ZStack(alignment: .leading) {
+            GeometryReader { geo in
+                let w = geo.size.width
+                let leftX = lowerFraction * w
+                let rightX = upperFraction * w
+
                 // Track background
-                RoundedRectangle(cornerRadius: 2)
+                Capsule()
                     .fill(Color(.systemGray4))
                     .frame(height: 4)
-                    .padding(.horizontal, thumbRadius)
+                    .frame(maxWidth: .infinity)
+                    .position(x: w / 2, y: 10)
 
                 // Active range
-                RoundedRectangle(cornerRadius: 2)
+                Capsule()
                     .fill(Color.green)
-                    .frame(width: max(upperX - lowerX, 0), height: 4)
-                    .offset(x: lowerX)
+                    .frame(width: max(rightX - leftX, 2), height: 4)
+                    .position(x: (leftX + rightX) / 2, y: 10)
 
                 // Lower thumb
                 Circle()
                     .fill(isDraggingLower ? Color.green : Color.white)
-                    .frame(width: thumbRadius * 2, height: thumbRadius * 2)
-                    .shadow(color: .black.opacity(0.2), radius: 2)
-                    .offset(x: lowerX - thumbRadius)
+                    .frame(width: 22, height: 22)
+                    .shadow(color: .black.opacity(0.25), radius: 2)
+                    .position(x: leftX, y: 10)
                     .gesture(
-                        DragGesture()
+                        DragGesture(minimumDistance: 0)
                             .onChanged { value in
                                 isDraggingLower = true
-                                let fraction = max(0, min((value.location.x - thumbRadius) / trackWidth, upperFraction - 0.02))
-                                range = dateAt(fraction: fraction)...range.upperBound
+                                let frac = max(0, min(value.location.x / w, upperFraction - 0.01))
+                                range = dateAt(fraction: frac)...range.upperBound
                             }
                             .onEnded { _ in isDraggingLower = false }
                     )
@@ -65,22 +69,22 @@ struct DateRangeSlider: View {
                 // Upper thumb
                 Circle()
                     .fill(isDraggingUpper ? Color.green : Color.white)
-                    .frame(width: thumbRadius * 2, height: thumbRadius * 2)
-                    .shadow(color: .black.opacity(0.2), radius: 2)
-                    .offset(x: upperX - thumbRadius)
+                    .frame(width: 22, height: 22)
+                    .shadow(color: .black.opacity(0.25), radius: 2)
+                    .position(x: rightX, y: 10)
                     .gesture(
-                        DragGesture()
+                        DragGesture(minimumDistance: 0)
                             .onChanged { value in
                                 isDraggingUpper = true
-                                let fraction = max(lowerFraction + 0.02, min(1, (value.location.x - thumbRadius) / trackWidth))
-                                range = range.lowerBound...dateAt(fraction: fraction)
+                                let frac = max(lowerFraction + 0.01, min(1, value.location.x / w))
+                                range = range.lowerBound...dateAt(fraction: frac)
                             }
                             .onEnded { _ in isDraggingUpper = false }
                     )
             }
         }
-        .padding(.horizontal, 10)
-        .frame(height: 20)
+        .padding(.horizontal, 12)
+        .frame(height: 22)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Date range from \(range.lowerBound.formatted(.dateTime.month(.abbreviated).day())) to \(range.upperBound.formatted(.dateTime.month(.abbreviated).day()))")
     }
