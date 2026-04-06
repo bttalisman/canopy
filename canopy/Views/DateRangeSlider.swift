@@ -10,12 +10,12 @@ struct DateRangeSlider: View {
 
     private var lowerFraction: Double {
         guard totalSeconds > 0 else { return 0 }
-        return range.lowerBound.timeIntervalSince(bounds.lowerBound) / totalSeconds
+        return max(0, min(1, range.lowerBound.timeIntervalSince(bounds.lowerBound) / totalSeconds))
     }
 
     private var upperFraction: Double {
         guard totalSeconds > 0 else { return 1 }
-        return range.upperBound.timeIntervalSince(bounds.lowerBound) / totalSeconds
+        return max(0, min(1, range.upperBound.timeIntervalSince(bounds.lowerBound) / totalSeconds))
     }
 
     private func dateAt(_ fraction: Double) -> Date {
@@ -27,7 +27,6 @@ struct DateRangeSlider: View {
         Color.clear.frame(height: 28)
             .overlay(
                 GeometryReader { geo in
-                    // Inset by thumb radius so thumbs don't clip
                     let inset: CGFloat = 14
                     let trackW = geo.size.width - inset * 2
                     let leftX = inset + CGFloat(lowerFraction) * trackW
