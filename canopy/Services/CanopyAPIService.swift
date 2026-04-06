@@ -202,7 +202,7 @@ actor CanopyAPIService {
             for apiPin in apiEvent.mapPins ?? [] {
                 let pin = MapPin(
                     label: apiPin.label,
-                    pinType: MapPinType(rawValue: apiPin.pinType?.capitalized ?? "Custom") ?? .custom,
+                    pinType: MapPinType(rawValue: apiPin.pinType ?? "Custom") ?? .custom,
                     x: apiPin.x,
                     y: apiPin.y,
                     pinDescription: apiPin.description ?? ""
@@ -269,7 +269,7 @@ actor CanopyAPIService {
 
             let pin = MapPin(
                 label: apiPin.label,
-                pinType: MapPinType(rawValue: apiPin.pinType?.capitalized ?? "Custom") ?? .custom,
+                pinType: MapPinType(rawValue: apiPin.pinType ?? "Custom") ?? .custom,
                 x: apiPin.x,
                 y: apiPin.y,
                 pinDescription: apiPin.description ?? ""
