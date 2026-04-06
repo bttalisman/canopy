@@ -656,7 +656,7 @@
       </div>
 
       <div style="font-size:11px;color:#64748b;margin-bottom:8px">
-        <strong>Keyboard:</strong> H = toggle pins · Delete = delete selected · Esc = deselect
+        <strong>Keyboard:</strong> H = toggle pins · Delete = delete selected · Esc = deselect · ⌘Z = undo
       </div>
 
       <!-- Map image with clickable overlay -->
@@ -1342,6 +1342,11 @@ document.addEventListener('keydown', (e) => {
     togglePinVisibility();
     return;
   }
+  if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    undoLastPin();
+    return;
+  }
 
   if (selectedMapPinIndex === null) return;
 
@@ -1400,6 +1405,31 @@ function togglePinVisibility() {
   pinsVisible = !pinsVisible;
   document.getElementById('mapPinsOverlay').style.display = pinsVisible ? 'block' : 'none';
   document.getElementById('togglePinsBtn').textContent = pinsVisible ? 'Hide Pins' : 'Show Pins';
+}
+
+async function undoLastPin() {
+  if (pinUndoStack.length === 0) { toast('Nothing to undo'); return; }
+  const entry = pinUndoStack.pop();
+
+  if (entry.action === 'place') {
+    // Undo a placement — delete the pin
+    const pin = entry.pin;
+    const idx = mapEditorPins.findIndex(p => p.id === pin.id);
+    if (idx >= 0) {
+      if (pin.id) {
+        try { await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() }); } catch(e) {}
+      }
+      mapEditorPins.splice(idx, 1);
+    }
+  }
+
+  selectedMapPinIndex = null;
+  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+  const btn = document.getElementById('updatePinBtn');
+  if (btn) btn.remove();
+  renderMapPins();
+  renderMapPinsList();
+  toast('Undone');
 }
 
 function setPinMode(mode) {
@@ -1759,6 +1789,7 @@ async function placePin(x, y) {
     document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
     renderMapPins();
     renderMapPinsList();
+    pinUndoStack.push({ action: 'place', index: mapEditorPins.length - 1, pin: mapEditorPins[mapEditorPins.length - 1] });
     toast(`Placed: ${label}`);
   } catch (e) {
     toast('Error: ' + e.message);
@@ -1897,6 +1928,7 @@ async function autoPlacePins() {
 // ---- Template Matching ----
 
 let pinMode = 'edit'; // 'place' or 'edit'
+let pinUndoStack = []; // {action, pin, index} for undo
 let templateMode = false;
 let templateDragStart = null;
 let templateRegion = null; // {x, y, w, h} in 0-1 coords
