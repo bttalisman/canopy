@@ -129,6 +129,8 @@ struct DiscoverView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
                     TextField("Search events, venues...", text: $searchText)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
                         .onChange(of: searchText) { oldValue, newValue in
                             if newValue.isEmpty && !oldValue.isEmpty {
                                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
