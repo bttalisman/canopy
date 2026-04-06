@@ -520,10 +520,10 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Pin Size (all pins on this map)</label>
+        <label>Pin Size (% of map width — consistent across devices)</label>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" id="mapPinSizeSlider" min="2" max="50" value="22" style="flex:1;accent-color:#4ade80" oninput="onPinSizeChange()" />
-          <span id="mapPinSizeValue" style="font-size:12px;color:#94a3b8;min-width:35px">22px</span>
+          <input type="range" id="mapPinSizeSlider" min="0.5" max="8" step="0.1" value="3" style="flex:1;accent-color:#4ade80" oninput="onPinSizeChange()" />
+          <span id="mapPinSizeValue" style="font-size:12px;color:#94a3b8;min-width:35px">3%</span>
           <button class="btn-secondary" onclick="saveMapPinSize()" style="font-size:12px;padding:4px 10px">Save</button>
         </div>
       </div>
@@ -1359,9 +1359,9 @@ function showMapEditor() {
   const mapURL = currentEventData?.mapImageURL || currentEventData?.map_image_url || '';
   document.getElementById('mapImageURL').value = mapURL;
 
-  const pinSize = currentEventData?.mapPinSize || currentEventData?.map_pin_size || 22;
+  const pinSize = currentEventData?.mapPinSize || currentEventData?.map_pin_size || 3;
   document.getElementById('mapPinSizeSlider').value = pinSize;
-  document.getElementById('mapPinSizeValue').textContent = pinSize + 'px';
+  document.getElementById('mapPinSizeValue').textContent = pinSize + '%';
 
   // Load existing calibration
   const calStr = currentEventData?.mapCalibration || currentEventData?.map_calibration || '';
@@ -1469,12 +1469,12 @@ function renderCalibrationOverlay() {
 
 function onPinSizeChange() {
   const val = document.getElementById('mapPinSizeSlider').value;
-  document.getElementById('mapPinSizeValue').textContent = val + 'px';
+  document.getElementById('mapPinSizeValue').textContent = val + '%';
   renderMapPins();
 }
 
 async function saveMapPinSize() {
-  const size = parseInt(document.getElementById('mapPinSizeSlider').value);
+  const size = parseFloat(document.getElementById('mapPinSizeSlider').value);
   try {
     await fetch(`${API}/api/admin/events/${currentEventId}`, {
       method: 'PUT',
@@ -1528,7 +1528,10 @@ function renderMapPins() {
     const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', WiFi: '#06b6d4', Accessible: '#6366f1', ATM: '#eab308', Parking: '#3b82f6', Info: '#14b8a6', 'Gift Shop': '#ec4899', Bus: '#22c55e', Custom: '#6b7280' };
     const color = colors[pin.pinType] || '#6b7280';
     const selected = selectedMapPinIndex === i;
-    const pinSz = parseInt(document.getElementById('mapPinSizeSlider')?.value || 22);
+    const pinPct = parseFloat(document.getElementById('mapPinSizeSlider')?.value || 3);
+    const container = document.getElementById('mapImageContainer');
+    const containerWidth = container ? container.offsetWidth : 600;
+    const pinSz = Math.round(containerWidth * pinPct / 100);
     const border = selected ? '3px solid #f59e0b' : '2px solid white';
     const size = selected ? (pinSz + 4) + 'px' : pinSz + 'px';
     const fontSize = Math.max(Math.round(pinSz * 0.35), 6) + 'px';

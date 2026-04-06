@@ -4,7 +4,7 @@ struct CustomMapView: View {
     let url: URL
     let pins: [MapPin]
     @Binding var selectedPin: MapPin?
-    var pinSize: CGFloat = 22
+    var pinSizePercent: CGFloat = 3 // percentage of map width
 
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
@@ -114,8 +114,9 @@ struct CustomMapView: View {
 
     private var pinOverlay: some View {
         GeometryReader { imgGeo in
+            let computedPinSize = imgGeo.size.width * pinSizePercent / 100
             ForEach(pins) { pin in
-                pinMarker(pin)
+                pinMarker(pin, size: computedPinSize)
                     .position(
                         x: pin.x * imgGeo.size.width,
                         y: pin.y * imgGeo.size.height
@@ -126,12 +127,12 @@ struct CustomMapView: View {
         }
     }
 
-    private func pinMarker(_ pin: MapPin) -> some View {
+    private func pinMarker(_ pin: MapPin, size: CGFloat) -> some View {
         VStack(spacing: 1) {
             Image(systemName: pin.pinType.systemImage)
-                .font(.system(size: pinSize * 0.45))
+                .font(.system(size: max(size * 0.45, 4)))
                 .foregroundStyle(.white)
-                .frame(width: pinSize, height: pinSize)
+                .frame(width: max(size, 4), height: max(size, 4))
                 .background(pinColor(pin.pinType))
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.4), radius: 2)

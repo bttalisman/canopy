@@ -538,7 +538,7 @@ struct EventMapView: View {
                 .padding(.top, 40)
             } else if let mapImageURL = event.mapImageURL, let url = URL(string: mapImageURL) {
                 // Custom venue map image with pin overlays
-                CustomMapView(url: url, pins: filteredPins, selectedPin: $selectedPin, pinSize: CGFloat(event.mapPinSize ?? 22))
+                CustomMapView(url: url, pins: filteredPins, selectedPin: $selectedPin, pinSizePercent: CGFloat(event.mapPinSize ?? 3))
             } else {
                 // MapKit map with annotation pins
                 Map(position: $mapPosition) {
