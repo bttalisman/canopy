@@ -48,23 +48,28 @@ struct canopyApp: App {
 
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showSplash = true
 
     var body: some View {
         ZStack {
-            MainTabView()
-                .opacity(showSplash ? 0 : 1)
+            if !hasCompletedOnboarding {
+                OnboardingView(isComplete: $hasCompletedOnboarding)
+            } else {
+                MainTabView()
+                    .opacity(showSplash ? 0 : 1)
 
-            if showSplash {
-                SplashView()
-                    .onAppear {
-                        NotificationManager.shared.requestPermission()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 4.3) {
-                            withAnimation {
-                                showSplash = false
+                if showSplash {
+                    SplashView()
+                        .onAppear {
+                            NotificationManager.shared.requestPermission()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 4.3) {
+                                withAnimation {
+                                    showSplash = false
+                                }
                             }
                         }
-                    }
+                }
             }
         }
         .onAppear {
