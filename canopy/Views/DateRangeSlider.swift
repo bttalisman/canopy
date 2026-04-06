@@ -79,6 +79,7 @@ struct DateRangeSlider: View {
                     )
             }
         }
+        .padding(.horizontal, 10)
         .frame(height: 20)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Date range from \(range.lowerBound.formatted(.dateTime.month(.abbreviated).day())) to \(range.upperBound.formatted(.dateTime.month(.abbreviated).day()))")
