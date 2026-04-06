@@ -18,14 +18,34 @@ struct DiscoverMapView: View {
     let events: [Event]
     @Binding var selectedEvent: Event?
     @State private var selectedCluster: VenueCluster?
+    @State private var dateRange: ClosedRange<Date> = {
+        let now = Calendar.current.startOfDay(for: Date())
+        let threeMonths = Calendar.current.date(byAdding: .month, value: 3, to: now)!
+        return now...threeMonths
+    }()
 
     @State private var position = MapCameraPosition.region(MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 47.6200, longitude: -122.3350),
         span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
     ))
 
+    private var dateMin: Date {
+        events.map(\.startDate).min() ?? Date()
+    }
+
+    private var dateMax: Date {
+        let latest = events.map(\.endDate).max() ?? Date()
+        return max(latest, Calendar.current.date(byAdding: .month, value: 1, to: Date())!)
+    }
+
+    private var dateFilteredEvents: [Event] {
+        events.filter { event in
+            event.startDate <= dateRange.upperBound && event.endDate >= dateRange.lowerBound
+        }
+    }
+
     var venueClusters: [VenueCluster] {
-        let eventsWithCoords = events.filter { $0.latitude != nil && $0.longitude != nil }
+        let eventsWithCoords = dateFilteredEvents.filter { $0.latitude != nil && $0.longitude != nil }
 
         // Group by rounded coordinates (~100m radius)
         let grouped = Dictionary(grouping: eventsWithCoords) { event -> String in
@@ -48,7 +68,35 @@ struct DiscoverMapView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        VStack(spacing: 0) {
+            // Date range slider
+            VStack(spacing: 4) {
+                HStack {
+                    Text(dateRange.lowerBound, format: .dateTime.month(.abbreviated).day())
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Text("\(dateFilteredEvents.count) event\(dateFilteredEvents.count == 1 ? "" : "s")")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(dateRange.upperBound, format: .dateTime.month(.abbreviated).day())
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.green)
+                }
+
+                DateRangeSlider(
+                    range: $dateRange,
+                    bounds: dateMin...dateMax
+                )
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial)
+
+            ZStack(alignment: .bottom) {
             Map(position: $position) {
                 ForEach(venueClusters) { cluster in
                     Annotation(cluster.location, coordinate: cluster.coordinate) {
@@ -177,6 +225,7 @@ struct DiscoverMapView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        } // close outer VStack
     }
 
     private func categoryThumb(_ category: EventCategory) -> some View {
