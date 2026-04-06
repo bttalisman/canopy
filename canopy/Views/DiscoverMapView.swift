@@ -16,6 +16,7 @@ struct VenueCluster: Identifiable {
 
 struct DiscoverMapView: View {
     let events: [Event]
+    var allEvents: [Event] = []
     @Binding var selectedEvent: Event?
     var showDateSlider: Bool = true
     @State private var selectedCluster: VenueCluster?
@@ -31,11 +32,13 @@ struct DiscoverMapView: View {
     ))
 
     private var dateMin: Date {
-        events.map(\.startDate).min() ?? Date()
+        let source = allEvents.isEmpty ? events : allEvents
+        return source.map(\.startDate).min() ?? Date()
     }
 
     private var dateMax: Date {
-        let latest = events.map(\.endDate).max() ?? Date()
+        let source = allEvents.isEmpty ? events : allEvents
+        let latest = source.map(\.endDate).max() ?? Date()
         return max(latest, Calendar.current.date(byAdding: .month, value: 1, to: Date())!)
     }
 

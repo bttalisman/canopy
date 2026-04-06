@@ -259,6 +259,7 @@ struct DiscoverView: View {
                     // Map view
                     DiscoverMapView(
                         events: filteredEvents,
+                        allEvents: events,
                         selectedEvent: $selectedMapEvent,
                         showDateSlider: selectedTimeFilter == .all
                     )
