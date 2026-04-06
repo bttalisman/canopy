@@ -554,7 +554,7 @@
         <div class="form-row" style="margin-bottom:12px">
           <div class="form-group" style="margin-bottom:0">
             <label>Pin Type</label>
-            <select id="mapPinType">
+            <select id="mapPinType" onchange="onPinTypeChange()">
               <option value="Stage">Stage</option>
               <option value="Food">Food</option>
               <option value="Restroom">Restroom</option>
@@ -1430,6 +1430,16 @@ async function undoLastPin() {
   renderMapPins();
   renderMapPinsList();
   toast('Undone');
+}
+
+function onPinTypeChange() {
+  const type = document.getElementById('mapPinType').value;
+  const label = document.getElementById('mapPinLabel');
+  // Only auto-fill if label is empty or matches a pin type name
+  const typeNames = ['Stage', 'Food', 'Restroom', 'First Aid', 'Exit', 'WiFi', 'Accessible', 'ATM', 'Parking', 'Info', 'Gift Shop', 'Bus', 'Custom', ''];
+  if (typeNames.includes(label.value)) {
+    label.value = type;
+  }
 }
 
 function setPinMode(mode) {
