@@ -580,6 +580,114 @@ ${text}`
 });
 
 // =====================
+// DATABASE EXPORT / IMPORT
+// =====================
+
+// GET /api/admin/export — full JSON dump of all data
+router.get('/export', async (req, res) => {
+  try {
+    const [events, stages, scheduleItems, mapPins, pushNotifications, deviceTokens] = await Promise.all([
+      pool.query('SELECT * FROM events ORDER BY start_date'),
+      pool.query('SELECT * FROM stages ORDER BY event_id, name'),
+      pool.query('SELECT * FROM schedule_items ORDER BY event_id, start_time'),
+      pool.query('SELECT * FROM map_pins ORDER BY event_id, label'),
+      pool.query('SELECT * FROM push_notifications ORDER BY created_at DESC LIMIT 100'),
+      pool.query('SELECT COUNT(*) as count FROM device_tokens'),
+    ]);
+
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      counts: {
+        events: events.rows.length,
+        stages: stages.rows.length,
+        scheduleItems: scheduleItems.rows.length,
+        mapPins: mapPins.rows.length,
+        pushNotifications: pushNotifications.rows.length,
+        deviceTokens: parseInt(deviceTokens.rows[0].count),
+      },
+      events: events.rows,
+      stages: stages.rows,
+      scheduleItems: scheduleItems.rows,
+      mapPins: mapPins.rows,
+      pushNotifications: pushNotifications.rows,
+    };
+
+    res.setHeader('Content-Disposition', `attachment; filename=canopy-backup-${new Date().toISOString().slice(0,10)}.json`);
+    res.json(backup);
+  } catch (err) {
+    console.error('Export error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/import — restore from a JSON backup
+router.post('/import', async (req, res) => {
+  try {
+    const { events, stages, scheduleItems, mapPins } = req.body;
+
+    if (!events || !Array.isArray(events)) {
+      return res.status(400).json({ error: 'Invalid backup format — expected events array' });
+    }
+
+    let imported = { events: 0, stages: 0, scheduleItems: 0, mapPins: 0 };
+
+    for (const e of events) {
+      try {
+        await pool.query(`
+          INSERT INTO events (id, name, slug, description, start_date, end_date, location, neighborhood,
+            logo_system_image, image_url, map_image_url, map_calibration, map_pin_size, ticketing_url,
+            latitude, longitude, category, is_active, created_at, updated_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+          ON CONFLICT (slug) DO NOTHING
+        `, [e.id, e.name, e.slug, e.description, e.start_date, e.end_date, e.location, e.neighborhood,
+            e.logo_system_image, e.image_url, e.map_image_url, e.map_calibration, e.map_pin_size, e.ticketing_url,
+            e.latitude, e.longitude, e.category, e.is_active, e.created_at, e.updated_at]);
+        imported.events++;
+      } catch(err) { /* skip duplicates */ }
+    }
+
+    for (const s of (stages || [])) {
+      try {
+        await pool.query(`
+          INSERT INTO stages (id, event_id, name, map_x, map_y, created_at)
+          VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING
+        `, [s.id, s.event_id, s.name, s.map_x, s.map_y, s.created_at]);
+        imported.stages++;
+      } catch(err) {}
+    }
+
+    for (const si of (scheduleItems || [])) {
+      try {
+        await pool.query(`
+          INSERT INTO schedule_items (id, event_id, stage_id, title, description, start_time, end_time,
+            category, is_cancelled, performer_name, performer_bio, performer_image_url, performer_links,
+            created_at, updated_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) ON CONFLICT DO NOTHING
+        `, [si.id, si.event_id, si.stage_id, si.title, si.description, si.start_time, si.end_time,
+            si.category, si.is_cancelled, si.performer_name, si.performer_bio, si.performer_image_url,
+            si.performer_links, si.created_at, si.updated_at]);
+        imported.scheduleItems++;
+      } catch(err) {}
+    }
+
+    for (const p of (mapPins || [])) {
+      try {
+        await pool.query(`
+          INSERT INTO map_pins (id, event_id, label, pin_type, x, y, description, created_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING
+        `, [p.id, p.event_id, p.label, p.pin_type, p.x, p.y, p.description, p.created_at]);
+        imported.mapPins++;
+      } catch(err) {}
+    }
+
+    res.json({ message: 'Import complete', imported });
+  } catch (err) {
+    console.error('Import error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =====================
 // TEMPLATE MATCHING
 // =====================
 
