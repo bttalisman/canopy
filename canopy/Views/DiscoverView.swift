@@ -344,7 +344,6 @@ struct DiscoverView: View {
     }
 
     private func fetchEvents() async {
-        guard !isLoading else { return }
         print("[Fetch] fetchEvents() called, hasBackend=\(hasBackend)")
         isLoading = true
         errorMessage = nil
