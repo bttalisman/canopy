@@ -17,11 +17,12 @@ struct VenueCluster: Identifiable {
 struct DiscoverMapView: View {
     let events: [Event]
     @Binding var selectedEvent: Event?
+    var showDateSlider: Bool = true
     @State private var selectedCluster: VenueCluster?
     @State private var dateRange: ClosedRange<Date> = {
         let now = Calendar.current.startOfDay(for: Date())
-        let threeMonths = Calendar.current.date(byAdding: .month, value: 3, to: now)!
-        return now...threeMonths
+        let sixMonths = Calendar.current.date(byAdding: .month, value: 6, to: now)!
+        return now...sixMonths
     }()
 
     @State private var position = MapCameraPosition.region(MKCoordinateRegion(
@@ -39,7 +40,8 @@ struct DiscoverMapView: View {
     }
 
     private var dateFilteredEvents: [Event] {
-        events.filter { event in
+        guard showDateSlider else { return events }
+        return events.filter { event in
             event.startDate <= dateRange.upperBound && event.endDate >= dateRange.lowerBound
         }
     }
@@ -69,7 +71,8 @@ struct DiscoverMapView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Date range slider
+            // Date range slider (only in "Any Time" mode)
+            if showDateSlider {
             VStack(spacing: 4) {
                 HStack {
                     Text(dateRange.lowerBound, format: .dateTime.month(.abbreviated).day())
@@ -95,6 +98,7 @@ struct DiscoverMapView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(.ultraThinMaterial)
+            }
 
             ZStack(alignment: .bottom) {
             Map(position: $position) {

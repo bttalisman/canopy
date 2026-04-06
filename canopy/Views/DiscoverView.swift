@@ -259,7 +259,8 @@ struct DiscoverView: View {
                     // Map view
                     DiscoverMapView(
                         events: filteredEvents,
-                        selectedEvent: $selectedMapEvent
+                        selectedEvent: $selectedMapEvent,
+                        showDateSlider: selectedTimeFilter == .all
                     )
                     .toolbar(.visible, for: .tabBar)
                 } else {
