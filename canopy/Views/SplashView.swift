@@ -134,7 +134,7 @@ struct SplashView: View {
         }
 
         // Continuous spin: starts fast during fall, decelerates to stop after landing
-        withAnimation(.easeOut(duration: 2.0)) {
+        withAnimation(.easeOut(duration: 1.2)) {
             rotation = 2160
         }
 
@@ -167,7 +167,7 @@ struct SplashView: View {
         }
 
         // Phase 4: Text slides in
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
             textOpacity = 1.0
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                 textOffset = 0
@@ -175,7 +175,7 @@ struct SplashView: View {
         }
 
         // Phase 5: Letters explode outward
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             exploding = true
 
             // Explode each title letter with random direction
@@ -230,7 +230,7 @@ struct SplashView: View {
         }
 
         // Phase 6: Final fade out
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
             withAnimation(.easeOut(duration: 0.3)) {
                 logoOpacity = 0
             }

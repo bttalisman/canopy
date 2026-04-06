@@ -72,7 +72,7 @@ struct RootView: View {
                     SplashView()
                         .onAppear {
                             NotificationManager.shared.requestPermission()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 4.3) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
                                 withAnimation {
                                     showSplash = false
                                 }
