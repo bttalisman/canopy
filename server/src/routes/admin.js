@@ -216,12 +216,12 @@ router.delete('/schedule/:id', async (req, res) => {
 // POST /api/admin/events/:eventId/pins
 router.post('/events/:eventId/pins', async (req, res) => {
   try {
-    const { label, pinType, x, y, description } = req.body;
+    const { label, pinType, x, y, latitude, longitude, description } = req.body;
     const { rows } = await pool.query(`
-      INSERT INTO map_pins (event_id, label, pin_type, x, y, description)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO map_pins (event_id, label, pin_type, x, y, latitude, longitude, description)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
-    `, [req.params.eventId, label, pinType || 'custom', x, y, description || '']);
+    `, [req.params.eventId, label, pinType || 'custom', x ?? 0, y ?? 0, latitude ?? null, longitude ?? null, description || '']);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -238,16 +238,40 @@ router.post('/events/:eventId/pins/bulk', async (req, res) => {
 
     for (const pin of pins) {
       const { rows } = await pool.query(`
-        INSERT INTO map_pins (event_id, label, pin_type, x, y, description)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO map_pins (event_id, label, pin_type, x, y, latitude, longitude, description)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
-      `, [req.params.eventId, pin.label, pin.pinType || 'custom', pin.x, pin.y, pin.description || '']);
+      `, [req.params.eventId, pin.label, pin.pinType || 'custom', pin.x ?? 0, pin.y ?? 0, pin.latitude ?? null, pin.longitude ?? null, pin.description || '']);
       results.push(rows[0]);
     }
 
     res.status(201).json(results);
   } catch (err) {
     console.error('Error bulk creating pins:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/pins/:id — update an existing pin (e.g. drag to new location)
+router.put('/pins/:id', async (req, res) => {
+  try {
+    const { label, pinType, x, y, latitude, longitude, description } = req.body;
+    const { rows } = await pool.query(`
+      UPDATE map_pins SET
+        label = COALESCE($2, label),
+        pin_type = COALESCE($3, pin_type),
+        x = COALESCE($4, x),
+        y = COALESCE($5, y),
+        latitude = $6,
+        longitude = $7,
+        description = COALESCE($8, description)
+      WHERE id = $1
+      RETURNING *
+    `, [req.params.id, label, pinType, x, y, latitude ?? null, longitude ?? null, description]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Pin not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error updating map pin:', err);
     res.status(500).json({ error: err.message });
   }
 });

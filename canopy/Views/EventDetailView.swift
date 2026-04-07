@@ -165,7 +165,11 @@ struct EventDetailView: View {
     }
 
     private var hasSchedule: Bool { !event.scheduleItems.isEmpty }
-    private var hasMap: Bool { !event.mapPins.isEmpty || event.mapImageURL != nil }
+    private var hasMap: Bool {
+        !event.mapPins.isEmpty
+            || event.mapImageURL != nil
+            || (event.latitude != nil && event.longitude != nil)
+    }
 
     private var availableTabs: [DetailTab] {
         var tabs: [DetailTab] = []
@@ -481,8 +485,14 @@ struct EventMapView: View {
         return event.mapPins
     }
 
-    // Convert a pin's relative x/y (0–1) to lat/long around the venue center
+    // Convert a pin's relative x/y (0–1) to lat/long around the venue center.
+    // If the pin already has real lat/lng (placed via the Apple Maps editor),
+    // use that directly.
     func pinCoordinate(_ pin: MapPin) -> CLLocationCoordinate2D {
+        if let lat = pin.latitude, let lon = pin.longitude {
+            return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        }
+
         let venue = VenueMapData.findVenue(for: event.location)
         let span = venue?.mapSpan ?? 0.004
         let centerLat = event.latitude ?? venue?.latitude ?? 47.6062
@@ -529,7 +539,8 @@ struct EventMapView: View {
                 .padding(.horizontal)
             }
 
-            if event.mapPins.isEmpty && event.mapImageURL == nil {
+            if event.mapPins.isEmpty && event.mapImageURL == nil
+                && (event.latitude == nil || event.longitude == nil) {
                 ContentUnavailableView(
                     "No Map Data",
                     systemImage: "map",

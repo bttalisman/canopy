@@ -8,6 +8,8 @@ final class MapPin {
     var pinType: MapPinType
     var x: Double
     var y: Double
+    var latitude: Double?
+    var longitude: Double?
     var pinDescription: String
 
     var event: Event?
@@ -17,6 +19,8 @@ final class MapPin {
         pinType: MapPinType = .custom,
         x: Double,
         y: Double,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
         pinDescription: String = ""
     ) {
         self.id = UUID()
@@ -24,6 +28,8 @@ final class MapPin {
         self.pinType = pinType
         self.x = x
         self.y = y
+        self.latitude = latitude
+        self.longitude = longitude
         self.pinDescription = pinDescription
     }
 }

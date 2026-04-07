@@ -72,6 +72,8 @@ router.get('/', async (req, res) => {
         pinType: p.pin_type,
         x: p.x,
         y: p.y,
+        latitude: p.latitude,
+        longitude: p.longitude,
         description: p.description,
       })),
     }));
@@ -147,6 +149,8 @@ router.get('/:slug', async (req, res) => {
         pinType: p.pin_type,
         x: p.x,
         y: p.y,
+        latitude: p.latitude,
+        longitude: p.longitude,
         description: p.description,
       })),
     });

@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Canopy Admin</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -657,10 +659,10 @@
         <strong>Keyboard:</strong> H = toggle pins · Delete = delete selected · Esc = deselect · ⌘Z = undo
       </div>
 
-      <!-- Map image with clickable overlay -->
+      <!-- Map image with clickable overlay (when a custom image is set) -->
       <div id="mapImageContainer" style="position:relative;border:1px solid #334155;border-radius:8px;overflow:hidden;cursor:crosshair;background:#0f172a;min-height:200px">
         <div id="mapNoImage" style="color:#64748b;text-align:center;padding:60px;font-style:italic">
-          Set a map image URL above to start placing pins
+          No custom map image — using the live map below to place pins.
         </div>
         <img id="mapImage" style="width:100%;display:none" />
         <div id="mapPinsOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
@@ -668,6 +670,14 @@
         <div id="mapSelectOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none">
           <div id="selectRect" style="position:absolute;border:2px solid #f59e0b;background:rgba(245,158,11,0.15)"></div>
         </div>
+      </div>
+
+      <!-- Leaflet (real-world) map for placing pins by GPS, used when no image is set -->
+      <div id="leafletContainer" style="display:none;margin-top:8px">
+        <p style="color:#94a3b8;font-size:12px;margin-bottom:6px">
+          Click anywhere on the map to drop a pin at that real-world location. Drag existing pins to move them.
+        </p>
+        <div id="leafletMap" style="height:520px;border:1px solid #334155;border-radius:8px"></div>
       </div>
 
       <!-- Pin list -->
@@ -1388,12 +1398,144 @@ function showMapEditor() {
 
   if (mapURL) {
     loadMapImage(mapURL);
+    document.getElementById('leafletContainer').style.display = 'none';
   } else {
     document.getElementById('mapImage').style.display = 'none';
     document.getElementById('mapNoImage').style.display = 'block';
+    document.getElementById('leafletContainer').style.display = 'block';
+    initLeafletEditor();
   }
 
   loadMapPins();
+}
+
+// =====================
+// Leaflet (real-world) pin editor
+// =====================
+let leafletMap = null;
+let leafletMarkers = [];      // {id, marker}
+let leafletNewMarker = null;
+
+function initLeafletEditor() {
+  const container = document.getElementById('leafletMap');
+  if (!container) return;
+
+  // Center on the event's lat/lng if present, otherwise downtown Seattle.
+  const lat = currentEventData?.latitude ?? 47.6062;
+  const lng = currentEventData?.longitude ?? -122.3321;
+
+  if (!leafletMap) {
+    leafletMap = L.map('leafletMap').setView([lat, lng], 17);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(leafletMap);
+
+    leafletMap.on('click', onLeafletMapClick);
+  } else {
+    leafletMap.setView([lat, lng], leafletMap.getZoom() || 17);
+    // Force a layout pass in case the container was just shown.
+    setTimeout(() => leafletMap.invalidateSize(), 50);
+  }
+
+  renderLeafletPins();
+}
+
+function renderLeafletPins() {
+  if (!leafletMap) return;
+  // Clear existing markers
+  leafletMarkers.forEach(m => leafletMap.removeLayer(m.marker));
+  leafletMarkers = [];
+
+  for (const pin of mapEditorPins) {
+    if (pin.latitude == null || pin.longitude == null) continue;
+    addLeafletMarker(pin);
+  }
+}
+
+function addLeafletMarker(pin) {
+  const marker = L.marker([pin.latitude, pin.longitude], {
+    draggable: true,
+    title: pin.label
+  }).addTo(leafletMap);
+
+  marker.bindPopup(`<strong>${escapeHtml(pin.label)}</strong><br>${escapeHtml(pin.pinType || 'Custom')}<br><button onclick="deleteLeafletPin('${pin.id}')" style="margin-top:6px;background:#ef4444;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer">Delete</button>`);
+
+  marker.on('dragend', async () => {
+    const latlng = marker.getLatLng();
+    pin.latitude = latlng.lat;
+    pin.longitude = latlng.lng;
+    try {
+      await fetch(`${API}/api/admin/pins/${pin.id}`, {
+        method: 'PUT',
+        headers: adminHeaders(),
+        body: JSON.stringify({ latitude: latlng.lat, longitude: latlng.lng })
+      });
+      toast(`Moved: ${pin.label}`);
+    } catch (e) {
+      toast('Error moving pin: ' + e.message);
+    }
+  });
+
+  leafletMarkers.push({ id: pin.id, marker });
+}
+
+async function onLeafletMapClick(e) {
+  const label = (document.getElementById('mapPinLabel').value || '').trim();
+  if (!label) {
+    toast('Enter a pin label first');
+    document.getElementById('mapPinLabel').focus();
+    return;
+  }
+  const pinType = document.getElementById('mapPinType').value;
+  const description = (document.getElementById('mapPinDescription').value || '').trim();
+  const { lat, lng } = e.latlng;
+
+  try {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ label, pinType, x: 0, y: 0, latitude: lat, longitude: lng, description })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const saved = await res.json();
+    const pin = {
+      id: saved.id,
+      label,
+      pinType,
+      x: 0,
+      y: 0,
+      latitude: lat,
+      longitude: lng,
+      description
+    };
+    mapEditorPins.push(pin);
+    addLeafletMarker(pin);
+    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+    renderMapPinsList();
+    toast(`Placed: ${label}`);
+  } catch (err) {
+    toast('Error: ' + err.message);
+  }
+}
+
+async function deleteLeafletPin(id) {
+  try {
+    await fetch(`${API}/api/admin/pins/${id}`, { method: 'DELETE', headers: adminHeaders() });
+  } catch (e) {}
+  const idx = mapEditorPins.findIndex(p => p.id === id);
+  if (idx >= 0) mapEditorPins.splice(idx, 1);
+  const m = leafletMarkers.find(m => m.id === id);
+  if (m) {
+    leafletMap.removeLayer(m.marker);
+    leafletMarkers = leafletMarkers.filter(x => x.id !== id);
+  }
+  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
+  renderMapPinsList();
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 let pinsVisible = true;
@@ -1541,9 +1683,14 @@ async function saveMapImageURL() {
       headers: adminHeaders(),
       body: JSON.stringify({ mapImageURL: url || '' })
     });
-    if (currentEventData) currentEventData.mapImageURL = url;
+    if (currentEventData) currentEventData.mapImageURL = url || null;
     toast(url ? 'Map image saved!' : 'Map image removed');
-    if (url) loadMapImage(url);
+    if (url) {
+      loadMapImage(url);
+    } else {
+      // Cleared — refresh the editor so the empty state shows immediately.
+      showMapEditor();
+    }
   } catch (e) {
     toast('Error: ' + e.message);
   }
@@ -1556,11 +1703,16 @@ function loadMapPins() {
     pinType: p.pinType || p.pin_type || 'Custom',
     x: p.x,
     y: p.y,
+    latitude: p.latitude ?? null,
+    longitude: p.longitude ?? null,
     description: p.description || ''
   }));
   document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
   renderMapPins();
   renderMapPinsList();
+  if (leafletMap && document.getElementById('leafletContainer').style.display !== 'none') {
+    renderLeafletPins();
+  }
 }
 
 function renderMapPins() {

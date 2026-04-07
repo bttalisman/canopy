@@ -53,6 +53,8 @@ struct APIMapPin: Codable {
     let pinType: String?
     let x: Double
     let y: Double
+    let latitude: Double?
+    let longitude: Double?
     let description: String?
 }
 
@@ -205,6 +207,8 @@ actor CanopyAPIService {
                     pinType: MapPinType(rawValue: apiPin.pinType ?? "Custom") ?? .custom,
                     x: apiPin.x,
                     y: apiPin.y,
+                    latitude: apiPin.latitude,
+                    longitude: apiPin.longitude,
                     pinDescription: apiPin.description ?? ""
                 )
                 pin.event = event
@@ -275,6 +279,8 @@ actor CanopyAPIService {
                 pinType: MapPinType(rawValue: apiPin.pinType ?? "Custom") ?? .custom,
                 x: apiPin.x,
                 y: apiPin.y,
+                latitude: apiPin.latitude,
+                longitude: apiPin.longitude,
                 pinDescription: apiPin.description ?? ""
             )
             pin.event = event
