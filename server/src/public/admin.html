@@ -1539,7 +1539,7 @@ async function saveMapImageURL() {
     await fetch(`${API}/api/admin/events/${currentEventId}`, {
       method: 'PUT',
       headers: adminHeaders(),
-      body: JSON.stringify({ mapImageURL: url || null })
+      body: JSON.stringify({ mapImageURL: url || '' })
     });
     if (currentEventData) currentEventData.mapImageURL = url;
     toast(url ? 'Map image saved!' : 'Map image removed');

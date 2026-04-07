@@ -57,7 +57,7 @@ router.put('/events/:id', async (req, res) => {
         neighborhood = COALESCE($7, neighborhood),
         logo_system_image = COALESCE($8, logo_system_image),
         image_url = COALESCE($9, image_url),
-        map_image_url = COALESCE($10, map_image_url),
+        map_image_url = CASE WHEN $10::text = '' THEN NULL ELSE COALESCE($10, map_image_url) END,
         map_calibration = COALESCE($11, map_calibration),
         map_pin_size = COALESCE($12, map_pin_size),
         ticketing_url = COALESCE($13, ticketing_url),

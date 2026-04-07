@@ -30,10 +30,10 @@ struct CustomMapView: View {
                         .simultaneousGesture(
                             MagnificationGesture()
                                 .onChanged { value in
-                                    scale = min(lastScale * value, 4.0)
+                                    scale = min(lastScale * value, 10.0)
                                 }
                                 .onEnded { _ in
-                                    lastScale = min(max(scale, 1.0), 4.0)
+                                    lastScale = min(max(scale, 1.0), 10.0)
                                     scale = lastScale
                                     clampOffset(containerWidth: geo.size.width)
                                 }
