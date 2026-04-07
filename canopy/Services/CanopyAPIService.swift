@@ -256,17 +256,20 @@ actor CanopyAPIService {
 
     @MainActor
     private func updateMapPins(for event: Event, from apiEvent: APIEvent, context: ModelContext) {
-        guard let apiPins = apiEvent.mapPins, !apiPins.isEmpty else {
-            return
+        // nil means the API response didn't include the field — leave local alone.
+        // An empty array means "no pins" and should clear any stale local pins.
+        guard let apiPins = apiEvent.mapPins else { return }
+
+        // Full reconcile: delete every existing pin for this event, then
+        // insert fresh copies of whatever the server currently has. The
+        // server is the source of truth; trying to match by label was
+        // unreliable (labels can change or repeat) and silently dropped pins
+        // added in the admin Map Editor after the event was first imported.
+        for existing in event.mapPins {
+            context.delete(existing)
         }
 
-        let existingLabels = Set(event.mapPins.map(\.label))
-
         for apiPin in apiPins {
-            if existingLabels.contains(apiPin.label) {
-                continue
-            }
-
             let pin = MapPin(
                 label: apiPin.label,
                 pinType: MapPinType(rawValue: apiPin.pinType ?? "Custom") ?? .custom,
