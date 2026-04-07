@@ -63,29 +63,31 @@ struct RootView: View {
         ZStack {
             if !hasCompletedOnboarding {
                 OnboardingView(isComplete: $hasCompletedOnboarding)
-            } else {
-                MainTabView()
-                    .opacity(showSplash ? 0 : 1)
-
-                if showSplash {
-                    SplashView()
-                        .onAppear {
-                            NotificationManager.shared.requestPermission()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                                withAnimation {
-                                    showSplash = false
-                                }
+            } else if showSplash {
+                SplashView()
+                    .onAppear {
+                        // Defer the splash dismissal; do NOT kick off any
+                        // heavy work (permissions, network, SwiftData queries)
+                        // until after the animation finishes so the main
+                        // thread stays clear for the splash render loop.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                            withAnimation {
+                                showSplash = false
                             }
                         }
-                }
+                    }
+            } else {
+                MainTabView()
+                    .transition(.opacity)
+                    .onAppear {
+                        // Now that the splash is gone, do post-launch work.
+                        NotificationManager.shared.requestPermission()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            NotificationManager.shared.syncReminders(context: modelContext)
+                        }
+                    }
             }
         }
         .preferredColorScheme(colorScheme)
-        .onAppear {
-            // Sync push token + saved items with backend on every launch
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                NotificationManager.shared.syncReminders(context: modelContext)
-            }
-        }
     }
 }

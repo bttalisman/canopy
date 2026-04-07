@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   sodipodi:docname="twoLeaves.svg"
+   inkscape:export-filename="twoLeaves.png"
+   inkscape:export-xdpi="96.761902"
+   inkscape:export-ydpi="96.761902"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.55505925"
+     inkscape:cx="369.32994"
+     inkscape:cy="536.87962"
+     inkscape:window-width="1083"
+     inkscape:window-height="701"
+     inkscape:window-x="573"
+     inkscape:window-y="100"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:#15803d;fill-opacity:1;stroke-width:0.0392376"
+       d="m 98.196123,206.96541 c 0,0 23.695307,-80.64035 -62.809419,-88.56911 -16.36877,86.78516 60.660288,91.62672 60.660288,91.62672 L 56.192441,144.98389 Z"
+       id="path1"
+       sodipodi:nodetypes="ccccc" />
+    <path
+       style="fill:#4ade80;fill-opacity:1;stroke-width:0.047763"
+       d="m 103.19235,207.50422 c 0,0 108.80117,-19.29294 60.25269,-108.246296 C 52.443641,128.97032 98.232862,207.01009 98.232862,207.01009 l 48.426048,-73.34576 z"
+       id="path1-2"
+       sodipodi:nodetypes="ccccc" />
+  </g>
+</svg>

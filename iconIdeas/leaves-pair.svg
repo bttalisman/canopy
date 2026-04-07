@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="leafBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f8a2e"/>
+      <stop offset="1" stop-color="#2d6b1f"/>
+    </linearGradient>
+    <linearGradient id="leafFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5fae3a"/>
+      <stop offset="1" stop-color="#3f8a2e"/>
+    </linearGradient>
+    <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#000" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Soft ground shadow -->
+  <ellipse cx="256" cy="470" rx="120" ry="10" fill="url(#shadow)"/>
+
+  <!-- Back (left) leaf -->
+  <g>
+    <path d="M 256 455
+             C 130 430, 60 320, 78 200
+             C 90 130, 150 95, 210 110
+             C 250 125, 270 200, 270 280
+             C 270 360, 256 455, 256 455 Z"
+          fill="url(#leafBack)"/>
+    <!-- Vein cutout (white wedge from base toward tip) -->
+    <path d="M 256 450
+             L 162 175
+             L 178 175
+             L 256 430 Z"
+          fill="#ffffff"/>
+  </g>
+
+  <!-- Front (right) leaf -->
+  <g>
+    <path d="M 256 455
+             C 382 430, 452 310, 432 190
+             C 418 120, 358 90, 300 108
+             C 258 124, 240 200, 242 285
+             C 244 365, 256 455, 256 455 Z"
+          fill="url(#leafFront)"/>
+    <!-- Vein cutout -->
+    <path d="M 256 450
+             L 350 165
+             L 334 165
+             L 256 430 Z"
+          fill="#ffffff"/>
+  </g>
+</svg>

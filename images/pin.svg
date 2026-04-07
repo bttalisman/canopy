@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="pinGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4ade80"/>
+      <stop offset="1" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="leafRight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#86efac"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+    <radialGradient id="hole" cx="0.5" cy="0.45" r="0.6">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e5e7eb"/>
+    </radialGradient>
+    <linearGradient id="cGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22c55e"/>
+      <stop offset="1" stop-color="#15803d"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Pin body -->
+  <path d="M 512 900
+           C 360 700, 280 560, 292 400
+           A 220 220 0 1 1 732 400
+           C 744 560, 664 700, 512 900 Z"
+        fill="url(#pinGrad)"/>
+
+  <!-- Inner white circle -->
+  <circle cx="512" cy="400" r="169" fill="url(#hole)"/>
+  <circle cx="512" cy="400" r="169" fill="none" stroke="#16a34a" stroke-opacity="0.25" stroke-width="5"/>
+
+  <!-- Letter C (larger) -->
+  <text x="512" y="402"
+        font-family="-apple-system, SF Pro Display, Helvetica, Arial, sans-serif"
+        font-size="306" font-weight="800"
+        text-anchor="middle" dominant-baseline="central"
+        fill="url(#cGrad)">C</text>
+
+  <!-- Stem -->
+  <path d="M 512 147 Q 518 162 512 180"
+        stroke="#16a34a" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+  <!-- Right leaf -->
+  <path d="M 512 147 Q 572 59 642 81 Q 688 105 664 171 Q 640 217 572 195 Q 536 183 512 147 Z"
+        fill="url(#leafRight)"/>
+  <path d="M 512 147 Q 588 125 650 101"
+        stroke="#16a34a" stroke-opacity="0.6" stroke-width="4" fill="none" stroke-linecap="round"/>
+
+  <!-- Left leaf -->
+  <path d="M 512 147 Q 452 69 406 101 Q 382 123 406 171 Q 430 205 476 183 Q 500 171 512 147 Z"
+        fill="#4ade80" fill-opacity="0.78"/>
+  <path d="M 512 147 Q 464 125 412 105"
+        stroke="#16a34a" stroke-opacity="0.6" stroke-width="4" fill="none" stroke-linecap="round"/>
+</svg>

@@ -13,6 +13,8 @@ struct DiscoverView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var lastFetchedCount: Int?
+    @State private var scrollMetrics = ScrollMetrics(offset: 0, contentHeight: 0)
+    @State private var viewportHeight: CGFloat = 0
 
     private var hasBackend: Bool {
         let url = Secrets.canopyAPIBaseURL
@@ -89,7 +91,10 @@ struct DiscoverView: View {
             VStack(spacing: 0) {
                 // Header
                 HStack(spacing: 12) {
-                    CanopyPinView(size: 42)
+                    Image("TwoLeaves")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: 63)
                         .accessibilityHidden(true)
 
                     HStack(spacing: 6) {
@@ -99,7 +104,7 @@ struct DiscoverView: View {
                             .font(.system(size: 28, weight: .bold))
                             .foregroundStyle(
                                 LinearGradient(
-                                    colors: [.green, .mint],
+                                    colors: [.leafDark, .leafLight],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -118,7 +123,7 @@ struct DiscoverView: View {
                     } label: {
                         Image(systemName: showMapView ? "list.bullet" : "map")
                             .font(.title3)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.leafDeep)
                             .frame(width: 36, height: 36)
                     }
                     .accessibilityLabel(showMapView ? "Show list view" : "Show map view")
@@ -171,7 +176,7 @@ struct DiscoverView: View {
                                         .padding(.vertical, 8)
                                         .background(
                                             Capsule()
-                                                .fill(selectedTimeFilter == filter ? Color.green : Color(.systemGray5))
+                                                .fill(selectedTimeFilter == filter ? Color.leafDeep : Color(.systemGray5))
                                         )
                                         .foregroundStyle(selectedTimeFilter == filter ? .white : .primary)
                                         .accessibilityLabel("\(filter.rawValue) filter")
@@ -194,9 +199,9 @@ struct DiscoverView: View {
                                     .padding(.vertical, 6)
                                     .background(
                                         Capsule()
-                                            .fill(selectedCategory == nil ? Color.green.opacity(0.15) : Color(.systemGray6))
+                                            .fill(selectedCategory == nil ? Color.leafDeep.opacity(0.15) : Color(.systemGray6))
                                     )
-                                    .foregroundStyle(selectedCategory == nil ? .green : .secondary)
+                                    .foregroundStyle(selectedCategory == nil ? Color.leafDeep : .secondary)
                             }
 
                             ForEach(EventCategory.allCases) { cat in
@@ -209,9 +214,9 @@ struct DiscoverView: View {
                                         .padding(.vertical, 6)
                                         .background(
                                             Capsule()
-                                                .fill(selectedCategory == cat ? Color.green.opacity(0.15) : Color(.systemGray6))
+                                                .fill(selectedCategory == cat ? Color.leafDeep.opacity(0.15) : Color(.systemGray6))
                                         )
-                                        .foregroundStyle(selectedCategory == cat ? .green : .secondary)
+                                        .foregroundStyle(selectedCategory == cat ? Color.leafDeep : .secondary)
                                 }
                             }
                         }
@@ -259,6 +264,10 @@ struct DiscoverView: View {
                 }
                 .padding(.bottom, 8)
 
+                LeafyDivider()
+                    .padding(.horizontal)
+                    .padding(.bottom, 4)
+
                 if showMapView {
                     // Map view
                     DiscoverMapView(
@@ -270,62 +279,79 @@ struct DiscoverView: View {
                     )
                     .toolbar(.visible, for: .tabBar)
                 } else {
-                    // List view
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            if isLoading && events.isEmpty {
-                                ProgressView("Fetching Seattle events...")
-                                    .padding(.top, 40)
-                            } else if let error = errorMessage {
-                                VStack(spacing: 12) {
-                                    Label(error, systemImage: "exclamationmark.triangle")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.orange)
-                                        .multilineTextAlignment(.center)
+                    // List view with custom leaf-themed scroll indicator
+                    GeometryReader { viewportGeo in
+                        ZStack(alignment: .topTrailing) {
+                            ScrollView {
+                                VStack(spacing: 16) {
+                                    if isLoading && events.isEmpty {
+                                        ProgressView("Fetching Seattle events...")
+                                            .padding(.top, 40)
+                                    } else if let error = errorMessage {
+                                        VStack(spacing: 12) {
+                                            Label(error, systemImage: "exclamationmark.triangle")
+                                                .font(.subheadline)
+                                                .foregroundStyle(.orange)
+                                                .multilineTextAlignment(.center)
 
-                                    Button("Retry") {
-                                        Task { await fetchEvents() }
-                                    }
-                                    .buttonStyle(.bordered)
-                                }
-                                .padding(.top, 40)
-                                .padding(.horizontal)
-                            } else if let count = lastFetchedCount {
-                                Text("Imported \(count) new events from Ticketmaster")
-                                    .font(.caption)
-                                    .foregroundStyle(.green)
-                                    .padding(.horizontal)
-                            }
-
-                            if filteredEvents.isEmpty && !isLoading && errorMessage == nil {
-                                ContentUnavailableView(
-                                    "No Events Found",
-                                    systemImage: "calendar.badge.exclamationmark",
-                                    description: Text(hasBackend
-                                        ? "Try adjusting your filters or pull to refresh."
-                                        : "Backend not configured.")
-                                )
-                                .padding(.top, 60)
-                            } else {
-                                LazyVStack(spacing: 16) {
-                                    ForEach(filteredEvents) { event in
-                                        NavigationLink(value: event) {
-                                            EventCard(event: event)
+                                            Button("Retry") {
+                                                Task { await fetchEvents() }
+                                            }
+                                            .buttonStyle(.bordered)
                                         }
-                                        .buttonStyle(.plain)
-                                        .transition(.opacity.combined(with: .move(edge: .top)))
+                                        .padding(.top, 40)
+                                        .padding(.horizontal)
+                                    } else if let count = lastFetchedCount {
+                                        Text("Imported \(count) new events from Ticketmaster")
+                                            .font(.caption)
+                                            .foregroundStyle(Color.leafDeep)
+                                            .padding(.horizontal)
+                                    }
+
+                                    if filteredEvents.isEmpty && !isLoading && errorMessage == nil {
+                                        ContentUnavailableView(
+                                            "No Events Found",
+                                            systemImage: "calendar.badge.exclamationmark",
+                                            description: Text(hasBackend
+                                                ? "Try adjusting your filters or pull to refresh."
+                                                : "Backend not configured.")
+                                        )
+                                        .padding(.top, 60)
+                                    } else {
+                                        LazyVStack(spacing: 16) {
+                                            ForEach(filteredEvents) { event in
+                                                NavigationLink(value: event) {
+                                                    EventCard(event: event)
+                                                }
+                                                .buttonStyle(.plain)
+                                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                            }
+                                        }
+                                        .padding(.horizontal)
                                     }
                                 }
-                                .padding(.horizontal)
+                                .padding(.vertical, 8)
+                                .animation(.easeInOut(duration: 0.25), value: filteredEvents.map(\.id))
                             }
+                            .scrollIndicators(.hidden)
+                            .refreshable {
+                                await Task { @MainActor in
+                                    await fetchEvents()
+                                }.value
+                            }
+                            .modifier(ScrollMetricsTracker(viewportHeight: viewportGeo.size.height) { metrics, vh in
+                                scrollMetrics = metrics
+                                viewportHeight = vh
+                            })
+
+                            LeafScrollIndicator(
+                                scrollOffset: scrollMetrics.offset,
+                                contentHeight: scrollMetrics.contentHeight,
+                                viewportHeight: viewportHeight
+                            )
+                            .padding(.trailing, 4)
+                            .padding(.vertical, 8)
                         }
-                        .padding(.vertical, 8)
-                        .animation(.easeInOut(duration: 0.25), value: filteredEvents.map(\.id))
-                    }
-                    .refreshable {
-                        await Task { @MainActor in
-                            await fetchEvents()
-                        }.value
                     }
                 }
             }
@@ -453,7 +479,7 @@ struct EventCard: View {
                         Text(event.startDate, format: .dateTime.month(.abbreviated).day())
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.leafDeep)
 
                         if !Calendar.current.isDate(event.startDate, inSameDayAs: event.endDate) {
                             Text("– \(event.endDate, format: .dateTime.month(.abbreviated).day())")
@@ -487,7 +513,7 @@ struct EventCard: View {
                     if event.ticketingURL != nil {
                         Label("Tickets", systemImage: "ticket")
                             .font(.caption)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.leafDeep)
                     }
                 }
             }
@@ -507,7 +533,7 @@ struct EventCard: View {
 
     private var categoryColor: Color {
         switch event.category {
-        case .festival: return .green
+        case .festival: return .leafDeep
         case .concert: return .purple
         case .fair: return .orange
         case .conference: return .blue
@@ -529,6 +555,110 @@ struct EventCard: View {
                 .foregroundStyle(categoryColor.opacity(0.2))
         }
         .frame(height: 100)
+    }
+}
+
+struct ScrollMetrics: Equatable {
+    var offset: CGFloat
+    var contentHeight: CGFloat
+}
+
+struct ScrollMetricsTracker: ViewModifier {
+    let viewportHeight: CGFloat
+    let onChange: (ScrollMetrics, CGFloat) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollGeometryChange(for: ScrollMetrics.self) { geo in
+                ScrollMetrics(
+                    offset: geo.contentOffset.y + geo.contentInsets.top,
+                    contentHeight: geo.contentSize.height
+                )
+            } action: { _, new in
+                onChange(new, viewportHeight)
+            }
+        } else {
+            content
+        }
+    }
+}
+
+struct LeafScrollIndicator: View {
+    let scrollOffset: CGFloat
+    let contentHeight: CGFloat
+    let viewportHeight: CGFloat
+
+    var body: some View {
+        GeometryReader { geo in
+            let trackHeight = geo.size.height
+            let visibleRatio = contentHeight > 0 ? min(1, viewportHeight / contentHeight) : 1
+            let thumbHeight = max(36, trackHeight * visibleRatio)
+            let maxScroll = max(1, contentHeight - viewportHeight)
+            let progress = min(1, max(0, scrollOffset / maxScroll))
+            let thumbY = (trackHeight - thumbHeight) * progress
+            let needsIndicator = contentHeight > viewportHeight + 1
+
+            if needsIndicator {
+                ZStack(alignment: .top) {
+                    Capsule()
+                        .fill(Color.leafDeep.opacity(0.08))
+                        .frame(width: 4)
+
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.leafLight, Color.leafMid, Color.leafDeep],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 5, height: thumbHeight)
+                        .shadow(color: Color.leafMid.opacity(0.5), radius: 2, x: 0, y: 0)
+                        .offset(y: thumbY)
+                        .animation(.easeOut(duration: 0.12), value: thumbY)
+                }
+                .frame(maxHeight: .infinity, alignment: .top)
+            }
+        }
+        .frame(width: 6)
+        .frame(maxHeight: .infinity)
+    }
+}
+
+extension Color {
+    static let leafLight  = Color(red: 0.525, green: 0.937, blue: 0.675) // #86EFAC
+    static let leafMid    = Color(red: 0.290, green: 0.871, blue: 0.502) // #4ADE80
+    static let leafDark   = Color(red: 0.133, green: 0.773, blue: 0.369) // #22C55E
+    static let leafDeep   = Color(red: 0.086, green: 0.639, blue: 0.290) // #16A34A
+    static let leafShadow = Color(red: 0.082, green: 0.502, blue: 0.239) // #15803D
+}
+
+struct LeafyDivider: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            line
+            Image(systemName: "leaf.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.leafDark, .leafLight],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .rotationEffect(.degrees(-35))
+            line
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var line: some View {
+        LinearGradient(
+            colors: [Color.leafDeep.opacity(0.0), Color.leafDeep.opacity(0.49), Color.leafDeep.opacity(0.0)],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+        .frame(height: 1)
     }
 }
 
