@@ -5,10 +5,12 @@ const router = express.Router();
 const cache = new Map();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-// Optional Socrata dataset id (e.g. "7vjk-q4xg" for Seattle Street Use Permits).
-// Set this in Railway env once you've confirmed the right dataset.
-const SOCRATA_DOMAIN = process.env.SOCRATA_DOMAIN || 'data.seattle.gov';
-const SOCRATA_DATASET = process.env.SOCRATA_DATASET || ''; // empty = mock mode
+// Seattle SDOT publishes street use permits as an ArcGIS Feature Service,
+// not as a Socrata dataset. Default to the dissolved Use Impacts polyline
+// layer; override via env var if a different source is wanted.
+const ARCGIS_LAYER_URL = process.env.ARCGIS_LAYER_URL
+  || 'https://services.arcgis.com/ZOyb2t4B0UYuYNYH/arcgis/rest/services/SU_Permit_Data_Model_Relationships/FeatureServer/1';
+const USE_MOCK = process.env.STREET_CLOSURES_MOCK === '1';
 
 // Generate fake closures around a coordinate so the UI can be demoed
 // before the real data source is wired up.
@@ -31,32 +33,35 @@ function mockClosures(centerLat, centerLon, startDate, endDate) {
   }));
 }
 
-// Normalize one Socrata row → our shape. Socrata payloads vary by dataset,
-// so this is intentionally permissive.
-function normalize(row) {
-  // Try to extract a polyline / polygon from common geometry fields.
-  let coords = null;
-  const geom = row.shape || row.the_geom || row.location;
-  if (geom && geom.type === 'LineString' && Array.isArray(geom.coordinates)) {
-    coords = geom.coordinates.map(([lng, lat]) => [lat, lng]);
-  } else if (geom && geom.type === 'Polygon' && Array.isArray(geom.coordinates)) {
-    coords = geom.coordinates[0].map(([lng, lat]) => [lat, lng]);
-  } else if (row.latitude && row.longitude) {
-    // Single-point permit — render as a tiny segment so it still shows.
-    const lat = parseFloat(row.latitude);
-    const lng = parseFloat(row.longitude);
-    coords = [[lat, lng], [lat + 0.00005, lng + 0.00005]];
-  }
+// Normalize one ArcGIS GeoJSON feature → our shape.
+function normalizeArcgis(feature) {
+  const geom = feature.geometry;
+  if (!geom) return null;
 
+  let coords = null;
+  if (geom.type === 'LineString') {
+    coords = geom.coordinates.map(([lng, lat]) => [lat, lng]);
+  } else if (geom.type === 'MultiLineString') {
+    // Flatten — render the longest sub-line for simplicity.
+    const longest = geom.coordinates.reduce((a, b) => (a.length > b.length ? a : b), []);
+    coords = longest.map(([lng, lat]) => [lat, lng]);
+  } else if (geom.type === 'Polygon') {
+    coords = geom.coordinates[0].map(([lng, lat]) => [lat, lng]);
+  }
   if (!coords || coords.length < 2) return null;
 
+  const props = feature.properties || {};
+  const desc = [props.PROJECT_DESCRIPTION, props.PERMIT_TYPE_ALIAS]
+    .filter(Boolean)
+    .join(' — ') || 'SDOT street use permit';
+
   return {
-    id: row.permit_number || row.id || row.objectid || String(Math.random()),
-    description: row.permit_type || row.permit_description || row.description || 'Street use permit',
+    id: props.PERMIT_NUMBER || String(feature.id || Math.random()),
+    description: desc,
     coordinates: coords,
-    startDate: row.permit_start_date || row.start_date || null,
-    endDate: row.permit_end_date || row.end_date || null,
-    source: 'socrata',
+    startDate: props.FIRST_ISSUED_DATE ? new Date(props.FIRST_ISSUED_DATE).toISOString() : null,
+    endDate: props.NEXT_EXPIRATION_DATE ? new Date(props.NEXT_EXPIRATION_DATE).toISOString() : null,
+    source: 'arcgis',
   };
 }
 
@@ -66,15 +71,15 @@ router.get('/', async (req, res) => {
     const { startDate, endDate, lat, lng } = req.query;
     const radius = parseFloat(req.query.radius || '0.02'); // ~2km in degrees
 
-    const cacheKey = `${SOCRATA_DATASET}|${startDate}|${endDate}|${lat}|${lng}|${radius}`;
+    const cacheKey = `${ARCGIS_LAYER_URL}|${startDate}|${endDate}|${lat}|${lng}|${radius}`;
     const hit = cache.get(cacheKey);
     if (hit && hit.expires > Date.now()) {
       return res.json(hit.data);
     }
 
-    // Mock mode (no Socrata dataset configured) — return placeholder closures
-    // around the requested point so the iOS map can demo the overlay.
-    if (!SOCRATA_DATASET) {
+    // Mock mode (forced via env var) — return placeholder closures around
+    // the requested point. Useful for offline demos.
+    if (USE_MOCK) {
       const centerLat = parseFloat(lat || '47.6062');
       const centerLon = parseFloat(lng || '-122.3321');
       const data = mockClosures(centerLat, centerLon, startDate, endDate);
@@ -82,34 +87,45 @@ router.get('/', async (req, res) => {
       return res.json(data);
     }
 
-    // Real fetch from Socrata. Using $where for date overlap and a basic
-    // bounding-box filter on latitude/longitude when present.
-    const params = new URLSearchParams();
-    params.set('$limit', '500');
-    const where = [];
-    if (startDate && endDate) {
-      where.push(`permit_end_date >= '${startDate}'`);
-      where.push(`permit_start_date <= '${endDate}'`);
-    }
-    if (lat && lng) {
-      const la = parseFloat(lat);
-      const lo = parseFloat(lng);
-      where.push(`latitude BETWEEN ${la - radius} AND ${la + radius}`);
-      where.push(`longitude BETWEEN ${lo - radius} AND ${lo + radius}`);
-    }
-    if (where.length) params.set('$where', where.join(' AND '));
+    // Real fetch from Seattle SDOT ArcGIS Feature Service.
+    // Bounding box filter via geometryType=esriGeometryEnvelope.
+    // Date filter: permit must be currently within its issued/expiration window.
+    const la = parseFloat(lat || '47.6062');
+    const lo = parseFloat(lng || '-122.3321');
+    const minX = lo - radius, minY = la - radius, maxX = lo + radius, maxY = la + radius;
 
-    const url = `https://${SOCRATA_DOMAIN}/resource/${SOCRATA_DATASET}.json?${params}`;
-    const headers = {};
-    if (process.env.SOCRATA_APP_TOKEN) {
-      headers['X-App-Token'] = process.env.SOCRATA_APP_TOKEN;
+    const where = [];
+    if (endDate) {
+      // Permit hasn't expired before the event starts.
+      const startMs = Date.parse(startDate || endDate);
+      where.push(`NEXT_EXPIRATION_DATE >= ${startMs}`);
     }
-    const response = await fetch(url, { headers });
+    if (startDate) {
+      // Permit was issued before the event ends.
+      const endMs = Date.parse(endDate || startDate);
+      where.push(`FIRST_ISSUED_DATE <= ${endMs}`);
+    }
+    if (where.length === 0) where.push('1=1');
+
+    const params = new URLSearchParams({
+      where: where.join(' AND '),
+      geometry: `${minX},${minY},${maxX},${maxY}`,
+      geometryType: 'esriGeometryEnvelope',
+      inSR: '4326',
+      outSR: '4326',
+      spatialRel: 'esriSpatialRelIntersects',
+      outFields: 'PERMIT_NUMBER,PERMIT_TYPE_ALIAS,PROJECT_DESCRIPTION,FIRST_ISSUED_DATE,NEXT_EXPIRATION_DATE',
+      f: 'geojson',
+      resultRecordCount: '200',
+    });
+
+    const url = `${ARCGIS_LAYER_URL}/query?${params}`;
+    const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Socrata returned ${response.status}`);
+      throw new Error(`ArcGIS returned ${response.status}`);
     }
-    const rows = await response.json();
-    const normalized = rows.map(normalize).filter(Boolean);
+    const json = await response.json();
+    const normalized = (json.features || []).map(normalizeArcgis).filter(Boolean);
 
     cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, data: normalized });
     res.json(normalized);
