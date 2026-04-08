@@ -15,6 +15,8 @@ struct DiscoverView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var lastFetchedCount: Int?
+    @FocusState private var searchFieldFocused: Bool
+    @State private var filterPillsCollapsed: Bool = false
     @State private var scrollMetrics = ScrollMetrics(offset: 0, contentHeight: 0)
     @State private var viewportHeight: CGFloat = 0
 
@@ -95,6 +97,9 @@ struct DiscoverView: View {
         return result
     }
 
+    private var isSearching: Bool { searchFieldFocused || !searchText.isEmpty }
+    private var pillsHidden: Bool { isSearching || filterPillsCollapsed }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -147,15 +152,13 @@ struct DiscoverView: View {
                     TextField("Search events, venues...", text: $searchText)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
-                        .onChange(of: searchText) { oldValue, newValue in
-                            if newValue.isEmpty && !oldValue.isEmpty {
-                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            }
-                        }
-                    if !searchText.isEmpty {
+                        .focused($searchFieldFocused)
+                        .submitLabel(.search)
+                        .onSubmit { searchFieldFocused = false }
+                    if !searchText.isEmpty || searchFieldFocused {
                         Button {
                             searchText = ""
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            searchFieldFocused = false
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
@@ -169,7 +172,8 @@ struct DiscoverView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 10)
 
-                // Filter pills
+                // Filter pills — hidden while searching or manually collapsed
+                if !pillsHidden {
                 VStack(spacing: 4) {
                     LeafyDivider()
                         .padding(.horizontal)
@@ -371,10 +375,30 @@ struct DiscoverView: View {
                     }
                 }
                 .padding(.bottom, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                }
 
-                SixLeavesDivider()
+                // Drawer handle: always visible (unless searching). Tapping
+                // toggles the manual collapse state for the filter pills.
+                if !isSearching {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            filterPillsCollapsed.toggle()
+                        }
+                    } label: {
+                        SixLeavesDivider()
+                            .overlay(alignment: .trailing) {
+                                Image(systemName: filterPillsCollapsed ? "chevron.down" : "chevron.up")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(Color.leafDeep)
+                                    .padding(.trailing, 2)
+                            }
+                    }
+                    .buttonStyle(.plain)
                     .padding(.horizontal)
                     .padding(.bottom, 6)
+                    .accessibilityLabel(filterPillsCollapsed ? "Show filters" : "Hide filters")
+                }
 
                 if showMapView {
                     // Map view
@@ -442,6 +466,7 @@ struct DiscoverView: View {
                                 .animation(.easeInOut(duration: 0.25), value: filteredEvents.map(\.id))
                             }
                             .scrollIndicators(.hidden)
+                            .scrollDismissesKeyboard(.immediately)
                             .refreshable {
                                 await Task { @MainActor in
                                     await fetchEvents()
@@ -463,6 +488,7 @@ struct DiscoverView: View {
                     }
                 }
             }
+            .animation(.easeInOut(duration: 0.25), value: pillsHidden)
             .navigationBarHidden(true)
             .navigationDestination(for: Event.self) { event in
                 EventDetailView(event: event)
