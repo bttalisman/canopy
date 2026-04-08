@@ -170,7 +170,11 @@ struct DiscoverView: View {
                 .padding(.vertical, 10)
 
                 // Filter pills
-                VStack(spacing: 8) {
+                VStack(spacing: 4) {
+                    LeafyDivider()
+                        .padding(.horizontal)
+                        .padding(.vertical, 0)
+
                     // Time filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -188,14 +192,13 @@ struct DiscoverView: View {
                                                 .fill(
                                                     selectedTimeFilter == filter
                                                         ? AnyShapeStyle(LinearGradient(
-                                                            colors: [Color.leafMid, Color.leafDeep],
+                                                            colors: [Color.indigo.opacity(0.35), Color.indigo.opacity(0.15)],
                                                             startPoint: .topLeading,
                                                             endPoint: .bottomTrailing))
-                                                        : AnyShapeStyle(Color(.systemGray5))
+                                                        : AnyShapeStyle(Color(.systemGray6))
                                                 )
                                         )
-                                        .shadow(color: selectedTimeFilter == filter ? Color.leafDeep.opacity(0.35) : .clear, radius: 4, x: 0, y: 2)
-                                        .foregroundStyle(selectedTimeFilter == filter ? .white : .primary)
+                                        .foregroundStyle(selectedTimeFilter == filter ? .indigo : .secondary)
                                         .accessibilityLabel("\(filter.rawValue) filter")
                                         .accessibilityAddTraits(selectedTimeFilter == filter ? .isSelected : [])
                                 }
@@ -254,6 +257,10 @@ struct DiscoverView: View {
                         .padding(.horizontal)
                     }
 
+                    TwoLeavesIconDivider()
+                        .padding(.horizontal)
+                        .padding(.vertical, 0)
+
                     // Category filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -302,6 +309,12 @@ struct DiscoverView: View {
                             }
                         }
                         .padding(.horizontal)
+                    }
+
+                    if neighborhoods.count > 1 {
+                        ThreeLeavesDivider()
+                            .padding(.horizontal)
+                            .padding(.vertical, 0)
                     }
                     // Neighborhood filter pills
                     if neighborhoods.count > 1 {
@@ -359,9 +372,9 @@ struct DiscoverView: View {
                 }
                 .padding(.bottom, 8)
 
-                LeafyDivider()
+                SixLeavesDivider()
                     .padding(.horizontal)
-                    .padding(.bottom, 4)
+                    .padding(.bottom, 6)
 
                 if showMapView {
                     // Map view
@@ -781,6 +794,76 @@ extension Color {
     static let leafDark   = Color(red: 0.133, green: 0.773, blue: 0.369) // #22C55E
     static let leafDeep   = Color(red: 0.086, green: 0.639, blue: 0.290) // #16A34A
     static let leafShadow = Color(red: 0.082, green: 0.502, blue: 0.239) // #15803D
+}
+
+struct SixLeavesDivider: View {
+    var body: some View { LeafImageDivider(imageName: "SixLeaves", height: 16) }
+}
+
+struct ThreeLeavesDivider: View {
+    var body: some View { LeafImageDivider(imageName: "ThreeLeaves", height: 16) }
+}
+
+struct LeafImageDivider: View {
+    let imageName: String
+    let height: CGFloat
+
+    var body: some View {
+        HStack(spacing: 8) {
+            line
+            Image(imageName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(height: height)
+            line
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var line: some View {
+        LinearGradient(
+            colors: [Color.leafDeep.opacity(0.0), Color.leafDeep.opacity(0.49), Color.leafDeep.opacity(0.0)],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+        .frame(height: 1)
+    }
+}
+
+struct TwoLeavesIconDivider: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            line
+            HStack(spacing: 4) {
+                leaf.scaleEffect(x: -1, y: -1, anchor: .center)
+                leaf.scaleEffect(x: 1, y: -1, anchor: .center)
+            }
+            line
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var leaf: some View {
+        Image(systemName: "leaf.fill")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [Color.leafDark, Color.leafLight],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .rotationEffect(.degrees(145))
+    }
+
+    private var line: some View {
+        LinearGradient(
+            colors: [Color.leafDeep.opacity(0.0), Color.leafDeep.opacity(0.49), Color.leafDeep.opacity(0.0)],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+        .frame(height: 1)
+    }
 }
 
 struct LeafyDivider: View {
