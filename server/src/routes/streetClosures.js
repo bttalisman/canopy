@@ -69,7 +69,7 @@ function normalizeArcgis(feature) {
 router.get('/', async (req, res) => {
   try {
     const { startDate, endDate, lat, lng } = req.query;
-    const radius = parseFloat(req.query.radius || '0.02'); // ~2km in degrees
+    const radius = parseFloat(req.query.radius || '0.006'); // ~600m in degrees
 
     const cacheKey = `${ARCGIS_LAYER_URL}|${startDate}|${endDate}|${lat}|${lng}|${radius}`;
     const hit = cache.get(cacheKey);
@@ -104,10 +104,22 @@ router.get('/', async (req, res) => {
     const startTs = toTs(startDate || endDate);
     const endTs = toTs(endDate || startDate);
 
-    const where = [];
+    // Only show permit types that actually impact street access for an
+    // event-goer. Skip utility / café / scaffolding / tree work etc.
+    const RELEVANT_TYPES = [
+      'Block Party',
+      'Block Party/Play Street',
+      'Temporary Activation',
+      'Temporary Activation Permit Revision',
+      'Temporary Activation Amendment',
+      'Heavy Crane Permit',
+      'Street Vacation',
+    ];
+    const typeList = RELEVANT_TYPES.map(t => `'${t.replace(/'/g, "''")}'`).join(',');
+
+    const where = [`PERMIT_TYPE_ALIAS IN (${typeList})`];
     if (startTs) where.push(`NEXT_EXPIRATION_DATE >= ${startTs}`);
     if (endTs)   where.push(`FIRST_ISSUED_DATE <= ${endTs}`);
-    if (where.length === 0) where.push('1=1');
 
     const params = new URLSearchParams({
       where: where.join(' AND '),
