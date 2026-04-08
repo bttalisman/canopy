@@ -6,6 +6,7 @@ const { migrate } = require('./db/migrate');
 const eventsRouter = require('./routes/events');
 const devicesRouter = require('./routes/devices');
 const adminRouter = require('./routes/admin');
+const streetClosuresRouter = require('./routes/streetClosures');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,6 +36,7 @@ app.get('/admin', (req, res) => {
 // Public API routes
 app.use('/api/events', eventsRouter);
 app.use('/api/devices', devicesRouter);
+app.use('/api/street-closures', streetClosuresRouter);
 
 // Admin routes (protected by API key)
 app.use('/api/admin', adminRouter);

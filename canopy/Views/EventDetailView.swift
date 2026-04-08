@@ -477,6 +477,7 @@ struct EventMapView: View {
     @State private var selectedPinType: MapPinType?
     @State private var selectedPin: MapPin?
     @State private var mapPosition: MapCameraPosition = .automatic
+    @State private var streetClosures: [StreetClosure] = []
 
     var filteredPins: [MapPin] {
         if let type = selectedPinType {
@@ -563,6 +564,12 @@ struct EventMapView: View {
                             .tint(Color.leafDeep)
                     }
 
+                    // Street closures (orange polylines)
+                    ForEach(streetClosures) { closure in
+                        MapPolyline(coordinates: closure.clCoordinates)
+                            .stroke(.orange.opacity(0.85), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    }
+
                     ForEach(filteredPins) { pin in
                         Annotation(pin.label, coordinate: pinCoordinate(pin)) {
                             Button {
@@ -597,6 +604,19 @@ struct EventMapView: View {
                         center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
                         span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
                     ))
+
+                    // Fetch nearby street closures for this event's date window.
+                    Task {
+                        do {
+                            streetClosures = try await StreetClosureService.shared.fetch(
+                                near: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+                                startDate: event.startDate,
+                                endDate: event.endDate
+                            )
+                        } catch {
+                            streetClosures = []
+                        }
+                    }
                 }
 
                 // Selected pin detail
