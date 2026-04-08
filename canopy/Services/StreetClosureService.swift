@@ -44,8 +44,16 @@ actor StreetClosureService {
         ]
 
         guard let url = components.url else { return [] }
-        let (data, _) = try await session.data(from: url)
+        print("[ClosureDebug] GET \(url.absoluteString)")
+        let (data, response) = try await session.data(from: url)
+        if let http = response as? HTTPURLResponse {
+            print("[ClosureDebug] HTTP \(http.statusCode), bytes=\(data.count)")
+        }
+        if let preview = String(data: data.prefix(400), encoding: .utf8) {
+            print("[ClosureDebug] body: \(preview)")
+        }
         let result = try JSONDecoder().decode([StreetClosure].self, from: data)
+        print("[ClosureDebug] decoded \(result.count) closures")
         cache[cacheKey] = result
         return result
     }

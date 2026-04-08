@@ -120,12 +120,17 @@ router.get('/', async (req, res) => {
     });
 
     const url = `${ARCGIS_LAYER_URL}/query?${params}`;
+    console.log('[street-closures] fetching:', url);
     const response = await fetch(url);
     if (!response.ok) {
+      const body = await response.text();
+      console.error('[street-closures] ArcGIS error', response.status, body.slice(0, 300));
       throw new Error(`ArcGIS returned ${response.status}`);
     }
     const json = await response.json();
+    console.log('[street-closures] features returned:', (json.features || []).length, 'where:', where.join(' AND '));
     const normalized = (json.features || []).map(normalizeArcgis).filter(Boolean);
+    console.log('[street-closures] normalized:', normalized.length);
 
     cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, data: normalized });
     res.json(normalized);
