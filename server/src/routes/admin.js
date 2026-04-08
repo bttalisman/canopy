@@ -2,37 +2,79 @@ const { Router } = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
 const cheerio = require('cheerio');
 const { pool } = require('../db/pool');
+const {
+  requireSignedIn,
+  requireSuperadmin,
+  requireEventAccess,
+  requireChildEventAccess,
+  isSuperadmin,
+  getAuth,
+} = require('../middleware/auth');
 
 const router = Router();
 
-// Simple API key auth middleware
-function requireAuth(req, res, next) {
-  const key = req.headers['x-admin-key'];
-  if (!key || key !== process.env.ADMIN_API_KEY) {
-    return res.status(401).json({ error: 'Invalid or missing admin API key' });
-  }
-  next();
-}
+// All admin routes require a valid Clerk session.
+router.use(requireSignedIn);
 
-router.use(requireAuth);
+// Lookup helpers for child resources — find parent event_id from a child id.
+const lookupStageEvent = 'SELECT event_id FROM stages WHERE id = $1';
+const lookupScheduleEvent = 'SELECT event_id FROM schedule_items WHERE id = $1';
+const lookupPinEvent = 'SELECT event_id FROM map_pins WHERE id = $1';
 
 // =====================
 // EVENTS
 // =====================
 
+// GET /api/admin/events — list events scoped to the requester's org
+// (or all events for superadmins). Includes drafts/pending, unlike the
+// public /api/events endpoint.
+router.get('/events', async (req, res) => {
+  try {
+    const auth = getAuth(req);
+    if (isSuperadmin(req)) {
+      const { rows } = await pool.query('SELECT * FROM events ORDER BY start_date DESC');
+      return res.json(rows);
+    }
+    if (!auth?.orgId) {
+      return res.status(403).json({ error: 'No organization selected' });
+    }
+    const { rows } = await pool.query(
+      'SELECT * FROM events WHERE owner_org_id = $1 ORDER BY start_date DESC',
+      [auth.orgId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('admin GET /events error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/admin/events
 router.post('/events', async (req, res) => {
   try {
+    const auth = getAuth(req);
+    const superadmin = isSuperadmin(req);
+    if (!superadmin && !auth?.orgId) {
+      return res.status(403).json({ error: 'Select an organization first' });
+    }
+
     const { name, slug, description, startDate, endDate, location, neighborhood,
             logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category } = req.body;
 
+    // Superadmins create active events; organizers create pending_review.
+    const status = superadmin ? 'active' : 'pending_review';
+    const ownerOrgId = auth?.orgId || null;
+    const createdByUserId = auth?.userId || null;
+
     const { rows } = await pool.query(`
       INSERT INTO events (name, slug, description, start_date, end_date, location, neighborhood,
-                          logo_system_image, image_url, map_image_url, ticketing_url, latitude, longitude, category)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                          logo_system_image, image_url, map_image_url, ticketing_url, latitude, longitude, category,
+                          owner_org_id, created_by_user_id, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *
     `, [name, slug, description || '', startDate, endDate, location, neighborhood || '',
-        logoSystemImage || 'party.popper', imageURL, mapImageURL || null, ticketingURL, latitude, longitude, category || 'community']);
+        logoSystemImage || 'party.popper', imageURL, mapImageURL || null, ticketingURL, latitude, longitude, category || 'community',
+        ownerOrgId, createdByUserId, status]);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -41,8 +83,22 @@ router.post('/events', async (req, res) => {
   }
 });
 
+// POST /api/admin/events/:id/approve — superadmin only
+router.post('/events/:id/approve', requireSuperadmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "UPDATE events SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING *",
+      [req.params.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/admin/events/:id
-router.put('/events/:id', async (req, res) => {
+router.put('/events/:id', requireEventAccess, async (req, res) => {
   try {
     const { name, description, startDate, endDate, location, neighborhood,
             logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
@@ -86,7 +142,7 @@ router.put('/events/:id', async (req, res) => {
 });
 
 // DELETE /api/admin/events/:id
-router.delete('/events/:id', async (req, res) => {
+router.delete('/events/:id', requireEventAccess, async (req, res) => {
   try {
     const { rowCount } = await pool.query('DELETE FROM events WHERE id = $1', [req.params.id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Event not found' });
@@ -102,7 +158,7 @@ router.delete('/events/:id', async (req, res) => {
 // =====================
 
 // POST /api/admin/events/:eventId/stages
-router.post('/events/:eventId/stages', async (req, res) => {
+router.post('/events/:eventId/stages', requireEventAccess, async (req, res) => {
   try {
     const { name, mapX, mapY } = req.body;
     const { rows } = await pool.query(`
@@ -119,7 +175,7 @@ router.post('/events/:eventId/stages', async (req, res) => {
 });
 
 // DELETE /api/admin/stages/:id
-router.delete('/stages/:id', async (req, res) => {
+router.delete('/stages/:id', requireChildEventAccess(lookupStageEvent), async (req, res) => {
   try {
     const { rowCount } = await pool.query('DELETE FROM stages WHERE id = $1', [req.params.id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Stage not found' });
@@ -134,7 +190,7 @@ router.delete('/stages/:id', async (req, res) => {
 // =====================
 
 // POST /api/admin/events/:eventId/schedule
-router.post('/events/:eventId/schedule', async (req, res) => {
+router.post('/events/:eventId/schedule', requireEventAccess, async (req, res) => {
   try {
     const { stageId, title, description, startTime, endTime, category, performerName, performerBio, performerImageURL, performerLinks } = req.body;
     const { rows } = await pool.query(`
@@ -151,7 +207,7 @@ router.post('/events/:eventId/schedule', async (req, res) => {
 });
 
 // POST /api/admin/events/:eventId/schedule/bulk — add multiple at once
-router.post('/events/:eventId/schedule/bulk', async (req, res) => {
+router.post('/events/:eventId/schedule/bulk', requireEventAccess, async (req, res) => {
   try {
     const { items } = req.body; // array of { stageId, title, description, startTime, endTime, category }
     const results = [];
@@ -175,7 +231,7 @@ router.post('/events/:eventId/schedule/bulk', async (req, res) => {
 });
 
 // PUT /api/admin/schedule/:id
-router.put('/schedule/:id', async (req, res) => {
+router.put('/schedule/:id', requireChildEventAccess(lookupScheduleEvent), async (req, res) => {
   try {
     const { stageId, title, description, startTime, endTime, category, isCancelled, performerName, performerBio, performerImageURL, performerLinks } = req.body;
 
@@ -205,7 +261,7 @@ router.put('/schedule/:id', async (req, res) => {
 });
 
 // DELETE /api/admin/schedule/:id
-router.delete('/schedule/:id', async (req, res) => {
+router.delete('/schedule/:id', requireChildEventAccess(lookupScheduleEvent), async (req, res) => {
   try {
     const { rowCount } = await pool.query('DELETE FROM schedule_items WHERE id = $1', [req.params.id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Schedule item not found' });
@@ -220,7 +276,7 @@ router.delete('/schedule/:id', async (req, res) => {
 // =====================
 
 // POST /api/admin/events/:eventId/pins
-router.post('/events/:eventId/pins', async (req, res) => {
+router.post('/events/:eventId/pins', requireEventAccess, async (req, res) => {
   try {
     const { label, pinType, x, y, latitude, longitude, description } = req.body;
     const { rows } = await pool.query(`
@@ -237,7 +293,7 @@ router.post('/events/:eventId/pins', async (req, res) => {
 });
 
 // POST /api/admin/events/:eventId/pins/bulk
-router.post('/events/:eventId/pins/bulk', async (req, res) => {
+router.post('/events/:eventId/pins/bulk', requireEventAccess, async (req, res) => {
   try {
     const { pins } = req.body;
     const results = [];
@@ -259,7 +315,7 @@ router.post('/events/:eventId/pins/bulk', async (req, res) => {
 });
 
 // PUT /api/admin/pins/:id — update an existing pin (e.g. drag to new location)
-router.put('/pins/:id', async (req, res) => {
+router.put('/pins/:id', requireChildEventAccess(lookupPinEvent), async (req, res) => {
   try {
     const { label, pinType, x, y, latitude, longitude, description } = req.body;
     const { rows } = await pool.query(`
@@ -283,7 +339,7 @@ router.put('/pins/:id', async (req, res) => {
 });
 
 // DELETE /api/admin/pins/:id
-router.delete('/pins/:id', async (req, res) => {
+router.delete('/pins/:id', requireChildEventAccess(lookupPinEvent), async (req, res) => {
   try {
     const { rowCount } = await pool.query('DELETE FROM map_pins WHERE id = $1', [req.params.id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Pin not found' });
@@ -300,7 +356,7 @@ router.delete('/pins/:id', async (req, res) => {
 const { sendPushToEvent, sendPushToScheduleItem } = require('../services/apns');
 
 // GET /api/admin/events/:eventId/devices/count — how many devices are subscribed
-router.get('/events/:eventId/devices/count', async (req, res) => {
+router.get('/events/:eventId/devices/count', requireEventAccess, async (req, res) => {
   try {
     const { rows } = await pool.query(
       'SELECT COUNT(*) FROM device_tokens WHERE event_id = $1',
@@ -313,7 +369,7 @@ router.get('/events/:eventId/devices/count', async (req, res) => {
 });
 
 // POST /api/admin/events/:eventId/push — send a push notification
-router.post('/events/:eventId/push', async (req, res) => {
+router.post('/events/:eventId/push', requireEventAccess, async (req, res) => {
   try {
     const { title, body, category } = req.body;
     if (!title || !body) {
@@ -343,7 +399,7 @@ router.post('/events/:eventId/push', async (req, res) => {
 });
 
 // POST /api/admin/schedule/:id/push — send notification to users who saved this item
-router.post('/schedule/:id/push', async (req, res) => {
+router.post('/schedule/:id/push', requireChildEventAccess(lookupScheduleEvent), async (req, res) => {
   try {
     const { title, body } = req.body;
     if (!title || !body) {
@@ -387,7 +443,7 @@ router.post('/schedule/:id/push', async (req, res) => {
 });
 
 // GET /api/admin/events/:eventId/push — notification history (paginated)
-router.get('/events/:eventId/push', async (req, res) => {
+router.get('/events/:eventId/push', requireEventAccess, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const offset = parseInt(req.query.offset) || 0;
@@ -420,7 +476,7 @@ router.get('/events/:eventId/push', async (req, res) => {
 // =====================
 
 // POST /api/admin/parse-schedule — parse raw text into structured schedule items
-router.post('/parse-schedule', async (req, res) => {
+router.post('/parse-schedule', requireSuperadmin, async (req, res) => {
   try {
     const { text, eventName, stages } = req.body;
 
@@ -497,7 +553,7 @@ ${text}`
 });
 
 // POST /api/admin/import-url — scrape a URL and parse schedule from it
-router.post('/import-url', async (req, res) => {
+router.post('/import-url', requireSuperadmin, async (req, res) => {
   try {
     const { url, eventName, stages } = req.body;
 
@@ -614,7 +670,7 @@ ${text}`
 // =====================
 
 // GET /api/admin/export — full JSON dump of all data
-router.get('/export', async (req, res) => {
+router.get('/export', requireSuperadmin, async (req, res) => {
   try {
     const [events, stages, scheduleItems, mapPins, pushNotifications, deviceTokens] = await Promise.all([
       pool.query('SELECT * FROM events ORDER BY start_date'),
@@ -651,7 +707,7 @@ router.get('/export', async (req, res) => {
 });
 
 // POST /api/admin/import — restore from a JSON backup
-router.post('/import', async (req, res) => {
+router.post('/import', requireSuperadmin, async (req, res) => {
   try {
     const { events, stages, scheduleItems, mapPins } = req.body;
 
@@ -722,7 +778,7 @@ router.post('/import', async (req, res) => {
 // =====================
 
 // POST /api/admin/match-template — find all instances of a selected icon region in the map
-router.post('/match-template', async (req, res) => {
+router.post('/match-template', requireSuperadmin, async (req, res) => {
   try {
     const { mapImageURL, template, threshold = 0.55 } = req.body;
 
@@ -874,7 +930,7 @@ router.post('/match-template', async (req, res) => {
 // =====================
 
 // POST /api/admin/detect-map-pins — use Claude Vision to detect pins/landmarks on a map image
-router.post('/detect-map-pins', async (req, res) => {
+router.post('/detect-map-pins', requireSuperadmin, async (req, res) => {
   try {
     const { mapImageURL, eventName } = req.body;
 
@@ -982,7 +1038,7 @@ Return ONLY a JSON array. If no icons found, return [].`
 // =====================
 
 // POST /api/admin/import-seattle-events — import from Seattle Special Events Permits
-router.post('/import-seattle-events', async (req, res) => {
+router.post('/import-seattle-events', requireSuperadmin, async (req, res) => {
   try {
     const { minAttendance = 0, year = new Date().getFullYear() } = req.body;
 
@@ -1058,7 +1114,7 @@ router.post('/import-seattle-events', async (req, res) => {
 });
 
 // GET /api/admin/seattle-events-preview — preview what would be imported
-router.get('/seattle-events-preview', async (req, res) => {
+router.get('/seattle-events-preview', requireSuperadmin, async (req, res) => {
   try {
     const minAttendance = parseInt(req.query.minAttendance) || 0;
     const year = parseInt(req.query.year) || new Date().getFullYear();

@@ -7,12 +7,17 @@ const eventsRouter = require('./routes/events');
 const devicesRouter = require('./routes/devices');
 const adminRouter = require('./routes/admin');
 const streetClosuresRouter = require('./routes/streetClosures');
+const { clerk } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Clerk session middleware — populates req.auth on every request.
+// Per-route guards in middleware/auth.js enforce signed-in / org-owner / superadmin.
+app.use(clerk);
 
 // Static files (maps, images)
 app.use('/maps', express.static(path.join(__dirname, 'public', 'maps')));

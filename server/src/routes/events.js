@@ -9,6 +9,7 @@ router.get('/', async (req, res) => {
     const { rows: events } = await pool.query(`
       SELECT * FROM events
       WHERE is_active = true
+        AND (status = 'active' OR status IS NULL)
       ORDER BY start_date ASC
     `);
 
@@ -93,7 +94,9 @@ router.get('/', async (req, res) => {
 router.get('/:slug', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT * FROM events WHERE slug = $1 AND is_active = true',
+      `SELECT * FROM events
+       WHERE slug = $1 AND is_active = true
+         AND (status = 'active' OR status IS NULL)`,
       [req.params.slug]
     );
 

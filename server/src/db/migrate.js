@@ -98,6 +98,14 @@ const schema = `
   ALTER TABLE map_pins ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
   ALTER TABLE map_pins ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 
+  -- Multi-tenant ownership: each event belongs to a Clerk organization.
+  -- Existing rows have NULL until backfilled (treated as superadmin-only).
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS owner_org_id TEXT;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS created_by_user_id TEXT;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+  CREATE INDEX IF NOT EXISTS idx_events_owner_org ON events(owner_org_id);
+  CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+
   ALTER TABLE events ADD COLUMN IF NOT EXISTS permit_id TEXT;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS is_accessible BOOLEAN;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS is_free BOOLEAN;
