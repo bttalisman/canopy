@@ -98,6 +98,11 @@ const schema = `
   ALTER TABLE map_pins ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
   ALTER TABLE map_pins ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS permit_id TEXT;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS is_accessible BOOLEAN;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS is_free BOOLEAN;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS is_city_official BOOLEAN;
+
   ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_name TEXT;
   ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_bio TEXT;
   ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS performer_image_url TEXT;

@@ -8,6 +8,8 @@ struct DiscoverView: View {
     @State private var selectedCategory: EventCategory?
     @State private var selectedTimeFilter: TimeFilter = .all
     @State private var selectedNeighborhood: String?
+    @State private var freeOnly: Bool = false
+    @State private var accessibleOnly: Bool = false
     @State private var showMapView = false
     @State private var selectedMapEvent: Event?
     @State private var isLoading = false
@@ -36,6 +38,13 @@ struct DiscoverView: View {
 
     var filteredEvents: [Event] {
         var result = events.filter { $0.isActive }
+
+        if freeOnly {
+            result = result.filter { $0.isFree == true }
+        }
+        if accessibleOnly {
+            result = result.filter { $0.isAccessible == true }
+        }
 
         if !searchText.isEmpty {
             result = result.filter {
@@ -176,12 +185,70 @@ struct DiscoverView: View {
                                         .padding(.vertical, 8)
                                         .background(
                                             Capsule()
-                                                .fill(selectedTimeFilter == filter ? Color.leafDeep : Color(.systemGray5))
+                                                .fill(
+                                                    selectedTimeFilter == filter
+                                                        ? AnyShapeStyle(LinearGradient(
+                                                            colors: [Color.leafMid, Color.leafDeep],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing))
+                                                        : AnyShapeStyle(Color(.systemGray5))
+                                                )
                                         )
+                                        .shadow(color: selectedTimeFilter == filter ? Color.leafDeep.opacity(0.35) : .clear, radius: 4, x: 0, y: 2)
                                         .foregroundStyle(selectedTimeFilter == filter ? .white : .primary)
                                         .accessibilityLabel("\(filter.rawValue) filter")
                                         .accessibilityAddTraits(selectedTimeFilter == filter ? .isSelected : [])
                                 }
+                            }
+
+                            // Free toggle
+                            Button {
+                                withAnimation { freeOnly.toggle() }
+                            } label: {
+                                Label("Free", systemImage: "tag")
+                                    .font(.subheadline)
+                                    .fontWeight(freeOnly ? .semibold : .regular)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        Capsule()
+                                            .fill(
+                                                freeOnly
+                                                    ? AnyShapeStyle(LinearGradient(
+                                                        colors: [Color.leafMid, Color.leafDeep],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing))
+                                                    : AnyShapeStyle(Color(.systemGray5))
+                                            )
+                                    )
+                                    .foregroundStyle(freeOnly ? .white : .primary)
+                                    .accessibilityLabel("Free events filter")
+                                    .accessibilityAddTraits(freeOnly ? .isSelected : [])
+                            }
+
+                            // Accessibility toggle
+                            Button {
+                                withAnimation { accessibleOnly.toggle() }
+                            } label: {
+                                Label("Accessible", systemImage: "figure.roll")
+                                    .font(.subheadline)
+                                    .fontWeight(accessibleOnly ? .semibold : .regular)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        Capsule()
+                                            .fill(
+                                                accessibleOnly
+                                                    ? AnyShapeStyle(LinearGradient(
+                                                        colors: [Color.leafMid, Color.leafDeep],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing))
+                                                    : AnyShapeStyle(Color(.systemGray5))
+                                            )
+                                    )
+                                    .foregroundStyle(accessibleOnly ? .white : .primary)
+                                    .accessibilityLabel("Wheelchair accessible filter")
+                                    .accessibilityAddTraits(accessibleOnly ? .isSelected : [])
                             }
                         }
                         .padding(.horizontal)
@@ -199,7 +266,14 @@ struct DiscoverView: View {
                                     .padding(.vertical, 6)
                                     .background(
                                         Capsule()
-                                            .fill(selectedCategory == nil ? Color.leafDeep.opacity(0.15) : Color(.systemGray6))
+                                            .fill(
+                                                selectedCategory == nil
+                                                    ? AnyShapeStyle(LinearGradient(
+                                                        colors: [Color.leafLight.opacity(0.35), Color.leafDeep.opacity(0.20)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing))
+                                                    : AnyShapeStyle(Color(.systemGray6))
+                                            )
                                     )
                                     .foregroundStyle(selectedCategory == nil ? Color.leafDeep : .secondary)
                             }
@@ -214,7 +288,14 @@ struct DiscoverView: View {
                                         .padding(.vertical, 6)
                                         .background(
                                             Capsule()
-                                                .fill(selectedCategory == cat ? Color.leafDeep.opacity(0.15) : Color(.systemGray6))
+                                                .fill(
+                                                    selectedCategory == cat
+                                                        ? AnyShapeStyle(LinearGradient(
+                                                            colors: [Color.leafLight.opacity(0.35), Color.leafDeep.opacity(0.20)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing))
+                                                        : AnyShapeStyle(Color(.systemGray6))
+                                                )
                                         )
                                         .foregroundStyle(selectedCategory == cat ? Color.leafDeep : .secondary)
                                 }
@@ -235,7 +316,14 @@ struct DiscoverView: View {
                                         .padding(.vertical, 6)
                                         .background(
                                             Capsule()
-                                                .fill(selectedNeighborhood == nil ? Color.orange.opacity(0.15) : Color(.systemGray6))
+                                                .fill(
+                                                    selectedNeighborhood == nil
+                                                        ? AnyShapeStyle(LinearGradient(
+                                                            colors: [Color.orange.opacity(0.35), Color.orange.opacity(0.15)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing))
+                                                        : AnyShapeStyle(Color(.systemGray6))
+                                                )
                                         )
                                         .foregroundStyle(selectedNeighborhood == nil ? .orange : .secondary)
                                 }
@@ -250,7 +338,14 @@ struct DiscoverView: View {
                                             .padding(.vertical, 6)
                                             .background(
                                                 Capsule()
-                                                    .fill(selectedNeighborhood == hood ? Color.orange.opacity(0.15) : Color(.systemGray6))
+                                                    .fill(
+                                                        selectedNeighborhood == hood
+                                                            ? AnyShapeStyle(LinearGradient(
+                                                                colors: [Color.orange.opacity(0.35), Color.orange.opacity(0.15)],
+                                                                startPoint: .topLeading,
+                                                                endPoint: .bottomTrailing))
+                                                            : AnyShapeStyle(Color(.systemGray6))
+                                                    )
                                             )
                                             .foregroundStyle(selectedNeighborhood == hood ? .orange : .secondary)
                                             .accessibilityLabel("\(hood) neighborhood filter")
@@ -463,14 +558,34 @@ struct EventCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(event.name)
-                            .font(.headline)
-                            .lineLimit(2)
+                        HStack(spacing: 6) {
+                            Text(event.name)
+                                .font(.headline)
+                                .lineLimit(2)
+                            if event.isCityOfficial == true {
+                                CityOfficialBadge()
+                            }
+                        }
 
                         Label(event.location, systemImage: "mappin.and.ellipse")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
+
+                        if event.isFree == true || event.isAccessible == true || event.permitId != nil {
+                            HStack(spacing: 6) {
+                                if event.isFree == true {
+                                    metaPill("Free", systemImage: "tag.fill", tint: Color.leafDeep)
+                                }
+                                if event.isAccessible == true {
+                                    metaPill("Accessible", systemImage: "figure.roll", tint: .blue)
+                                }
+                                if let permit = event.permitId, !permit.isEmpty {
+                                    metaPill(permit, systemImage: "checkmark.seal.fill", tint: .gray)
+                                }
+                            }
+                            .padding(.top, 2)
+                        }
                     }
 
                     Spacer()
@@ -542,6 +657,17 @@ struct EventCard: View {
         }
     }
 
+    private func metaPill(_ text: String, systemImage: String, tint: Color) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .foregroundStyle(tint)
+            .background(
+                Capsule().fill(tint.opacity(0.12))
+            )
+    }
+
     private var fallbackHeader: some View {
         ZStack {
             LinearGradient(
@@ -555,6 +681,30 @@ struct EventCard: View {
                 .foregroundStyle(categoryColor.opacity(0.2))
         }
         .frame(height: 100)
+    }
+}
+
+struct CityOfficialBadge: View {
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "building.columns.fill")
+                .font(.system(size: 9, weight: .bold))
+            Text("Official")
+                .font(.system(size: 10, weight: .bold))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(
+            Capsule().fill(
+                LinearGradient(
+                    colors: [Color.leafDeep, Color.leafShadow],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        )
+        .accessibilityLabel("Official city event")
     }
 }
 

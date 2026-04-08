@@ -46,6 +46,10 @@ router.get('/', async (req, res) => {
       latitude: event.latitude,
       longitude: event.longitude,
       category: event.category,
+      permitId: event.permit_id,
+      isAccessible: event.is_accessible,
+      isFree: event.is_free,
+      isCityOfficial: event.is_city_official,
       stages: (stagesByEvent[event.id] || []).map(s => ({
         id: s.id,
         name: s.name,
@@ -123,6 +127,10 @@ router.get('/:slug', async (req, res) => {
       latitude: event.latitude,
       longitude: event.longitude,
       category: event.category,
+      permitId: event.permit_id,
+      isAccessible: event.is_accessible,
+      isFree: event.is_free,
+      isCityOfficial: event.is_city_official,
       stages: stagesResult.rows.map(s => ({
         id: s.id,
         name: s.name,

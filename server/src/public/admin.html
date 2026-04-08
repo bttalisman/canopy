@@ -327,6 +327,23 @@
             <input type="url" id="evImageURL" />
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>City Permit ID</label>
+            <input type="text" id="evPermitId" placeholder="e.g. SE-2026-0142" />
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:14px;padding-top:22px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="evIsFree" /> Free
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="evIsAccessible" /> Accessible
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="evIsCityOfficial" /> City Official
+            </label>
+          </div>
+        </div>
         <div class="actions">
           <button type="submit" class="btn-primary">Save Event</button>
           <button type="button" class="btn-secondary" onclick="showEventList()">Cancel</button>
@@ -902,6 +919,10 @@ function showEditEvent() {
   document.getElementById('evLng').value = e.longitude || '';
   document.getElementById('evTicketURL').value = e.ticketingURL || '';
   document.getElementById('evImageURL').value = e.imageURL || '';
+  document.getElementById('evPermitId').value = e.permitId || '';
+  document.getElementById('evIsFree').checked = !!e.isFree;
+  document.getElementById('evIsAccessible').checked = !!e.isAccessible;
+  document.getElementById('evIsCityOfficial').checked = !!e.isCityOfficial;
 }
 
 async function saveEvent(evt) {
@@ -920,6 +941,10 @@ async function saveEvent(evt) {
     longitude: parseFloat(document.getElementById('evLng').value) || null,
     ticketingURL: document.getElementById('evTicketURL').value || null,
     imageURL: document.getElementById('evImageURL').value || null,
+    permitId: document.getElementById('evPermitId').value || null,
+    isFree: document.getElementById('evIsFree').checked,
+    isAccessible: document.getElementById('evIsAccessible').checked,
+    isCityOfficial: document.getElementById('evIsCityOfficial').checked,
   };
 
   try {

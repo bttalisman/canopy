@@ -20,6 +20,10 @@ struct APIEvent: Codable, Identifiable {
     let latitude: Double?
     let longitude: Double?
     let category: String?
+    let permitId: String?
+    let isAccessible: Bool?
+    let isFree: Bool?
+    let isCityOfficial: Bool?
     let stages: [APIStage]?
     let scheduleItems: [APIScheduleItem]?
     let mapPins: [APIMapPin]?
@@ -134,6 +138,10 @@ actor CanopyAPIService {
                     event.latitude = apiEvent.latitude ?? event.latitude
                     event.longitude = apiEvent.longitude ?? event.longitude
                     event.category = mapCategory(apiEvent.category ?? event.category.rawValue)
+                    event.permitId = apiEvent.permitId
+                    event.isAccessible = apiEvent.isAccessible
+                    event.isFree = apiEvent.isFree
+                    event.isCityOfficial = apiEvent.isCityOfficial
 
                     updateScheduleItems(for: event, from: apiEvent, parseDate: parseDate, context: context)
                     updateMapPins(for: event, from: apiEvent, context: context)
@@ -163,6 +171,10 @@ actor CanopyAPIService {
             event.mapPinSize = apiEvent.mapPinSize
             event.latitude = apiEvent.latitude
             event.longitude = apiEvent.longitude
+            event.permitId = apiEvent.permitId
+            event.isAccessible = apiEvent.isAccessible
+            event.isFree = apiEvent.isFree
+            event.isCityOfficial = apiEvent.isCityOfficial
 
             context.insert(event)
 

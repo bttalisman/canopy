@@ -20,6 +20,11 @@ final class Event {
     var longitude: Double?
     var isActive: Bool
     var category: EventCategory
+    // City / civic metadata (all optional — additive only)
+    var permitId: String?
+    var isAccessible: Bool?
+    var isFree: Bool?
+    var isCityOfficial: Bool?
 
     @Relationship(deleteRule: .cascade, inverse: \Stage.event)
     var stages: [Stage] = []

@@ -45,7 +45,8 @@ router.post('/events', async (req, res) => {
 router.put('/events/:id', async (req, res) => {
   try {
     const { name, description, startDate, endDate, location, neighborhood,
-            logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive } = req.body;
+            logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
+            permitId, isAccessible, isFree, isCityOfficial } = req.body;
 
     const { rows } = await pool.query(`
       UPDATE events SET
@@ -65,11 +66,16 @@ router.put('/events/:id', async (req, res) => {
         longitude = COALESCE($15, longitude),
         category = COALESCE($16, category),
         is_active = COALESCE($17, is_active),
+        permit_id = COALESCE($18, permit_id),
+        is_accessible = COALESCE($19, is_accessible),
+        is_free = COALESCE($20, is_free),
+        is_city_official = COALESCE($21, is_city_official),
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `, [req.params.id, name, description, startDate, endDate, location, neighborhood,
-        logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive]);
+        logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
+        permitId, isAccessible, isFree, isCityOfficial]);
 
     if (rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     res.json(rows[0]);

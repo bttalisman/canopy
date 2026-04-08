@@ -555,6 +555,14 @@ struct EventMapView: View {
                 Map(position: $mapPosition) {
                     UserAnnotation()
 
+                    // If the event has no pins of its own, show the venue
+                    // itself as a marker so the user has something to anchor on.
+                    if filteredPins.isEmpty,
+                       let lat = event.latitude, let lon = event.longitude {
+                        Marker(event.location, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))
+                            .tint(Color.leafDeep)
+                    }
+
                     ForEach(filteredPins) { pin in
                         Annotation(pin.label, coordinate: pinCoordinate(pin)) {
                             Button {
