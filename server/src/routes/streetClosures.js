@@ -94,17 +94,19 @@ router.get('/', async (req, res) => {
     const lo = parseFloat(lng || '-122.3321');
     const minX = lo - radius, minY = la - radius, maxX = lo + radius, maxY = la + radius;
 
+    // ArcGIS REST expects date literals in `TIMESTAMP 'YYYY-MM-DD HH:MM:SS'`
+    // form — passing raw epoch milliseconds yields a 400 error.
+    const toTs = (iso) => {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return null;
+      return `TIMESTAMP '${d.toISOString().replace('T', ' ').slice(0, 19)}'`;
+    };
+    const startTs = toTs(startDate || endDate);
+    const endTs = toTs(endDate || startDate);
+
     const where = [];
-    if (endDate) {
-      // Permit hasn't expired before the event starts.
-      const startMs = Date.parse(startDate || endDate);
-      where.push(`NEXT_EXPIRATION_DATE >= ${startMs}`);
-    }
-    if (startDate) {
-      // Permit was issued before the event ends.
-      const endMs = Date.parse(endDate || startDate);
-      where.push(`FIRST_ISSUED_DATE <= ${endMs}`);
-    }
+    if (startTs) where.push(`NEXT_EXPIRATION_DATE >= ${startTs}`);
+    if (endTs)   where.push(`FIRST_ISSUED_DATE <= ${endTs}`);
     if (where.length === 0) where.push('1=1');
 
     const params = new URLSearchParams({
@@ -128,6 +130,9 @@ router.get('/', async (req, res) => {
       throw new Error(`ArcGIS returned ${response.status}`);
     }
     const json = await response.json();
+    if (json.error) {
+      console.error('[street-closures] ArcGIS body error:', JSON.stringify(json.error));
+    }
     console.log('[street-closures] features returned:', (json.features || []).length, 'where:', where.join(' AND '));
     const normalized = (json.features || []).map(normalizeArcgis).filter(Boolean);
     console.log('[street-closures] normalized:', normalized.length);
