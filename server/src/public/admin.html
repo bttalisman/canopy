@@ -6,6 +6,12 @@
   <title>Canopy Admin</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Clerk authentication SDK -->
+  <script
+    data-clerk-publishable-key="pk_test_REPLACE_ME"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    crossorigin="anonymous"
+  ></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -203,13 +209,22 @@
 
 <div class="header">
   <h1>🌿 Canopy Admin</h1>
-  <div class="key-input">
-    <label style="font-size:12px;color:#94a3b8">Admin Key:</label>
-    <input type="password" id="apiKey" placeholder="Enter admin API key" />
+  <div class="key-input" style="display:flex;align-items:center;gap:12px">
+    <div id="clerk-org-switcher"></div>
+    <div id="clerk-user-button"></div>
   </div>
 </div>
 
-<div class="container">
+<!-- Sign-in gate: shown when no Clerk session -->
+<div id="signedOutView" class="container" style="display:none">
+  <div class="card" style="text-align:center;padding:40px">
+    <h2 style="margin-bottom:8px">Sign in to Canopy Admin</h2>
+    <p style="color:#94a3b8;margin-bottom:20px">You need an account to manage events.</p>
+    <div id="clerk-sign-in"></div>
+  </div>
+</div>
+
+<div class="container" id="signedInContainer" style="display:none">
   <!-- Event List View -->
   <div id="eventListView">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -720,16 +735,60 @@ let currentEventId = null;
 let currentEventData = null;
 let parsedItems = [];
 
-function getKey() {
-  return document.getElementById('apiKey').value;
-}
-
-function adminHeaders() {
+// Auth headers come from the active Clerk session. Every callsite that
+// uses adminHeaders() must `await` it now.
+async function adminHeaders() {
+  const token = window.Clerk?.session ? await window.Clerk.session.getToken() : null;
   return {
     'Content-Type': 'application/json',
-    'X-Admin-Key': getKey()
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
   };
 }
+
+// Init Clerk on load and gate the UI on sign-in.
+window.addEventListener('load', async () => {
+  if (!window.Clerk) {
+    console.error('Clerk SDK failed to load');
+    return;
+  }
+  try {
+    await window.Clerk.load();
+  } catch (e) {
+    console.error('Clerk.load() failed:', e);
+    return;
+  }
+
+  const renderAuthState = () => {
+    const signedIn = !!window.Clerk.user;
+    document.getElementById('signedOutView').style.display = signedIn ? 'none' : 'block';
+    document.getElementById('signedInContainer').style.display = signedIn ? 'block' : 'none';
+
+    if (signedIn) {
+      // Mount org switcher + user button into the header
+      const orgEl = document.getElementById('clerk-org-switcher');
+      const userEl = document.getElementById('clerk-user-button');
+      if (orgEl && !orgEl.dataset.mounted) {
+        window.Clerk.mountOrganizationSwitcher(orgEl, { hidePersonal: false });
+        orgEl.dataset.mounted = '1';
+      }
+      if (userEl && !userEl.dataset.mounted) {
+        window.Clerk.mountUserButton(userEl);
+        userEl.dataset.mounted = '1';
+      }
+      // Kick off the initial event list load now that we have a session
+      if (typeof loadEvents === 'function') loadEvents();
+    } else {
+      const signInEl = document.getElementById('clerk-sign-in');
+      if (signInEl && !signInEl.dataset.mounted) {
+        window.Clerk.mountSignIn(signInEl);
+        signInEl.dataset.mounted = '1';
+      }
+    }
+  };
+
+  renderAuthState();
+  window.Clerk.addListener(renderAuthState);
+});
 
 function toast(msg) {
   const el = document.getElementById('toast');
@@ -950,7 +1009,7 @@ async function saveEvent(evt) {
   try {
     const url = id ? `${API}/api/admin/events/${id}` : `${API}/api/admin/events`;
     const method = id ? 'PUT' : 'POST';
-    const res = await fetch(url, { method, headers: adminHeaders(), body: JSON.stringify(body) });
+    const res = await fetch(url, { method, headers: (await adminHeaders()), body: JSON.stringify(body) });
     if (!res.ok) throw new Error(await res.text());
     toast(id ? 'Event updated!' : 'Event created!');
     showEventList();
@@ -962,7 +1021,7 @@ async function saveEvent(evt) {
 async function deleteEvent(id) {
   if (!confirm('Delete this event and all its data?')) return;
   try {
-    await fetch(`${API}/api/admin/events/${id}`, { method: 'DELETE', headers: adminHeaders() });
+    await fetch(`${API}/api/admin/events/${id}`, { method: 'DELETE', headers: (await adminHeaders()) });
     toast('Event deleted');
     showEventList();
   } catch (e) {
@@ -987,7 +1046,7 @@ async function saveStage(evt) {
   };
   try {
     const res = await fetch(`${API}/api/admin/events/${currentEventId}/stages`, {
-      method: 'POST', headers: adminHeaders(), body: JSON.stringify(body)
+      method: 'POST', headers: (await adminHeaders()), body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error(await res.text());
     toast('Stage added!');
@@ -1000,7 +1059,7 @@ async function saveStage(evt) {
 async function deleteStage(id) {
   if (!confirm('Delete this stage?')) return;
   try {
-    await fetch(`${API}/api/admin/stages/${id}`, { method: 'DELETE', headers: adminHeaders() });
+    await fetch(`${API}/api/admin/stages/${id}`, { method: 'DELETE', headers: (await adminHeaders()) });
     toast('Stage deleted');
     backToEventDetail();
   } catch (e) {
@@ -1035,7 +1094,7 @@ async function saveScheduleItem(evt) {
   };
   try {
     const res = await fetch(`${API}/api/admin/events/${currentEventId}/schedule`, {
-      method: 'POST', headers: adminHeaders(), body: JSON.stringify(body)
+      method: 'POST', headers: (await adminHeaders()), body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error(await res.text());
     toast('Session added!');
@@ -1048,7 +1107,7 @@ async function saveScheduleItem(evt) {
 async function deleteScheduleItem(id) {
   if (!confirm('Delete this session?')) return;
   try {
-    await fetch(`${API}/api/admin/schedule/${id}`, { method: 'DELETE', headers: adminHeaders() });
+    await fetch(`${API}/api/admin/schedule/${id}`, { method: 'DELETE', headers: (await adminHeaders()) });
     toast('Session deleted');
     backToEventDetail();
   } catch (e) {
@@ -1086,7 +1145,7 @@ async function importFromURL() {
   try {
     const res = await fetch(`${API}/api/admin/import-url`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({
         url,
         eventName: currentEventData?.name || '',
@@ -1130,7 +1189,7 @@ async function parseSchedule() {
   try {
     const res = await fetch(`${API}/api/admin/parse-schedule`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({
         text,
         eventName: currentEventData?.name || '',
@@ -1205,7 +1264,7 @@ async function importParsedItems() {
   try {
     const res = await fetch(`${API}/api/admin/events/${currentEventId}/schedule/bulk`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({ items })
     });
 
@@ -1230,7 +1289,7 @@ async function showSendPush() {
   // Load subscriber count
   try {
     const res = await fetch(`${API}/api/admin/events/${currentEventId}/devices/count`, {
-      headers: adminHeaders()
+      headers: (await adminHeaders())
     });
     const data = await res.json();
     document.getElementById('pushDeviceCount').textContent = `${data.count} subscriber${data.count !== 1 ? 's' : ''}`;
@@ -1249,7 +1308,7 @@ async function loadPushHistory(page = 0) {
   pushHistoryPage = page;
   try {
     const res = await fetch(`${API}/api/admin/events/${currentEventId}/push?limit=${PUSH_PAGE_SIZE}&offset=${page * PUSH_PAGE_SIZE}`, {
-      headers: adminHeaders()
+      headers: (await adminHeaders())
     });
     const data = await res.json();
     const notifications = data.notifications || [];
@@ -1309,7 +1368,7 @@ async function sendPush(evt) {
   try {
     const res = await fetch(`${API}/api/admin/events/${currentEventId}/push`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({ title, body })
     });
 
@@ -1325,7 +1384,7 @@ async function sendPush(evt) {
 
     // Refresh subscriber count
     const countRes = await fetch(`${API}/api/admin/events/${currentEventId}/devices/count`, {
-      headers: adminHeaders()
+      headers: (await adminHeaders())
     });
     const countData = await countRes.json();
     document.getElementById('pushDeviceCount').textContent = `${countData.count} subscriber${countData.count !== 1 ? 's' : ''}`;
@@ -1346,7 +1405,7 @@ async function sendItemPush(itemId, itemTitle) {
   try {
     const res = await fetch(`${API}/api/admin/schedule/${itemId}/push`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({ title, body })
     });
     if (!res.ok) {
@@ -1493,7 +1552,7 @@ function addLeafletMarker(pin) {
     try {
       await fetch(`${API}/api/admin/pins/${pin.id}`, {
         method: 'PUT',
-        headers: adminHeaders(),
+        headers: (await adminHeaders()),
         body: JSON.stringify({ latitude: latlng.lat, longitude: latlng.lng })
       });
       toast(`Moved: ${pin.label}`);
@@ -1519,7 +1578,7 @@ async function onLeafletMapClick(e) {
   try {
     const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({ label, pinType, x: 0, y: 0, latitude: lat, longitude: lng, description })
     });
     if (!res.ok) throw new Error(await res.text());
@@ -1546,7 +1605,7 @@ async function onLeafletMapClick(e) {
 
 async function deleteLeafletPin(id) {
   try {
-    await fetch(`${API}/api/admin/pins/${id}`, { method: 'DELETE', headers: adminHeaders() });
+    await fetch(`${API}/api/admin/pins/${id}`, { method: 'DELETE', headers: (await adminHeaders()) });
   } catch (e) {}
   const idx = mapEditorPins.findIndex(p => p.id === id);
   if (idx >= 0) mapEditorPins.splice(idx, 1);
@@ -1581,7 +1640,7 @@ async function undoLastPin() {
     const idx = mapEditorPins.findIndex(p => p.id === pin.id);
     if (idx >= 0) {
       if (pin.id) {
-        try { await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() }); } catch(e) {}
+        try { await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) }); } catch(e) {}
       }
       mapEditorPins.splice(idx, 1);
     }
@@ -1690,7 +1749,7 @@ async function saveMapPinSize() {
   try {
     await fetch(`${API}/api/admin/events/${currentEventId}`, {
       method: 'PUT',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({ mapPinSize: size })
     });
     if (currentEventData) currentEventData.mapPinSize = size;
@@ -1705,7 +1764,7 @@ async function saveMapImageURL() {
   try {
     await fetch(`${API}/api/admin/events/${currentEventId}`, {
       method: 'PUT',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({ mapImageURL: url || '' })
     });
     if (currentEventData) currentEventData.mapImageURL = url || null;
@@ -1816,9 +1875,9 @@ function renderMapPins() {
       const pin = mapEditorPins[index];
       if (pin.id) {
         try {
-          await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+          await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
           const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
-            method: 'POST', headers: adminHeaders(),
+            method: 'POST', headers: (await adminHeaders()),
             body: JSON.stringify({ label: pin.label, pinType: pin.pinType, x, y, description: pin.description || '' })
           });
           if (res.ok) {
@@ -1901,7 +1960,7 @@ async function deleteSelectedPin() {
   const pin = mapEditorPins[selectedMapPinIndex];
   try {
     if (pin.id) {
-      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
     }
     mapEditorPins.splice(selectedMapPinIndex, 1);
     document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
@@ -1926,10 +1985,10 @@ async function updateSelectedPin() {
   // Delete old and recreate with new metadata at same position
   try {
     if (pin.id) {
-      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
     }
     const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
-      method: 'POST', headers: adminHeaders(),
+      method: 'POST', headers: (await adminHeaders()),
       body: JSON.stringify({ label: newLabel, pinType: newType, x: pin.x, y: pin.y, description: newDesc })
     });
     if (res.ok) {
@@ -1959,7 +2018,7 @@ async function placePin(x, y) {
   try {
     const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({ label, pinType, x, y, description })
     });
     if (!res.ok) throw new Error(await res.text());
@@ -2003,7 +2062,7 @@ async function saveCalibration() {
   try {
     await fetch(`${API}/api/admin/events/${currentEventId}`, {
       method: 'PUT',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({ mapCalibration: calibration })
     });
     if (currentEventData) currentEventData.mapCalibration = calibration;
@@ -2091,7 +2150,7 @@ async function autoPlacePins() {
     try {
       const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
         method: 'POST',
-        headers: adminHeaders(),
+        headers: (await adminHeaders()),
         body: JSON.stringify({
           label: pin.label,
           pinType: pin.type,
@@ -2216,7 +2275,7 @@ async function findTemplateMatches() {
   try {
     const res = await fetch(`${API}/api/admin/match-template`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({
         mapImageURL: mapURL,
         template: templateRegion,
@@ -2295,7 +2354,7 @@ async function placeFilteredMatches() {
     try {
       const saveRes = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
         method: 'POST',
-        headers: adminHeaders(),
+        headers: (await adminHeaders()),
         body: JSON.stringify({
           label: filtered.length > 1 ? `${label} ${placed + 1}` : label,
           pinType,
@@ -2337,7 +2396,7 @@ async function aiDetectPins() {
   try {
     const res = await fetch(`${API}/api/admin/detect-map-pins`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({
         mapImageURL: mapURL,
         eventName: currentEventData?.name || ''
@@ -2361,7 +2420,7 @@ async function aiDetectPins() {
     for (const pin of mapEditorPins) {
       if (pin.id) {
         try {
-          await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+          await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
         } catch(e) {}
       }
     }
@@ -2373,7 +2432,7 @@ async function aiDetectPins() {
       try {
         const saveRes = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
           method: 'POST',
-          headers: adminHeaders(),
+          headers: (await adminHeaders()),
           body: JSON.stringify({
             label: pin.label,
             pinType: pin.pinType || 'Custom',
@@ -2415,7 +2474,7 @@ async function deleteAllPins() {
   for (const pin of mapEditorPins) {
     if (pin.id) {
       try {
-        await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+        await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
       } catch(e) {}
     }
   }
@@ -2435,7 +2494,7 @@ async function deleteMapPin(index) {
 
   try {
     if (pin.id) {
-      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: adminHeaders() });
+      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
     }
     mapEditorPins.splice(index, 1);
     document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
@@ -2464,7 +2523,7 @@ async function previewSeattleEvents() {
 
   try {
     const res = await fetch(`${API}/api/admin/seattle-events-preview?minAttendance=${minAttendance}&year=${year}`, {
-      headers: adminHeaders()
+      headers: (await adminHeaders())
     });
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
@@ -2512,7 +2571,7 @@ async function importSeattleEvents() {
   try {
     const res = await fetch(`${API}/api/admin/import-seattle-events`, {
       method: 'POST',
-      headers: adminHeaders(),
+      headers: (await adminHeaders()),
       body: JSON.stringify({ minAttendance: parseInt(minAttendance), year: parseInt(year) })
     });
     if (!res.ok) throw new Error(await res.text());
