@@ -82,12 +82,12 @@ def make_screenshot(screen, index):
 
     # Try to load a nice font, fall back to default
     try:
-        title_font = ImageFont.truetype("/System/Library/Fonts/SFProDisplay-Bold.otf", 88)
-        sub_font = ImageFont.truetype("/System/Library/Fonts/SFProDisplay-Regular.otf", 44)
+        title_font = ImageFont.truetype("/System/Library/Fonts/SFProDisplay-Bold.otf", 120)
+        sub_font = ImageFont.truetype("/System/Library/Fonts/SFProDisplay-Regular.otf", 80)
     except (IOError, OSError):
         try:
-            title_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 88)
-            sub_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 44)
+            title_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 120)
+            sub_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 80)
         except (IOError, OSError):
             title_font = ImageFont.load_default()
             sub_font = ImageFont.load_default()
@@ -141,12 +141,12 @@ def make_screenshot(screen, index):
 
     # Subtitle
     sub_lines = screen["subtitle"].split("\n")
-    y_sub = y_title + 110
+    y_sub = y_title + 145
     for line in sub_lines:
         sub_bbox = draw.textbbox((0, 0), line, font=sub_font)
         sub_w = sub_bbox[2] - sub_bbox[0]
         draw.text(((OUT_W - sub_w) // 2, y_sub), line, fill=GRAY, font=sub_font)
-        y_sub += 55
+        y_sub += 95
 
     # Paste onto canvas
     canvas = canvas.convert("RGBA")

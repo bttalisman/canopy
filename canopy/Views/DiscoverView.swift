@@ -97,8 +97,8 @@ struct DiscoverView: View {
         return result
     }
 
-    private var isSearching: Bool { searchFieldFocused || !searchText.isEmpty }
-    private var pillsHidden: Bool { isSearching || filterPillsCollapsed }
+    private var isSearching: Bool { !searchText.isEmpty }
+    private var pillsHidden: Bool { filterPillsCollapsed }
 
     var body: some View {
         NavigationStack {
@@ -178,6 +178,7 @@ struct DiscoverView: View {
                     LeafyDivider()
                         .padding(.horizontal)
                         .padding(.vertical, 0)
+
 
                     // Time filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -373,32 +374,32 @@ struct DiscoverView: View {
                             .padding(.horizontal)
                         }
                     }
-                }
-                .padding(.bottom, 8)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-                }
 
-                // Drawer handle: always visible (unless searching). Tapping
-                // toggles the manual collapse state for the filter pills.
-                if !isSearching {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            filterPillsCollapsed.toggle()
-                        }
-                    } label: {
-                        SixLeavesDivider()
-                            .overlay(alignment: .trailing) {
-                                Image(systemName: filterPillsCollapsed ? "chevron.down" : "chevron.up")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(Color.leafDeep)
-                                    .padding(.trailing, 2)
-                            }
+                } // end VStack
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                } // end if !pillsHidden
+
+                // Drawer handle — always visible
+                Button {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        filterPillsCollapsed.toggle()
                     }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal)
-                    .padding(.bottom, 6)
-                    .accessibilityLabel(filterPillsCollapsed ? "Show filters" : "Hide filters")
+                } label: {
+                    SixLeavesDivider()
+                        .rotationEffect(.degrees(pillsHidden ? 720 : 0))
+                        .animation(.easeInOut(duration: 0.5), value: pillsHidden)
+                        .overlay(alignment: .trailing) {
+                            Image(systemName: filterPillsCollapsed ? "chevron.down" : "chevron.up")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.leafDeep)
+                                .padding(.trailing, 2)
+                        }
                 }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
+                .padding(.top, 6)
+                .padding(.bottom, 6)
+                .accessibilityLabel(filterPillsCollapsed ? "Show filters" : "Hide filters")
 
                 if showMapView {
                     // Map view
@@ -488,7 +489,12 @@ struct DiscoverView: View {
                     }
                 }
             }
-            .animation(.easeInOut(duration: 0.25), value: pillsHidden)
+            .animation(.easeInOut(duration: 0.5), value: pillsHidden)
+            .onChange(of: isSearching) { _, searching in
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    filterPillsCollapsed = searching
+                }
+            }
             .navigationBarHidden(true)
             .navigationDestination(for: Event.self) { event in
                 EventDetailView(event: event)
