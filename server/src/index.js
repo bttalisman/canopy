@@ -38,6 +38,11 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+// Redirect bare root to /admin so Clerk's default redirects work.
+app.get('/', (req, res) => {
+  res.redirect('/admin');
+});
+
 // Public API routes
 app.use('/api/events', eventsRouter);
 app.use('/api/devices', devicesRouter);

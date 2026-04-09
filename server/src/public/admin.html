@@ -780,7 +780,12 @@ window.addEventListener('load', async () => {
     } else {
       const signInEl = document.getElementById('clerk-sign-in');
       if (signInEl && !signInEl.dataset.mounted) {
-        window.Clerk.mountSignIn(signInEl);
+        window.Clerk.mountSignIn(signInEl, {
+          fallbackRedirectUrl: '/admin',
+          forceRedirectUrl: '/admin',
+          signUpFallbackRedirectUrl: '/admin',
+          signUpForceRedirectUrl: '/admin',
+        });
         signInEl.dataset.mounted = '1';
       }
     }
