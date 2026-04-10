@@ -93,8 +93,8 @@ actor TicketmasterService {
                 eventDescription: tmEvent.displayDescription,
                 startDate: startDate,
                 endDate: endDate,
-                location: tmEvent.venue?.name ?? "Seattle",
-                neighborhood: tmEvent.venue?.city?.name ?? "Seattle",
+                location: tmEvent.venue?.name ?? CityConfig.defaultLocation,
+                neighborhood: tmEvent.venue?.city?.name ?? CityConfig.defaultLocation,
                 logoSystemImage: category.systemImage,
                 ticketingURL: tmEvent.url,
                 category: category

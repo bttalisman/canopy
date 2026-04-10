@@ -326,6 +326,13 @@
             </select>
           </div>
           <div class="form-group">
+            <label>City</label>
+            <select id="evCity">
+              <option value="seattle">Seattle</option>
+              <option value="portland">Portland</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>Latitude</label>
             <input type="number" step="any" id="evLat" />
           </div>
@@ -1029,6 +1036,7 @@ function showEditEvent() {
   document.getElementById('evLocation').value = e.location;
   document.getElementById('evNeighborhood').value = e.neighborhood || '';
   document.getElementById('evCategory').value = e.category || 'community';
+  document.getElementById('evCity').value = e.city || 'seattle';
   document.getElementById('evLat').value = e.latitude || '';
   document.getElementById('evLng').value = e.longitude || '';
   document.getElementById('evTicketURL').value = e.ticketingURL || '';
@@ -1051,6 +1059,7 @@ async function saveEvent(evt) {
     location: document.getElementById('evLocation').value,
     neighborhood: document.getElementById('evNeighborhood').value,
     category: document.getElementById('evCategory').value,
+    city: document.getElementById('evCity').value,
     latitude: parseFloat(document.getElementById('evLat').value) || null,
     longitude: parseFloat(document.getElementById('evLng').value) || null,
     ticketingURL: document.getElementById('evTicketURL').value || null,

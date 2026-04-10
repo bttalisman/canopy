@@ -59,7 +59,7 @@ router.post('/events', async (req, res) => {
     }
 
     const { name, slug, description, startDate, endDate, location, neighborhood,
-            logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category } = req.body;
+            logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, city } = req.body;
 
     // Superadmins create active events; organizers create pending_review.
     const status = superadmin ? 'active' : 'pending_review';
@@ -69,12 +69,12 @@ router.post('/events', async (req, res) => {
     const { rows } = await pool.query(`
       INSERT INTO events (name, slug, description, start_date, end_date, location, neighborhood,
                           logo_system_image, image_url, map_image_url, ticketing_url, latitude, longitude, category,
-                          owner_org_id, created_by_user_id, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                          owner_org_id, created_by_user_id, status, city)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING *
     `, [name, slug, description || '', startDate, endDate, location, neighborhood || '',
         logoSystemImage || 'party.popper', imageURL, mapImageURL || null, ticketingURL, latitude, longitude, category || 'community',
-        ownerOrgId, createdByUserId, status]);
+        ownerOrgId, createdByUserId, status, city || 'seattle']);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -102,7 +102,7 @@ router.put('/events/:id', requireEventAccess, async (req, res) => {
   try {
     const { name, description, startDate, endDate, location, neighborhood,
             logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
-            permitId, isAccessible, isFree, isCityOfficial } = req.body;
+            permitId, isAccessible, isFree, isCityOfficial, city } = req.body;
 
     const { rows } = await pool.query(`
       UPDATE events SET
@@ -126,12 +126,13 @@ router.put('/events/:id', requireEventAccess, async (req, res) => {
         is_accessible = COALESCE($19, is_accessible),
         is_free = COALESCE($20, is_free),
         is_city_official = COALESCE($21, is_city_official),
+        city = COALESCE($22, city),
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `, [req.params.id, name, description, startDate, endDate, location, neighborhood,
         logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
-        permitId, isAccessible, isFree, isCityOfficial]);
+        permitId, isAccessible, isFree, isCityOfficial, city]);
 
     if (rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     res.json(rows[0]);

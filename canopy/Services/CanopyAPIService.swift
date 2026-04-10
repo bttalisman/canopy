@@ -82,7 +82,9 @@ actor CanopyAPIService {
             throw CanopyAPIError.notConfigured
         }
 
-        guard let url = URL(string: "\(baseURL)/api/events") else {
+        var components = URLComponents(string: "\(baseURL)/api/events")
+        components?.queryItems = [URLQueryItem(name: "city", value: CityConfig.citySlug)]
+        guard let url = components?.url else {
             throw CanopyAPIError.invalidURL
         }
 

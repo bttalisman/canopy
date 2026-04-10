@@ -126,18 +126,18 @@ struct DiscoverView: View {
                     HStack(spacing: 6) {
                         Text("Canopy")
                             .font(.system(size: 28, weight: .bold))
-                        Text("Seattle")
+                        Text(CityConfig.cityDisplayName)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundStyle(
                                 LinearGradient(
-                                    colors: [.leafDark, .leafLight],
+                                    colors: CityConfig.accentGradientColors,
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Canopy Seattle")
+                    .accessibilityLabel(CityConfig.appTitle)
 
                     Spacer()
 
@@ -441,7 +441,7 @@ struct DiscoverView: View {
                             ScrollView {
                                 VStack(spacing: 16) {
                                     if isLoading && events.isEmpty {
-                                        ProgressView("Fetching Seattle events...")
+                                        ProgressView(CityConfig.eventsLoadingMessage)
                                             .padding(.top, 40)
                                     } else if let error = errorMessage {
                                         VStack(spacing: 12) {

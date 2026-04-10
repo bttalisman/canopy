@@ -63,7 +63,7 @@ struct SettingsView: View {
                     HStack {
                         Text("City")
                         Spacer()
-                        Text("Seattle, WA")
+                        Text(CityConfig.settingsCityLabel)
                             .foregroundStyle(.secondary)
                     }
 

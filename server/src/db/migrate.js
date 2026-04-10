@@ -120,6 +120,9 @@ const schema = `
   CREATE INDEX IF NOT EXISTS idx_device_saved_items_item ON device_saved_items(schedule_item_id);
   CREATE INDEX IF NOT EXISTS idx_push_notifications_event ON push_notifications(event_id);
 
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'seattle';
+  CREATE INDEX IF NOT EXISTS idx_events_city ON events(city);
+
   CREATE TABLE IF NOT EXISTS contact_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,

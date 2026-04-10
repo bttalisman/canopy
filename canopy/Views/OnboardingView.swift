@@ -27,7 +27,7 @@ struct OnboardingView: View {
                                 )
                             )
 
-                        Text("One app for every\nSeattle event")
+                        Text(CityConfig.onboardingSubtitle)
                             .font(.title3)
                             .fontWeight(.medium)
                             .multilineTextAlignment(.center)
