@@ -33,6 +33,11 @@ app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
 });
 
+// City pitch page
+app.get('/city', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'city.html'));
+});
+
 // Admin dashboard
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
