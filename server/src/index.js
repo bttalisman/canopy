@@ -56,6 +56,24 @@ app.use('/api/street-closures', streetClosuresRouter);
 // Admin routes (protected by API key)
 app.use('/api/admin', adminRouter);
 
+// Contact form submission
+app.post('/api/contact', async (req, res) => {
+  const { name, email, organization, message } = req.body;
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Name and email are required.' });
+  }
+  try {
+    await pool.query(
+      'INSERT INTO contact_submissions (name, email, organization, message) VALUES ($1, $2, $3, $4)',
+      [name, email, organization || '', message || '']
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Contact form error:', err.message);
+    res.status(500).json({ error: 'Failed to submit. Please try again.' });
+  }
+});
+
 // Health check
 app.get('/health', async (req, res) => {
   try {

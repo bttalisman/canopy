@@ -277,7 +277,7 @@
       Canopy gives the City of Seattle a unified platform for event discovery,
       public safety communication, and transit coordination — without building anything from scratch.
     </p>
-    <a href="mailto:canopyseattle@gmail.com" class="hero-cta">Schedule a Demo</a>
+    <a href="#contact" class="hero-cta">Schedule a Demo</a>
   </div>
 
   <hr class="divider">
@@ -465,12 +465,68 @@
 
   <hr class="divider">
 
-  <!-- CTA -->
-  <div class="cta-section">
+  <!-- Contact Form -->
+  <div class="cta-section" id="contact">
     <h2>Let's bring Seattle's events <span>together</span></h2>
     <p>We'd love to show you Canopy in action and discuss how it fits into the city's event infrastructure.</p>
-    <a href="mailto:canopyseattle@gmail.com">Schedule a Demo</a>
+
+    <form id="contactForm" style="max-width:480px; margin:32px auto 0; text-align:left;">
+      <label style="display:block; margin-bottom:16px;">
+        <span style="font-size:14px; color:#94a3b8; display:block; margin-bottom:4px;">Name *</span>
+        <input type="text" name="name" required style="width:100%; padding:12px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:15px;">
+      </label>
+      <label style="display:block; margin-bottom:16px;">
+        <span style="font-size:14px; color:#94a3b8; display:block; margin-bottom:4px;">Email *</span>
+        <input type="email" name="email" required style="width:100%; padding:12px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:15px;">
+      </label>
+      <label style="display:block; margin-bottom:16px;">
+        <span style="font-size:14px; color:#94a3b8; display:block; margin-bottom:4px;">Organization / Department</span>
+        <input type="text" name="organization" style="width:100%; padding:12px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:15px;">
+      </label>
+      <label style="display:block; margin-bottom:24px;">
+        <span style="font-size:14px; color:#94a3b8; display:block; margin-bottom:4px;">Message</span>
+        <textarea name="message" rows="4" style="width:100%; padding:12px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:15px; resize:vertical;"></textarea>
+      </label>
+      <button type="submit" style="width:100%; background:#4ade80; color:#0f172a; font-weight:600; font-size:16px; padding:14px; border:none; border-radius:10px; cursor:pointer; transition:background 0.2s;">
+        Request a Demo
+      </button>
+      <p id="formStatus" style="text-align:center; margin-top:16px; font-size:15px; display:none;"></p>
+    </form>
   </div>
+
+  <script>
+    document.getElementById('contactForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const btn = form.querySelector('button');
+      const status = document.getElementById('formStatus');
+      const data = Object.fromEntries(new FormData(form));
+
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      status.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error();
+        status.textContent = 'Thanks! We\u2019ll be in touch soon.';
+        status.style.color = '#4ade80';
+        status.style.display = 'block';
+        form.reset();
+      } catch {
+        status.textContent = 'Something went wrong. Please email canopyseattle@gmail.com instead.';
+        status.style.color = '#f87171';
+        status.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Request a Demo';
+      }
+    });
+  </script>
 
   <!-- Footer -->
   <footer>

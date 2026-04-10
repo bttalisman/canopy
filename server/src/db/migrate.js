@@ -119,6 +119,15 @@ const schema = `
   CREATE INDEX IF NOT EXISTS idx_device_tokens_event ON device_tokens(event_id);
   CREATE INDEX IF NOT EXISTS idx_device_saved_items_item ON device_saved_items(schedule_item_id);
   CREATE INDEX IF NOT EXISTS idx_push_notifications_event ON push_notifications(event_id);
+
+  CREATE TABLE IF NOT EXISTS contact_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    organization TEXT DEFAULT '',
+    message TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
 `;
 
 async function migrate(pool) {
