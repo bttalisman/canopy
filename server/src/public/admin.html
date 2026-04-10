@@ -2752,14 +2752,15 @@ function renderEventAnalytics(data, sessions) {
   const container = document.getElementById('eventAnalyticsDetail');
 
   const timelineHtml = data.registrationsByDay.length > 0 ? `
-    <h4 style="margin:16px 0 8px;">Registration Timeline</h4>
-    <div style="display:flex; align-items:flex-end; gap:4px; height:100px; padding:8px 0;">
+    <h4 style="margin:16px 0 8px;">Registration Timeline <span style="font-weight:normal; font-size:13px; color:#94a3b8;">(registrations per day)</span></h4>
+    <div style="display:flex; align-items:flex-end; gap:6px; height:140px; padding:8px 0 32px; border-bottom:1px solid #334155; position:relative;">
       ${(() => {
         const maxCount = Math.max(...data.registrationsByDay.map(d => d.count), 1);
         return data.registrationsByDay.map(d => `
-          <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
-            <div style="background:#4ade80; border-radius:3px 3px 0 0; width:100%; max-width:40px; height:${(d.count/maxCount*80).toFixed(0)}px;" title="${d.date}: ${d.count}"></div>
-            <div style="font-size:9px; color:#64748b; margin-top:4px; transform:rotate(-45deg); white-space:nowrap;">${new Date(d.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; position:relative;">
+            <div style="font-size:11px; color:#e2e8f0; font-weight:600; margin-bottom:4px;">${d.count}</div>
+            <div style="background:#4ade80; border-radius:3px 3px 0 0; width:100%; max-width:40px; height:${(d.count/maxCount*80).toFixed(0)}px;"></div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:8px; white-space:nowrap; position:absolute; bottom:-24px;">${new Date(d.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
           </div>
         `).join('');
       })()}
