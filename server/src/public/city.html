@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canopy — Seattle's Event Infrastructure</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    /* ---- Hero ---- */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 24px;
+      background: linear-gradient(175deg, #0f172a 0%, #132218 50%, #0f172a 100%);
+    }
+    .hero-logo {
+      width: 80px; height: 80px;
+      border-radius: 18px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 56px);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .hero h1 span { color: #4ade80; }
+    .hero .subtitle {
+      font-size: clamp(18px, 3vw, 24px);
+      color: #94a3b8;
+      max-width: 620px;
+      margin-bottom: 40px;
+    }
+    .hero-cta {
+      display: inline-block;
+      background: #4ade80;
+      color: #0f172a;
+      font-weight: 600;
+      font-size: 16px;
+      padding: 14px 32px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .hero-cta:hover { background: #22c55e; }
+
+    /* ---- Sections ---- */
+    section {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+    section h2 {
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    section h2 span { color: #4ade80; }
+    section .section-sub {
+      color: #94a3b8;
+      font-size: 18px;
+      max-width: 640px;
+      margin-bottom: 48px;
+    }
+
+    /* ---- Problem ---- */
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .problem-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .problem-card .icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+    .problem-card h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .problem-card p {
+      color: #94a3b8;
+      font-size: 15px;
+    }
+
+    /* ---- Features ---- */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 32px;
+    }
+    .feature-card .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+    }
+    .badge-permits { background: #4ade8033; color: #4ade80; }
+    .badge-safety { background: #f59e0b33; color: #f59e0b; }
+    .badge-equity { background: #818cf833; color: #818cf8; }
+    .badge-transit { background: #38bdf833; color: #38bdf8; }
+    .badge-data { background: #f472b633; color: #f472b6; }
+    .badge-comms { background: #fb923c33; color: #fb923c; }
+    .feature-card h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      color: #94a3b8;
+      font-size: 15px;
+    }
+
+    /* ---- Stakeholders ---- */
+    .stakeholder-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .stakeholder-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .stakeholder-card h3 {
+      font-size: 18px;
+      color: #4ade80;
+      margin-bottom: 8px;
+    }
+    .stakeholder-card ul {
+      list-style: none;
+      padding: 0;
+    }
+    .stakeholder-card li {
+      color: #94a3b8;
+      font-size: 15px;
+      padding: 4px 0;
+    }
+    .stakeholder-card li::before {
+      content: "\2713";
+      color: #4ade80;
+      margin-right: 8px;
+      font-weight: 700;
+    }
+
+    /* ---- Screenshot ---- */
+    .screenshot-section {
+      text-align: center;
+      padding: 60px 24px;
+      background: linear-gradient(180deg, #0f172a 0%, #132218 50%, #0f172a 100%);
+    }
+    .screenshot-section h2 {
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 700;
+      margin-bottom: 48px;
+    }
+    .screenshot-row {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .screenshot-row img {
+      width: 200px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    /* ---- Stats ---- */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+    .stat {
+      text-align: center;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 28px 16px;
+    }
+    .stat .number {
+      font-size: 36px;
+      font-weight: 700;
+      color: #4ade80;
+    }
+    .stat .label {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* ---- CTA ---- */
+    .cta-section {
+      text-align: center;
+      padding: 80px 24px;
+      background: linear-gradient(180deg, #0f172a, #132218);
+    }
+    .cta-section h2 {
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .cta-section p {
+      color: #94a3b8;
+      font-size: 18px;
+      margin-bottom: 32px;
+    }
+    .cta-section a {
+      display: inline-block;
+      background: #4ade80;
+      color: #0f172a;
+      font-weight: 600;
+      font-size: 16px;
+      padding: 14px 32px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .cta-section a:hover { background: #22c55e; }
+
+    /* ---- Footer ---- */
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: #64748b;
+      font-size: 13px;
+      border-top: 1px solid #1e293b;
+    }
+    footer a { color: #4ade80; text-decoration: none; }
+
+    /* ---- Divider ---- */
+    .divider {
+      border: none;
+      border-top: 1px solid #1e293b;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <div class="hero">
+    <img src="/images/canopy-logo.png" alt="Canopy logo" class="hero-logo"
+         onerror="this.style.display='none'">
+    <h1>One app for every <span>Seattle</span> event</h1>
+    <p class="subtitle">
+      Canopy gives the City of Seattle a unified platform for event discovery,
+      public safety communication, and transit coordination — without building anything from scratch.
+    </p>
+    <a href="mailto:canopyseattle@gmail.com" class="hero-cta">Schedule a Demo</a>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Problem -->
+  <section>
+    <h2>The problem <span>today</span></h2>
+    <p class="section-sub">
+      Seattle hosts hundreds of permitted events every year. Right now, every one of them is an island.
+    </p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="icon">📱</div>
+        <h3>Fragmented apps</h3>
+        <p>Each festival builds (or skips) its own app. Residents download, use once, delete. No continuity, no shared data.</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon">📣</div>
+        <h3>No emergency channel</h3>
+        <p>When weather cancels a festival or a street closes unexpectedly, there's no fast, direct way to reach the people who are already on their way.</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon">🔍</div>
+        <h3>No visibility</h3>
+        <p>The city issues permits but has no aggregate view of attendance patterns, neighborhood distribution, or accessibility across events.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- App Screenshots -->
+  <div class="screenshot-section">
+    <h2>Built and <span>live</span> today</h2>
+    <div class="screenshot-row">
+      <img src="/images/appstore-01.png" alt="Discover events" onerror="this.style.display='none'">
+      <img src="/images/appstore-02.png" alt="Map view" onerror="this.style.display='none'">
+      <img src="/images/appstore-03.png" alt="Event detail" onerror="this.style.display='none'">
+      <img src="/images/appstore-04.png" alt="Transit" onerror="this.style.display='none'">
+      <img src="/images/appstore-05.png" alt="Venue map" onerror="this.style.display='none'">
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Features for City -->
+  <section>
+    <h2>Built for <span>city government</span></h2>
+    <p class="section-sub">
+      Canopy isn't just a consumer app. It's infrastructure designed around the needs of the departments that make events happen.
+    </p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="badge badge-permits">Permitting</div>
+        <h3>Permit ID badges</h3>
+        <p>Every event card displays its city permit ID. Residents can see at a glance that an event is legitimate and city-sanctioned.</p>
+      </div>
+      <div class="feature-card">
+        <div class="badge badge-safety">Public Safety</div>
+        <h3>Emergency push notifications</h3>
+        <p>Cancel an event, reroute foot traffic, or issue a weather alert — pushed directly to the phones of people who saved that event.</p>
+      </div>
+      <div class="feature-card">
+        <div class="badge badge-equity">Equity</div>
+        <h3>Accessibility filters</h3>
+        <p>Users can filter by wheelchair access, ASL interpreters, sensory-friendly times, and free admission — making equity visible, not buried.</p>
+      </div>
+      <div class="feature-card">
+        <div class="badge badge-transit">Transit</div>
+        <h3>Real-time transit integration</h3>
+        <p>Every event shows nearby bus stops with live arrival times via OneBusAway, plus street closure overlays from city data feeds.</p>
+      </div>
+      <div class="feature-card">
+        <div class="badge badge-data">Data</div>
+        <h3>City analytics dashboard</h3>
+        <p>Aggregate, anonymized data on event engagement by neighborhood, category, and time — exportable as CSV or JSON for city reporting.</p>
+      </div>
+      <div class="feature-card">
+        <div class="badge badge-comms">Communications</div>
+        <h3>Official city badge</h3>
+        <p>City-sponsored events carry a "City of Seattle Official" badge with the civic seal, distinguishing them from private events.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Stakeholders -->
+  <section>
+    <h2>Value for every <span>department</span></h2>
+    <p class="section-sub">
+      Different offices, different priorities — Canopy addresses them all with one platform.
+    </p>
+    <div class="stakeholder-list">
+      <div class="stakeholder-card">
+        <h3>Special Events Office</h3>
+        <ul>
+          <li>Permit ID display on every event</li>
+          <li>Organizer contact info in admin portal</li>
+          <li>Public "Submit your event" intake form</li>
+          <li>Cancellation and reschedule push alerts</li>
+        </ul>
+      </div>
+      <div class="stakeholder-card">
+        <h3>Office of Arts &amp; Culture</h3>
+        <ul>
+          <li>Neighborhood equity heatmap</li>
+          <li>Free vs. ticketed event filtering</li>
+          <li>Multi-language support</li>
+          <li>Accessibility-first design</li>
+        </ul>
+      </div>
+      <div class="stakeholder-card">
+        <h3>SDOT / Transit</h3>
+        <ul>
+          <li>Bus and light rail directions per event</li>
+          <li>Street closure overlay maps</li>
+          <li>Bike rack and parking info</li>
+          <li>Estimated attendance indicators</li>
+        </ul>
+      </div>
+      <div class="stakeholder-card">
+        <h3>Mayor's Office</h3>
+        <ul>
+          <li>City of Seattle Official badge</li>
+          <li>Civic alerts channel (opt-in)</li>
+          <li>Public-facing engagement stats</li>
+          <li>Unified event calendar for communications</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- By the numbers -->
+  <section>
+    <h2>By the <span>numbers</span></h2>
+    <p class="section-sub">
+      Canopy is live on the App Store and growing.
+    </p>
+    <div class="stats-row">
+      <div class="stat">
+        <div class="number">28+</div>
+        <div class="label">Seattle events loaded</div>
+      </div>
+      <div class="stat">
+        <div class="number">0</div>
+        <div class="label">Cost to the city</div>
+      </div>
+      <div class="stat">
+        <div class="number">1</div>
+        <div class="label">App for residents to install</div>
+      </div>
+      <div class="stat">
+        <div class="number">100%</div>
+        <div class="label">Free for attendees</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Technical credibility -->
+  <section>
+    <h2>Built to <span>last</span></h2>
+    <p class="section-sub">
+      Canopy is production software, not a prototype.
+    </p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <h3>Native iOS</h3>
+        <p>Built in SwiftUI with offline-first architecture. Works without cell service at crowded outdoor events.</p>
+      </div>
+      <div class="problem-card">
+        <h3>Privacy-first</h3>
+        <p>No account required. No email collected. No tracking. Location is used on-device only for transit directions. CCPA compliant.</p>
+      </div>
+      <div class="problem-card">
+        <h3>Open API</h3>
+        <p>RESTful API with JSON and CSV export. The city can query its own events programmatically for internal dashboards and reporting.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <h2>Let's bring Seattle's events <span>together</span></h2>
+    <p>We'd love to show you Canopy in action and discuss how it fits into the city's event infrastructure.</p>
+    <a href="mailto:canopyseattle@gmail.com">Schedule a Demo</a>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2026 Canopy Seattle &middot; <a href="/privacy.html">Privacy Policy</a> &middot; <a href="/support.html">Support</a></p>
+  </footer>
+
+</body>
+</html>

@@ -7,6 +7,7 @@ struct SettingsView: View {
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
     @AppStorage("quietHoursEnabled") private var quietHoursEnabled = false
     @AppStorage("appearanceMode") private var appearanceMode = 0 // 0=system, 1=light, 2=dark
+    @AppStorage("eventSortOrder") private var eventSortOrder = 0 // 0=date, 1=distance
     @State private var showingClearConfirmation = false
 
     var body: some View {
@@ -30,6 +31,14 @@ struct SettingsView: View {
                         Text("System").tag(0)
                         Text("Light").tag(1)
                         Text("Dark").tag(2)
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Section("Event Sort Order") {
+                    Picker("Sort By", selection: $eventSortOrder) {
+                        Text("Date").tag(0)
+                        Text("Distance").tag(1)
                     }
                     .pickerStyle(.segmented)
                 }

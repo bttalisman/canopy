@@ -16,7 +16,9 @@ struct DiscoverView: View {
     @State private var errorMessage: String?
     @State private var lastFetchedCount: Int?
     @FocusState private var searchFieldFocused: Bool
-    @State private var filterPillsCollapsed: Bool = false
+    @State private var filterPillsCollapsed: Bool = true
+    @AppStorage("eventSortOrder") private var eventSortOrder = 0
+    @ObservedObject private var locationManager = LocationManager.shared
     @State private var scrollMetrics = ScrollMetrics(offset: 0, contentHeight: 0)
     @State private var viewportHeight: CGFloat = 0
 
@@ -71,7 +73,7 @@ struct DiscoverView: View {
 
         switch selectedTimeFilter {
         case .all:
-            break
+            result = result.filter { $0.endDate >= now }
         case .thisWeek:
             let endOfWeek = calendar.date(byAdding: .day, value: 7, to: now)!
             result = result.filter { $0.startDate <= endOfWeek && $0.endDate >= now }
@@ -92,6 +94,16 @@ struct DiscoverView: View {
         case .thisMonth:
             let endOfMonth = calendar.date(byAdding: .month, value: 1, to: now)!
             result = result.filter { $0.startDate <= endOfMonth && $0.endDate >= now }
+        }
+
+        if eventSortOrder == 1 {
+            result.sort { a, b in
+                let distA = a.latitude.flatMap { lat in a.longitude.flatMap { lng in locationManager.distanceTo(latitude: lat, longitude: lng) } } ?? .infinity
+                let distB = b.latitude.flatMap { lat in b.longitude.flatMap { lng in locationManager.distanceTo(latitude: lat, longitude: lng) } } ?? .infinity
+                return distA < distB
+            }
+        } else {
+            result.sort { $0.startDate < $1.startDate }
         }
 
         return result
@@ -385,15 +397,26 @@ struct DiscoverView: View {
                         filterPillsCollapsed.toggle()
                     }
                 } label: {
-                    SixLeavesDivider()
-                        .rotationEffect(.degrees(pillsHidden ? 720 : 0))
-                        .animation(.easeInOut(duration: 0.5), value: pillsHidden)
-                        .overlay(alignment: .trailing) {
-                            Image(systemName: filterPillsCollapsed ? "chevron.down" : "chevron.up")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.leafDeep)
-                                .padding(.trailing, 2)
+                    ZStack {
+                        SixLeavesDivider()
+                            .rotationEffect(.degrees(pillsHidden ? 720 : 0))
+                            .animation(.easeInOut(duration: 0.5), value: pillsHidden)
+                        HStack {
+                            Spacer()
+                            HStack(spacing: 4) {
+                                if filterPillsCollapsed {
+                                    Text("filters")
+                                        .font(.system(size: 11, weight: .regular))
+                                        .foregroundStyle(Color.leafDeep)
+                                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                                }
+                                Image(systemName: filterPillsCollapsed ? "chevron.down" : "chevron.up")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(Color.leafDeep)
+                            }
+                            .padding(.trailing, 2)
                         }
+                    }
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal)
