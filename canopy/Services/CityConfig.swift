@@ -18,7 +18,7 @@ enum CityConfig {
     static var settingsCityLabel: String {
         let labels: [String: String] = [
             "seattle": "Seattle, WA",
-            "portland": "Portland, OR",
+            "tacoma": "Tacoma, WA",
         ]
         return labels[citySlug] ?? cityDisplayName
     }
@@ -26,7 +26,7 @@ enum CityConfig {
     static var accentGradientColors: [Color] {
         switch citySlug {
         case "seattle": return [.leafDark, .leafLight]
-        case "portland": return [.green, .teal]
+        case "tacoma": return [.blue, .cyan]
         default: return [.leafDark, .leafLight]
         }
     }

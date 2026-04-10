@@ -24,6 +24,7 @@ struct APIEvent: Codable, Identifiable {
     let isAccessible: Bool?
     let isFree: Bool?
     let isCityOfficial: Bool?
+    let city: String?
     let stages: [APIStage]?
     let scheduleItems: [APIScheduleItem]?
     let mapPins: [APIMapPin]?
@@ -144,6 +145,7 @@ actor CanopyAPIService {
                     event.isAccessible = apiEvent.isAccessible
                     event.isFree = apiEvent.isFree
                     event.isCityOfficial = apiEvent.isCityOfficial
+                    event.city = apiEvent.city
 
                     updateScheduleItems(for: event, from: apiEvent, parseDate: parseDate, context: context)
                     updateMapPins(for: event, from: apiEvent, context: context)
@@ -177,6 +179,7 @@ actor CanopyAPIService {
             event.isAccessible = apiEvent.isAccessible
             event.isFree = apiEvent.isFree
             event.isCityOfficial = apiEvent.isCityOfficial
+            event.city = apiEvent.city
 
             context.insert(event)
 
