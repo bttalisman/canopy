@@ -877,6 +877,8 @@ function toLocalInput(d) {
 // ---- Event List ----
 
 async function loadEvents() {
+  hideAll();
+  document.getElementById('eventListView').style.display = 'block';
   try {
     const res = await fetch(`${API}/api/events`);
     const events = await res.json();
