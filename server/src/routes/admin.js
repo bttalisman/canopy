@@ -1156,4 +1156,230 @@ router.get('/seattle-events-preview', requireSuperadmin, async (req, res) => {
   }
 });
 
+// =====================
+// ANALYTICS
+// =====================
+
+// Per-event analytics
+router.get('/analytics/event/:eventId', requireEventAccess, async (req, res) => {
+  const { eventId } = req.params;
+  try {
+    const [devices, saves, uniqueSavers, timeline, pushStats] = await Promise.all([
+      pool.query('SELECT COUNT(*)::int as count FROM device_tokens WHERE event_id = $1', [eventId]),
+      pool.query(`SELECT COUNT(*)::int as count FROM device_saved_items dsi
+        JOIN schedule_items si ON si.id = dsi.schedule_item_id WHERE si.event_id = $1`, [eventId]),
+      pool.query(`SELECT COUNT(DISTINCT dsi.device_token)::int as count FROM device_saved_items dsi
+        JOIN schedule_items si ON si.id = dsi.schedule_item_id WHERE si.event_id = $1`, [eventId]),
+      pool.query(`SELECT DATE(created_at) as date, COUNT(*)::int as count
+        FROM device_tokens WHERE event_id = $1
+        GROUP BY DATE(created_at) ORDER BY date`, [eventId]),
+      pool.query(`SELECT COUNT(*)::int as total_sent, COALESCE(SUM(sent_count),0)::int as delivered,
+        COALESCE(SUM(failed_count),0)::int as failed
+        FROM push_notifications WHERE event_id = $1`, [eventId]),
+    ]);
+    res.json({
+      eventId,
+      deviceCount: devices.rows[0].count,
+      totalSaves: saves.rows[0].count,
+      uniqueSavers: uniqueSavers.rows[0].count,
+      registrationsByDay: timeline.rows,
+      pushStats: pushStats.rows[0],
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Per-event session popularity
+router.get('/analytics/event/:eventId/sessions', requireEventAccess, async (req, res) => {
+  const { eventId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT si.id, si.title, si.start_time, si.end_time, si.category,
+             s.name as stage_name, COUNT(dsi.id)::int as save_count
+      FROM schedule_items si
+      LEFT JOIN device_saved_items dsi ON dsi.schedule_item_id = si.id
+      LEFT JOIN stages s ON s.id = si.stage_id
+      WHERE si.event_id = $1
+      GROUP BY si.id, si.title, si.start_time, si.end_time, si.category, s.name
+      ORDER BY save_count DESC`, [eventId]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Cross-event overview analytics
+router.get('/analytics/overview', requireSuperadmin, async (req, res) => {
+  try {
+    const [byNeighborhood, byCategory, freeVsTicketed, accessibility, platformStats] = await Promise.all([
+      pool.query(`SELECT neighborhood, COUNT(*)::int as count FROM events
+        WHERE neighborhood IS NOT NULL AND neighborhood != ''
+        GROUP BY neighborhood ORDER BY count DESC`),
+      pool.query(`SELECT category, COUNT(*)::int as count FROM events
+        GROUP BY category ORDER BY count DESC`),
+      pool.query(`SELECT
+        COUNT(*) FILTER (WHERE is_free = true)::int as free_count,
+        COUNT(*) FILTER (WHERE is_free = false OR is_free IS NULL)::int as ticketed_count
+        FROM events`),
+      pool.query(`SELECT
+        COUNT(*) FILTER (WHERE is_accessible = true)::int as accessible_count,
+        COUNT(*)::int as total FROM events`),
+      pool.query(`SELECT COUNT(DISTINCT device_token)::int as unique_devices,
+        COUNT(*)::int as total_subscriptions FROM device_tokens`),
+    ]);
+    res.json({
+      byNeighborhood: byNeighborhood.rows,
+      byCategory: byCategory.rows,
+      freeVsTicketed: freeVsTicketed.rows[0],
+      accessibility: accessibility.rows[0],
+      platformStats: platformStats.rows[0],
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// CSV/JSON export
+router.get('/analytics/export', requireSuperadmin, async (req, res) => {
+  const { type = 'events', format = 'csv' } = req.query;
+  try {
+    let result;
+    if (type === 'sessions') {
+      result = await pool.query(`
+        SELECT e.name as event_name, si.title, si.category, si.start_time, si.end_time,
+               s.name as stage_name, COUNT(dsi.id)::int as save_count
+        FROM schedule_items si
+        JOIN events e ON e.id = si.event_id
+        LEFT JOIN stages s ON s.id = si.stage_id
+        LEFT JOIN device_saved_items dsi ON dsi.schedule_item_id = si.id
+        GROUP BY e.name, si.id, si.title, si.category, si.start_time, si.end_time, s.name
+        ORDER BY save_count DESC`);
+    } else {
+      result = await pool.query(`
+        SELECT e.name, e.slug, e.location, e.neighborhood, e.category,
+               e.start_date, e.end_date, e.is_free, e.is_accessible,
+               COUNT(DISTINCT dt.device_token)::int as device_count,
+               COUNT(DISTINCT dsi.id)::int as total_saves
+        FROM events e
+        LEFT JOIN device_tokens dt ON dt.event_id = e.id
+        LEFT JOIN schedule_items si ON si.event_id = e.id
+        LEFT JOIN device_saved_items dsi ON dsi.schedule_item_id = si.id
+        GROUP BY e.id ORDER BY e.start_date`);
+    }
+
+    if (format === 'json') {
+      res.setHeader('Content-Disposition', `attachment; filename=canopy-${type}-${new Date().toISOString().slice(0,10)}.json`);
+      return res.json(result.rows);
+    }
+
+    // CSV
+    if (result.rows.length === 0) {
+      res.setHeader('Content-Type', 'text/csv');
+      return res.send('');
+    }
+    const columns = Object.keys(result.rows[0]);
+    const escape = (val) => {
+      if (val == null) return '';
+      const s = String(val);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    };
+    const csv = [columns.join(','), ...result.rows.map(r => columns.map(c => escape(r[c])).join(','))].join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=canopy-${type}-${new Date().toISOString().slice(0,10)}.csv`);
+    res.send(csv);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Generate fake demo data
+router.post('/analytics/generate-demo-data', requireSuperadmin, async (req, res) => {
+  const { deviceCount = 200 } = req.body || {};
+  try {
+    const events = (await pool.query('SELECT id, start_date FROM events')).rows;
+    const scheduleItems = (await pool.query('SELECT id, event_id FROM schedule_items')).rows;
+
+    if (events.length === 0) return res.json({ devicesCreated: 0, savesCreated: 0 });
+
+    const itemsByEvent = {};
+    for (const si of scheduleItems) {
+      if (!itemsByEvent[si.event_id]) itemsByEvent[si.event_id] = [];
+      itemsByEvent[si.event_id].push(si.id);
+    }
+
+    let devicesCreated = 0;
+    let savesCreated = 0;
+    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const hex = () => Math.random().toString(16).slice(2, 10);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      for (let i = 0; i < deviceCount; i++) {
+        const token = `demo-device-${hex()}${hex()}`;
+        // Subscribe to 1-3 random events
+        const numEvents = rand(1, Math.min(3, events.length));
+        const shuffled = [...events].sort(() => Math.random() - 0.5).slice(0, numEvents);
+
+        for (const event of shuffled) {
+          // Spread registration over 14 days before event start
+          const startDate = new Date(event.start_date);
+          const daysBack = rand(1, 14);
+          const createdAt = new Date(startDate.getTime() - daysBack * 86400000);
+
+          const r = await client.query(
+            `INSERT INTO device_tokens (device_token, event_id, created_at, updated_at)
+             VALUES ($1, $2, $3, $3) ON CONFLICT DO NOTHING RETURNING id`,
+            [token, event.id, createdAt]
+          );
+          if (r.rowCount > 0) devicesCreated++;
+
+          // Save 1-8 random schedule items from this event
+          const items = itemsByEvent[event.id] || [];
+          if (items.length > 0) {
+            const numSaves = rand(1, Math.min(8, items.length));
+            const savedItems = [...items].sort(() => Math.random() - 0.5).slice(0, numSaves);
+            for (const itemId of savedItems) {
+              const saveDate = new Date(createdAt.getTime() + rand(0, daysBack) * 86400000);
+              const sr = await client.query(
+                `INSERT INTO device_saved_items (device_token, schedule_item_id, created_at)
+                 VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING id`,
+                [token, itemId, saveDate]
+              );
+              if (sr.rowCount > 0) savesCreated++;
+            }
+          }
+        }
+      }
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json({ devicesCreated, savesCreated, deviceCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear demo data
+router.delete('/analytics/demo-data', requireSuperadmin, async (req, res) => {
+  try {
+    const saved = await pool.query("DELETE FROM device_saved_items WHERE device_token LIKE 'demo-device-%'");
+    const devices = await pool.query("DELETE FROM device_tokens WHERE device_token LIKE 'demo-device-%'");
+    res.json({ devicesRemoved: devices.rowCount, savesRemoved: saved.rowCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

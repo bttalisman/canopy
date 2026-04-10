@@ -230,6 +230,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2>Events</h2>
       <div style="display:flex;gap:8px">
+        <button class="btn-secondary" onclick="showAnalytics()" style="font-size:13px">📈 Analytics</button>
         <button class="btn-secondary" onclick="showSeattleImport()" style="font-size:13px">📊 Import from Seattle Data</button>
         <button class="btn-primary" onclick="showCreateEvent()">+ New Event</button>
       </div>
@@ -727,6 +728,52 @@
   </div>
 </div>
 
+<!-- Analytics View -->
+<div id="analyticsView" style="display:none; padding:24px; max-width:960px; margin:0 auto;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+    <h2 style="margin:0;">Analytics</h2>
+    <button class="btn-secondary" onclick="loadEvents()" style="font-size:13px;">← Back to Events</button>
+  </div>
+
+  <!-- Platform Stats -->
+  <div id="analyticsOverview" style="margin-bottom:32px;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:16px; margin-bottom:24px;" id="statCards"></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;" id="overviewCharts"></div>
+  </div>
+
+  <!-- Per-Event Selector -->
+  <div style="margin-bottom:24px;">
+    <h3 style="margin-bottom:8px;">Event Details</h3>
+    <select id="analyticsEventSelect" onchange="onAnalyticsEventChange()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
+      <option value="">Select an event...</option>
+    </select>
+  </div>
+  <div id="eventAnalyticsDetail" style="margin-bottom:32px;"></div>
+
+  <!-- Export -->
+  <div style="margin-bottom:32px;">
+    <h3 style="margin-bottom:12px;">Export Data</h3>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn-secondary" onclick="downloadExport('events','csv')">Events CSV</button>
+      <button class="btn-secondary" onclick="downloadExport('sessions','csv')">Sessions CSV</button>
+      <button class="btn-secondary" onclick="downloadExport('events','json')">Events JSON</button>
+      <button class="btn-secondary" onclick="downloadExport('sessions','json')">Sessions JSON</button>
+    </div>
+  </div>
+
+  <!-- Demo Data -->
+  <div style="border-top:1px solid #334155; padding-top:24px;">
+    <h3 style="margin-bottom:12px;">Demo Data</h3>
+    <p style="color:#94a3b8; font-size:13px; margin-bottom:12px;">Generate fake device registrations and schedule saves for demo purposes. All demo data uses a "demo-device-" prefix and can be cleanly removed.</p>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <label style="font-size:13px; color:#94a3b8;">Devices:</label>
+      <input type="number" id="demoDeviceCount" value="200" min="10" max="5000" style="width:80px; padding:6px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0;">
+      <button class="btn-primary" onclick="generateDemoData()">Generate Demo Data</button>
+      <button class="btn-secondary" onclick="clearDemoData()" style="color:#f87171;">Clear Demo Data</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -803,7 +850,7 @@ function toast(msg) {
 }
 
 function hideAll() {
-  ['eventListView','eventDetailView','eventFormView','scheduleFormView','stageFormView','pasteScheduleView','pushNotificationView','mapEditorView']
+  ['eventListView','eventDetailView','eventFormView','scheduleFormView','stageFormView','pasteScheduleView','pushNotificationView','mapEditorView','analyticsView']
     .forEach(id => document.getElementById(id).style.display = 'none');
 }
 
@@ -2603,6 +2650,200 @@ document.getElementById('apiKey').addEventListener('change', (e) => {
 });
 
 loadEvents();
+
+// =====================
+// ANALYTICS
+// =====================
+
+async function showAnalytics() {
+  hideAll();
+  document.getElementById('analyticsView').style.display = 'block';
+  await Promise.all([loadAnalyticsOverview(), loadAnalyticsEventList()]);
+}
+
+async function loadAnalyticsOverview() {
+  const headers = await adminHeaders();
+  const res = await fetch(`${API}/api/admin/analytics/overview`, { headers });
+  if (!res.ok) { toast('Failed to load analytics'); return; }
+  const data = await res.json();
+  renderAnalyticsOverview(data);
+}
+
+function renderAnalyticsOverview(data) {
+  const { byNeighborhood, byCategory, freeVsTicketed, accessibility, platformStats } = data;
+
+  document.getElementById('statCards').innerHTML = `
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:20px; text-align:center;">
+      <div style="font-size:28px; font-weight:700; color:#4ade80;">${platformStats.unique_devices}</div>
+      <div style="font-size:13px; color:#94a3b8;">Unique Devices</div>
+    </div>
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:20px; text-align:center;">
+      <div style="font-size:28px; font-weight:700; color:#4ade80;">${platformStats.total_subscriptions}</div>
+      <div style="font-size:13px; color:#94a3b8;">Total Subscriptions</div>
+    </div>
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:20px; text-align:center;">
+      <div style="font-size:28px; font-weight:700; color:#4ade80;">${freeVsTicketed.free_count}</div>
+      <div style="font-size:13px; color:#94a3b8;">Free Events</div>
+    </div>
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:20px; text-align:center;">
+      <div style="font-size:28px; font-weight:700; color:#4ade80;">${accessibility.accessible_count}/${accessibility.total}</div>
+      <div style="font-size:13px; color:#94a3b8;">Accessible Events</div>
+    </div>
+  `;
+
+  const maxNeighborhood = Math.max(...byNeighborhood.map(n => n.count), 1);
+  const maxCategory = Math.max(...byCategory.map(c => c.count), 1);
+
+  document.getElementById('overviewCharts').innerHTML = `
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:20px;">
+      <h4 style="margin:0 0 12px;">By Neighborhood</h4>
+      ${byNeighborhood.map(n => `
+        <div style="margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:2px;">
+            <span>${n.neighborhood}</span><span style="color:#94a3b8;">${n.count}</span>
+          </div>
+          <div style="background:#334155; border-radius:4px; height:8px;">
+            <div style="background:#4ade80; border-radius:4px; height:8px; width:${(n.count/maxNeighborhood*100).toFixed(0)}%;"></div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:20px;">
+      <h4 style="margin:0 0 12px;">By Category</h4>
+      ${byCategory.map(c => `
+        <div style="margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:2px;">
+            <span>${c.category}</span><span style="color:#94a3b8;">${c.count}</span>
+          </div>
+          <div style="background:#334155; border-radius:4px; height:8px;">
+            <div style="background:#818cf8; border-radius:4px; height:8px; width:${(c.count/maxCategory*100).toFixed(0)}%;"></div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function loadAnalyticsEventList() {
+  const headers = await adminHeaders();
+  const res = await fetch(`${API}/api/admin/events`, { headers });
+  if (!res.ok) return;
+  const events = await res.json();
+  const select = document.getElementById('analyticsEventSelect');
+  select.innerHTML = '<option value="">Select an event...</option>' +
+    events.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+}
+
+async function onAnalyticsEventChange() {
+  const eventId = document.getElementById('analyticsEventSelect').value;
+  if (!eventId) { document.getElementById('eventAnalyticsDetail').innerHTML = ''; return; }
+  const headers = await adminHeaders();
+  const [eventRes, sessionsRes] = await Promise.all([
+    fetch(`${API}/api/admin/analytics/event/${eventId}`, { headers }),
+    fetch(`${API}/api/admin/analytics/event/${eventId}/sessions`, { headers }),
+  ]);
+  if (!eventRes.ok) { toast('Failed to load event analytics'); return; }
+  const eventData = await eventRes.json();
+  const sessions = await sessionsRes.json();
+  renderEventAnalytics(eventData, sessions);
+}
+
+function renderEventAnalytics(data, sessions) {
+  const container = document.getElementById('eventAnalyticsDetail');
+
+  const timelineHtml = data.registrationsByDay.length > 0 ? `
+    <h4 style="margin:16px 0 8px;">Registration Timeline</h4>
+    <div style="display:flex; align-items:flex-end; gap:4px; height:100px; padding:8px 0;">
+      ${(() => {
+        const maxCount = Math.max(...data.registrationsByDay.map(d => d.count), 1);
+        return data.registrationsByDay.map(d => `
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
+            <div style="background:#4ade80; border-radius:3px 3px 0 0; width:100%; max-width:40px; height:${(d.count/maxCount*80).toFixed(0)}px;" title="${d.date}: ${d.count}"></div>
+            <div style="font-size:9px; color:#64748b; margin-top:4px; transform:rotate(-45deg); white-space:nowrap;">${new Date(d.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+          </div>
+        `).join('');
+      })()}
+    </div>
+  ` : '';
+
+  const sessionsHtml = sessions.length > 0 ? `
+    <h4 style="margin:16px 0 8px;">Session Popularity</h4>
+    <table style="width:100%; font-size:13px; border-collapse:collapse;">
+      <tr style="border-bottom:1px solid #334155; color:#94a3b8;">
+        <th style="text-align:left; padding:6px;">Session</th>
+        <th style="text-align:left; padding:6px;">Stage</th>
+        <th style="text-align:right; padding:6px;">Saves</th>
+      </tr>
+      ${sessions.map(s => `
+        <tr style="border-bottom:1px solid #1e293b;">
+          <td style="padding:6px;">${s.title}</td>
+          <td style="padding:6px; color:#94a3b8;">${s.stage_name || '—'}</td>
+          <td style="padding:6px; text-align:right; color:#4ade80; font-weight:600;">${s.save_count}</td>
+        </tr>
+      `).join('')}
+    </table>
+  ` : '<p style="color:#94a3b8; font-size:13px;">No schedule items for this event.</p>';
+
+  container.innerHTML = `
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:16px;">
+      <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:16px; text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:#4ade80;">${data.deviceCount}</div>
+        <div style="font-size:12px; color:#94a3b8;">Devices</div>
+      </div>
+      <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:16px; text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:#4ade80;">${data.totalSaves}</div>
+        <div style="font-size:12px; color:#94a3b8;">Total Saves</div>
+      </div>
+      <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:16px; text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:#4ade80;">${data.uniqueSavers}</div>
+        <div style="font-size:12px; color:#94a3b8;">Unique Savers</div>
+      </div>
+      <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:16px; text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:#4ade80;">${data.pushStats.total_sent}</div>
+        <div style="font-size:12px; color:#94a3b8;">Pushes Sent</div>
+      </div>
+    </div>
+    ${timelineHtml}
+    ${sessionsHtml}
+  `;
+}
+
+async function downloadExport(type, format) {
+  const headers = await adminHeaders();
+  const res = await fetch(`${API}/api/admin/analytics/export?type=${type}&format=${format}`, { headers });
+  if (!res.ok) { toast('Export failed'); return; }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `canopy-${type}-${new Date().toISOString().slice(0,10)}.${format}`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function generateDemoData() {
+  const count = parseInt(document.getElementById('demoDeviceCount').value) || 200;
+  if (!confirm(`Generate demo data for ${count} fake devices?`)) return;
+  const headers = await adminHeaders();
+  headers['Content-Type'] = 'application/json';
+  const res = await fetch(`${API}/api/admin/analytics/generate-demo-data`, {
+    method: 'POST', headers, body: JSON.stringify({ deviceCount: count }),
+  });
+  if (!res.ok) { toast('Failed to generate demo data'); return; }
+  const result = await res.json();
+  toast(`Generated ${result.devicesCreated} device subscriptions, ${result.savesCreated} saves`);
+  await loadAnalyticsOverview();
+}
+
+async function clearDemoData() {
+  if (!confirm('Remove all demo device data?')) return;
+  const headers = await adminHeaders();
+  const res = await fetch(`${API}/api/admin/analytics/demo-data`, { method: 'DELETE', headers });
+  if (!res.ok) { toast('Failed to clear demo data'); return; }
+  const result = await res.json();
+  toast(`Removed ${result.devicesRemoved} devices, ${result.savesRemoved} saves`);
+  await loadAnalyticsOverview();
+}
 </script>
 </body>
 </html>
