@@ -418,14 +418,15 @@ struct DiscoverView: View {
 
                             HStack(alignment: .top, spacing: 8) {
                                 let midpoint = (group.hoods.count + 1) / 2
+                                let isRegionSelected = selectedRegions.contains(group.label)
                                 VStack(spacing: 8) {
                                     ForEach(group.hoods.prefix(midpoint), id: \.self) { hood in
-                                        neighborhoodGridButton(hood, color: group.color)
+                                        neighborhoodGridButton(hood, color: group.color, regionSelected: isRegionSelected)
                                     }
                                 }
                                 VStack(spacing: 8) {
                                     ForEach(group.hoods.suffix(from: midpoint), id: \.self) { hood in
-                                        neighborhoodGridButton(hood, color: group.color)
+                                        neighborhoodGridButton(hood, color: group.color, regionSelected: isRegionSelected)
                                     }
                                 }
                             }
@@ -680,6 +681,8 @@ struct DiscoverView: View {
                     _ = selectedRegions.remove(group.label)
                 } else {
                     selectedRegions.insert(group.label)
+                    // Remove individual neighborhoods covered by this region
+                    selectedNeighborhoods.subtract(group.hoods)
                 }
                 expandedNeighborhoodGroup = nil
             }
@@ -699,12 +702,14 @@ struct DiscoverView: View {
         }
     }
 
-    private func neighborhoodGridButton(_ hood: String, color: Color = .orange) -> some View {
+    private func neighborhoodGridButton(_ hood: String, color: Color = .orange, regionSelected: Bool = false) -> some View {
         let isSelected = selectedNeighborhoods.contains(hood)
+        let disabled = regionSelected
+
         return Button {
             withAnimation(.easeInOut(duration: 0.25)) {
                 if isSelected {
-                    selectedNeighborhoods.remove(hood)
+                    _ = selectedNeighborhoods.remove(hood)
                 } else {
                     selectedNeighborhoods.insert(hood)
                 }
@@ -717,14 +722,17 @@ struct DiscoverView: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(isSelected
-                            ? AnyShapeStyle(LinearGradient(
-                                colors: [color.opacity(0.35), color.opacity(0.15)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing))
-                            : AnyShapeStyle(Color(.systemGray6)))
+                        .fill(disabled
+                            ? AnyShapeStyle(Color(.systemGray5))
+                            : isSelected
+                                ? AnyShapeStyle(LinearGradient(
+                                    colors: [color.opacity(0.35), color.opacity(0.15)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing))
+                                : AnyShapeStyle(Color(.systemGray6)))
                 )
-                .foregroundStyle(color)
+                .foregroundStyle(disabled ? .secondary : color)
         }
+        .disabled(disabled)
     }
 
     private func fetchEvents() async {
