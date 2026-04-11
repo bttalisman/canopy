@@ -478,6 +478,7 @@ struct EventMapView: View {
     @State private var selectedPin: MapPin?
     @State private var mapPosition: MapCameraPosition = .automatic
     @State private var streetClosures: [StreetClosure] = []
+    @State private var useGoogleMaps = false
 
     var filteredPins: [MapPin] {
         if let type = selectedPinType {
@@ -567,6 +568,27 @@ struct EventMapView: View {
                     }
                     .padding(.horizontal)
                 }
+                // Map provider toggle
+                Picker("Map", selection: $useGoogleMaps) {
+                    Text("Apple Maps").tag(false)
+                    Text("Google Maps").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.bottom, 4)
+
+                if useGoogleMaps {
+                    // Google Maps
+                    GoogleMapView(
+                        latitude: event.latitude ?? 47.6062,
+                        longitude: event.longitude ?? -122.3321,
+                        span: VenueMapData.findVenue(for: event.location)?.mapSpan ?? 0.004,
+                        markers: googleMapMarkers
+                    )
+                    .frame(height: 380)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal)
+                } else {
                 // MapKit map with annotation pins
                 Map(position: $mapPosition) {
                     UserAnnotation()
@@ -633,6 +655,7 @@ struct EventMapView: View {
                         }
                     }
                 }
+                } // end Apple Maps else
 
                 // Selected pin detail
                 if let pin = selectedPin {
@@ -719,6 +742,16 @@ struct EventMapView: View {
                 }
                 .padding(.bottom)
             }
+        }
+    }
+
+    private var googleMapMarkers: [(lat: Double, lng: Double, title: String, color: UIColor)] {
+        if filteredPins.isEmpty, let lat = event.latitude, let lng = event.longitude {
+            return [(lat: lat, lng: lng, title: event.location, color: UIColor(Color.leafDeep))]
+        }
+        return filteredPins.compactMap { pin in
+            guard let lat = pin.latitude, let lng = pin.longitude else { return nil }
+            return (lat: lat, lng: lng, title: pin.label, color: UIColor(pinColor(pin.pinType)))
         }
     }
 
