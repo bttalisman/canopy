@@ -125,14 +125,17 @@ struct CustomMapView: View {
     }
 
     private func pinMarker(_ pin: MapPin, size: CGFloat) -> some View {
-        VStack(spacing: 1) {
+        let color = pinColor(pin.pinType)
+        return VStack(spacing: 1) {
             Image(systemName: pin.pinType.systemImage)
-                .font(.system(size: max(size * 0.45, 4)))
+                .font(.system(size: max(size * 0.45, 4), weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: max(size, 4), height: max(size, 4))
-                .background(pinColor(pin.pinType))
+                .background(color)
                 .clipShape(Circle())
-                .shadow(color: .black.opacity(0.4), radius: 2)
+                .overlay(Circle().stroke(.white, lineWidth: max(size * 0.1, 1.5)))
+                .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+                .shadow(color: color.opacity(0.6), radius: 4)
 
             if selectedPin?.id == pin.id {
                 Text(pin.label)
@@ -140,7 +143,7 @@ struct CustomMapView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)
-                    .background(pinColor(pin.pinType).opacity(0.9))
+                    .background(color.opacity(0.9))
                     .clipShape(RoundedRectangle(cornerRadius: 3))
             }
         }
