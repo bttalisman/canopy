@@ -44,25 +44,26 @@ struct DiscoverView: View {
     struct NeighborhoodGroupView: Identifiable {
         let label: String
         let hoods: [String]
+        let color: Color
         var id: String { label }
     }
 
     var groupedNeighborhoods: [NeighborhoodGroupView] {
         let groups = CityConfig.neighborhoodGroups
         if groups.isEmpty {
-            return [NeighborhoodGroupView(label: CityConfig.cityDisplayName, hoods: neighborhoods)]
+            return [NeighborhoodGroupView(label: CityConfig.cityDisplayName, hoods: neighborhoods, color: .orange)]
         }
         var result: [NeighborhoodGroupView] = []
         for group in groups {
             let matching = neighborhoods.filter { group.members.contains($0) }
             if !matching.isEmpty {
-                result.append(NeighborhoodGroupView(label: group.label, hoods: matching))
+                result.append(NeighborhoodGroupView(label: group.label, hoods: matching, color: group.color))
             }
         }
         let allGrouped = Set(groups.flatMap(\.members))
         let ungrouped = neighborhoods.filter { !allGrouped.contains($0) }
         if !ungrouped.isEmpty {
-            result.append(NeighborhoodGroupView(label: "Other", hoods: ungrouped))
+            result.append(NeighborhoodGroupView(label: "Other", hoods: ungrouped, color: .orange))
         }
         return result
     }
@@ -390,30 +391,7 @@ struct DiscoverView: View {
 
                                 // Region group pills
                                 ForEach(groupedNeighborhoods, id: \.label) { group in
-                                    Button {
-                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                            expandedNeighborhoodGroup = expandedNeighborhoodGroup == group.label ? nil : group.label
-                                        }
-                                    } label: {
-                                        HStack(spacing: 4) {
-                                            Text(group.label)
-                                            Image(systemName: expandedNeighborhoodGroup == group.label ? "chevron.up" : "chevron.down")
-                                                .font(.caption2)
-                                        }
-                                        .font(.subheadline)
-                                        .padding(.horizontal, 14)
-                                        .padding(.vertical, 6)
-                                        .background(
-                                            Capsule().fill(
-                                                expandedNeighborhoodGroup == group.label
-                                                    ? AnyShapeStyle(LinearGradient(
-                                                        colors: [group.color.opacity(0.25), group.color.opacity(0.10)],
-                                                        startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                    : AnyShapeStyle(Color(.systemGray6))
-                                            )
-                                        )
-                                        .foregroundStyle(expandedNeighborhoodGroup == group.label ? group.color : .secondary)
-                                    }
+                                    regionPillButton(group)
                                 }
 
                                 Color.clear.frame(width: 1).id("neighborhoodTrailing")
@@ -432,18 +410,17 @@ struct DiscoverView: View {
 
                         // Expanded neighborhood list
                         if let expanded = expandedNeighborhoodGroup,
-                           let group = groupedNeighborhoods.first(where: { $0.label == expanded }),
-                           let cfgGroup = CityConfig.neighborhoodGroups.first(where: { $0.label == expanded }) {
+                           let group = groupedNeighborhoods.first(where: { $0.label == expanded }) {
                             HStack(alignment: .top, spacing: 8) {
                                 let midpoint = (group.hoods.count + 1) / 2
                                 VStack(spacing: 8) {
                                     ForEach(group.hoods.prefix(midpoint), id: \.self) { hood in
-                                        neighborhoodGridButton(hood, color: cfgGroup.color)
+                                        neighborhoodGridButton(hood, color: group.color)
                                     }
                                 }
                                 VStack(spacing: 8) {
                                     ForEach(group.hoods.suffix(from: midpoint), id: \.self) { hood in
-                                        neighborhoodGridButton(hood, color: cfgGroup.color)
+                                        neighborhoodGridButton(hood, color: group.color)
                                     }
                                 }
                             }
@@ -601,6 +578,34 @@ struct DiscoverView: View {
                     await fetchEvents()
                 }.value
             }
+        }
+    }
+
+    private func regionPillButton(_ group: NeighborhoodGroupView) -> some View {
+        let isExpanded = expandedNeighborhoodGroup == group.label
+        let chevron = isExpanded ? "chevron.up" : "chevron.down"
+        let bgStyle: AnyShapeStyle = isExpanded
+            ? AnyShapeStyle(LinearGradient(
+                colors: [group.color.opacity(0.25), group.color.opacity(0.10)],
+                startPoint: .topLeading, endPoint: .bottomTrailing))
+            : AnyShapeStyle(Color(.systemGray6))
+        let fgColor: Color = isExpanded ? group.color : .secondary
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                expandedNeighborhoodGroup = isExpanded ? nil : group.label
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(group.label)
+                Image(systemName: chevron)
+                    .font(.caption2)
+            }
+            .font(.subheadline)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(bgStyle))
+            .foregroundStyle(fgColor)
         }
     }
 
