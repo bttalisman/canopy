@@ -417,32 +417,7 @@ struct DiscoverView: View {
                         if let expanded = expandedNeighborhoodGroup,
                            let group = groupedNeighborhoods.first(where: { $0.label == expanded }) {
                             VStack(spacing: 8) {
-                                // Select entire region button
-                                Button {
-                                    withAnimation(.easeInOut(duration: 0.25)) {
-                                        let hoodSet = Set(group.hoods)
-                                        if hoodSet.isSubset(of: selectedNeighborhoods) {
-                                            selectedNeighborhoods.subtract(hoodSet)
-                                        } else {
-                                            selectedNeighborhoods.formUnion(hoodSet)
-                                        }
-                                        expandedNeighborhoodGroup = nil
-                                    }
-                                } label: {
-                                    let allSelected = Set(group.hoods).isSubset(of: selectedNeighborhoods)
-                                    Text(allSelected ? "Deselect All \(group.label)" : "Select All \(group.label)")
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .fill(LinearGradient(
-                                                    colors: [group.color.opacity(0.25), group.color.opacity(0.10)],
-                                                    startPoint: .topLeading, endPoint: .bottomTrailing))
-                                        )
-                                        .foregroundStyle(group.color)
-                                }
+                                regionSelectAllButton(group)
 
                             HStack(alignment: .top, spacing: 8) {
                                 let midpoint = (group.hoods.count + 1) / 2
@@ -643,6 +618,36 @@ struct DiscoverView: View {
             .padding(.vertical, 6)
             .background(Capsule().fill(bgStyle))
             .foregroundStyle(fgColor)
+        }
+    }
+
+    private func regionSelectAllButton(_ group: NeighborhoodGroupView) -> some View {
+        let hoodSet = Set(group.hoods)
+        let allSelected = hoodSet.isSubset(of: selectedNeighborhoods)
+        let title = allSelected ? "Deselect All \(group.label)" : "Select All \(group.label)"
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                if allSelected {
+                    selectedNeighborhoods.subtract(hoodSet)
+                } else {
+                    selectedNeighborhoods.formUnion(hoodSet)
+                }
+                expandedNeighborhoodGroup = nil
+            }
+        } label: {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(LinearGradient(
+                            colors: [group.color.opacity(0.25), group.color.opacity(0.10)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing))
+                )
+                .foregroundStyle(group.color)
         }
     }
 
