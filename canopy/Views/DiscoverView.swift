@@ -428,7 +428,8 @@ struct DiscoverView: View {
                             .padding(.horizontal)
                             .padding(.bottom, 4)
                             .background(Color(.systemBackground))
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .clipped()
+                            .transition(.opacity)
                         }
                     }
 
