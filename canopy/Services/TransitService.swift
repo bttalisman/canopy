@@ -137,8 +137,7 @@ actor TransitService {
             throw TransitError.serverError
         }
 
-        let obaResponse = try Self.decodeOBA(OBAStopListData.self, from: data)
-        return obaResponse.data.list
+        return try Self.decodeStops(from: data)
     }
 
     // MARK: - OneBusAway: Arrivals at a Stop
@@ -165,13 +164,13 @@ actor TransitService {
             throw TransitError.serverError
         }
 
-        let obaResponse = try Self.decodeOBA(OBAArrivalEntryData.self, from: data)
+        let arrivals = try Self.decodeArrivals(from: data)
         let now = Date().timeIntervalSince1970 * 1000
 
         // Look up stop name
         let stopName = stopId
 
-        let arrivals = obaResponse.data.entry.arrivalsAndDepartures.compactMap { arrival -> RealTimeArrival? in
+        let results = arrivals.compactMap { arrival -> RealTimeArrival? in
             let arrivalTime = arrival.predicted ? arrival.predictedArrivalTime : arrival.scheduledArrivalTime
             let minutesAway = Int((Double(arrivalTime) - now) / 60000)
             guard minutesAway >= 0 else { return nil }
@@ -186,8 +185,8 @@ actor TransitService {
             )
         }.sorted { $0.minutesUntilArrival < $1.minutesUntilArrival }
 
-        arrivalCache[stopId] = CachedArrivals(arrivals: arrivals, fetchedAt: Date())
-        return arrivals
+        arrivalCache[stopId] = CachedArrivals(arrivals: results, fetchedAt: Date())
+        return results
     }
 
     // MARK: - Filtered arrivals: only routes that go to the venue
@@ -251,8 +250,12 @@ actor TransitService {
         }
     }
 
-    private nonisolated static func decodeOBA<T: Decodable & Sendable>(_ type: T.Type, from data: Data) throws -> OBAResponse<T> {
-        try JSONDecoder().decode(OBAResponse<T>.self, from: data)
+    private nonisolated static func decodeStops(from data: Data) throws -> [OBAStop] {
+        try JSONDecoder().decode(OBAStopsResponse.self, from: data).data.list
+    }
+
+    private nonisolated static func decodeArrivals(from data: Data) throws -> [OBAArrival] {
+        try JSONDecoder().decode(OBAArrivalsResponse.self, from: data).data.entry.arrivalsAndDepartures
     }
 }
 

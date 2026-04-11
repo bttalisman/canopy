@@ -1,14 +1,18 @@
 @preconcurrency import Foundation
 
-struct OBAResponse<T: Decodable & Sendable>: Decodable, Sendable {
-    let data: T
+struct OBAStopsResponse: Decodable {
+    let data: OBAStopListData
 }
 
-struct OBAStopListData: Decodable, Sendable {
+struct OBAArrivalsResponse: Decodable {
+    let data: OBAArrivalEntryData
+}
+
+struct OBAStopListData: Decodable {
     let list: [OBAStop]
 }
 
-struct OBAStop: Decodable, Sendable {
+struct OBAStop: Decodable {
     let id: String
     let name: String
     let lat: Double
@@ -16,15 +20,15 @@ struct OBAStop: Decodable, Sendable {
     let routeIds: [String]?
 }
 
-struct OBAArrivalEntryData: Decodable, Sendable {
+struct OBAArrivalEntryData: Decodable {
     let entry: OBAArrivalEntry
 }
 
-struct OBAArrivalEntry: Decodable, Sendable {
+struct OBAArrivalEntry: Decodable {
     let arrivalsAndDepartures: [OBAArrival]
 }
 
-struct OBAArrival: Decodable, Sendable {
+struct OBAArrival: Decodable {
     let routeId: String?
     let routeShortName: String?
     let tripHeadsign: String?
