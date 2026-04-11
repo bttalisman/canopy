@@ -361,6 +361,7 @@ struct DiscoverView: View {
                             .padding(.horizontal)
                             .padding(.vertical, 0)
 
+                        ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 // Show selected neighborhood pill if one is chosen
@@ -413,9 +414,19 @@ struct DiscoverView: View {
                                         .foregroundStyle(expandedNeighborhoodGroup == group.label ? .orange : .secondary)
                                     }
                                 }
+
+                                Color.clear.frame(width: 1).id("neighborhoodTrailing")
                             }
                             .padding(.horizontal)
                         }
+                        .onChange(of: selectedNeighborhood) { _, newValue in
+                            if newValue != nil {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    proxy.scrollTo("neighborhoodTrailing", anchor: .trailing)
+                                }
+                            }
+                        }
+                        } // end ScrollViewReader
 
                         // Expanded neighborhood list
                         if let expanded = expandedNeighborhoodGroup,
