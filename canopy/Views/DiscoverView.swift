@@ -354,26 +354,41 @@ struct DiscoverView: View {
                         .padding(.horizontal)
                     }
 
+                    // Neighborhood filter — inline with category pills
                     if neighborhoods.count > 1 {
                         ThreeLeavesDivider()
                             .padding(.horizontal)
                             .padding(.vertical, 0)
-                    }
-                    // Neighborhood filter pills
-                    if neighborhoods.count > 1 {
+
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                Button {
-                                    withAnimation { selectedNeighborhood = nil }
+                                Menu {
+                                    Button {
+                                        withAnimation { selectedNeighborhood = nil }
+                                    } label: {
+                                        Label("All Areas", systemImage: selectedNeighborhood == nil ? "checkmark" : "mappin.and.ellipse")
+                                    }
+
+                                    ForEach(groupedNeighborhoods, id: \.label) { group in
+                                        Section(group.label) {
+                                            ForEach(group.hoods, id: \.self) { hood in
+                                                Button {
+                                                    withAnimation { selectedNeighborhood = hood }
+                                                } label: {
+                                                    Label(hood, systemImage: selectedNeighborhood == hood ? "checkmark" : "mappin")
+                                                }
+                                            }
+                                        }
+                                    }
                                 } label: {
-                                    Label("All Areas", systemImage: "mappin.and.ellipse")
+                                    Label(selectedNeighborhood ?? "All Areas", systemImage: "mappin.and.ellipse")
                                         .font(.subheadline)
                                         .padding(.horizontal, 14)
                                         .padding(.vertical, 6)
                                         .background(
                                             Capsule()
                                                 .fill(
-                                                    selectedNeighborhood == nil
+                                                    selectedNeighborhood != nil
                                                         ? AnyShapeStyle(LinearGradient(
                                                             colors: [Color.orange.opacity(0.35), Color.orange.opacity(0.15)],
                                                             startPoint: .topLeading,
@@ -381,40 +396,7 @@ struct DiscoverView: View {
                                                         : AnyShapeStyle(Color(.systemGray6))
                                                 )
                                         )
-                                        .foregroundStyle(selectedNeighborhood == nil ? .orange : .secondary)
-                                }
-
-                                ForEach(groupedNeighborhoods, id: \.label) { group in
-                                    Text(group.label)
-                                        .font(.caption2)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.leading, 4)
-
-                                    ForEach(group.hoods, id: \.self) { hood in
-                                        Button {
-                                            withAnimation { selectedNeighborhood = hood }
-                                        } label: {
-                                            Text(hood)
-                                                .font(.subheadline)
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 6)
-                                                .background(
-                                                    Capsule()
-                                                        .fill(
-                                                            selectedNeighborhood == hood
-                                                                ? AnyShapeStyle(LinearGradient(
-                                                                    colors: [Color.orange.opacity(0.35), Color.orange.opacity(0.15)],
-                                                                    startPoint: .topLeading,
-                                                                    endPoint: .bottomTrailing))
-                                                                : AnyShapeStyle(Color(.systemGray6))
-                                                        )
-                                                )
-                                                .foregroundStyle(selectedNeighborhood == hood ? .orange : .secondary)
-                                                .accessibilityLabel("\(hood) neighborhood filter")
-                                                .accessibilityAddTraits(selectedNeighborhood == hood ? .isSelected : [])
-                                        }
-                                    }
+                                        .foregroundStyle(selectedNeighborhood != nil ? .orange : .secondary)
                                 }
                             }
                             .padding(.horizontal)
