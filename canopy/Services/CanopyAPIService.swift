@@ -175,6 +175,12 @@ actor CanopyAPIService {
             event.mapPinSize = apiEvent.mapPinSize
             event.latitude = apiEvent.latitude
             event.longitude = apiEvent.longitude
+            // Resolve neighborhood from coordinates if not provided by backend
+            if (apiEvent.neighborhood ?? "").isEmpty,
+               let lat = apiEvent.latitude, let lng = apiEvent.longitude,
+               let hood = NeighborhoodLookup.lookup(latitude: lat, longitude: lng) {
+                event.neighborhood = hood
+            }
             event.permitId = apiEvent.permitId
             event.isAccessible = apiEvent.isAccessible
             event.isFree = apiEvent.isFree

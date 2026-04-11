@@ -17,7 +17,9 @@ actor TicketmasterService {
         }
 
         var components = URLComponents(string: "\(baseURL)/api/events/ticketmaster/search")!
-        var queryItems: [URLQueryItem] = []
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "city", value: CityConfig.cityDisplayName),
+        ]
 
         if let startDateTime {
             queryItems.append(URLQueryItem(name: "startDateTime", value: startDateTime))
@@ -110,11 +112,16 @@ actor TicketmasterService {
                 event.imageURL = imageURL
             }
 
-            // Store venue coordinates
+            // Store venue coordinates and resolve neighborhood
             if let loc = tmEvent.venue?.location {
                 event.latitude = loc.latitudeDouble
                 event.longitude = loc.longitudeDouble
+                if let hood = NeighborhoodLookup.lookup(latitude: loc.latitudeDouble, longitude: loc.longitudeDouble) {
+                    event.neighborhood = hood
+                }
             }
+
+            event.city = CityConfig.citySlug
 
             context.insert(event)
 

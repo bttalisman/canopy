@@ -41,7 +41,7 @@ struct DiscoverView: View {
     }
 
     var filteredEvents: [Event] {
-        var result = events.filter { $0.isActive && ($0.city == CityConfig.citySlug || $0.city == nil) }
+        var result = events.filter { $0.isActive && $0.city == CityConfig.citySlug }
 
         if freeOnly {
             result = result.filter { $0.isFree == true }
@@ -545,16 +545,19 @@ struct DiscoverView: View {
 
         // 1. Fetch from Canopy backend (schedule items, curated events)
         do {
+            print("[Canopy] Fetching events for city: \(CityConfig.citySlug)")
             let apiEvents = try await CanopyAPIService.shared.fetchEvents()
-            for e in apiEvents {
-            }
+            print("[Canopy] API returned \(apiEvents.count) events")
             let count = await CanopyAPIService.shared.importEvents(apiEvents, into: modelContext)
             totalImported += count
+            print("[Canopy] Imported \(count) events from backend")
         } catch let error as CanopyAPIError where error == .notConfigured {
+            print("[Canopy] API not configured, skipping backend fetch")
         } catch is CancellationError {
             isLoading = false
             return
         } catch {
+            print("[Canopy] Backend fetch error: \(error)")
         }
 
         // 2. Fetch from Ticketmaster (via backend proxy)
@@ -568,8 +571,10 @@ struct DiscoverView: View {
                 )
 
                 let tmEvents = response.embedded?.events ?? []
+                print("[Canopy] Ticketmaster returned \(tmEvents.count) events")
                 let count = await TicketmasterService.shared.importEvents(tmEvents, into: modelContext)
                 totalImported += count
+                print("[Canopy] Imported \(count) events from Ticketmaster")
             } catch is CancellationError {
                 isLoading = false
                 return
@@ -581,6 +586,9 @@ struct DiscoverView: View {
                 }
             }
         }
+
+        let cityCounts = Dictionary(grouping: events, by: { $0.city ?? "nil" }).mapValues(\.count)
+        print("[Canopy] Total events in SwiftData: \(events.count), by city: \(cityCounts), filtered for \(CityConfig.citySlug): \(filteredEvents.count)")
 
         if totalImported > 0 {
             lastFetchedCount = totalImported
