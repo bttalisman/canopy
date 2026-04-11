@@ -4,7 +4,7 @@ import Foundation
 enum NeighborhoodLookup {
     private struct Hood {
         let name: String
-        let polygon: [(Double, Double)] // (lng, lat) pairs
+        let polygons: [[(Double, Double)]] // array of (lng, lat) rings
     }
 
     private static let hoods: [Hood] = {
@@ -18,19 +18,28 @@ enum NeighborhoodLookup {
         }
 
         return entries.compactMap { entry in
-            guard let name = entry["n"] as? String,
-                  let coords = entry["c"] as? [[Double]]
-            else { return nil }
-            let polygon = coords.map { ($0[0], $0[1]) }
-            return Hood(name: name, polygon: polygon)
+            guard let name = entry["n"] as? String else { return nil }
+
+            // Support both formats: "p" (array of polygons) and "c" (single polygon)
+            var polygons: [[(Double, Double)]] = []
+            if let polys = entry["p"] as? [[[Double]]] {
+                polygons = polys.map { ring in ring.map { ($0[0], $0[1]) } }
+            } else if let coords = entry["c"] as? [[Double]] {
+                polygons = [coords.map { ($0[0], $0[1]) }]
+            }
+
+            guard !polygons.isEmpty else { return nil }
+            return Hood(name: name, polygons: polygons)
         }
     }()
 
     /// Returns the neighborhood name for the given coordinates, or nil if not found.
     static func lookup(latitude: Double, longitude: Double) -> String? {
         for hood in hoods {
-            if pointInPolygon(x: longitude, y: latitude, polygon: hood.polygon) {
-                return hood.name
+            for polygon in hood.polygons {
+                if pointInPolygon(x: longitude, y: latitude, polygon: polygon) {
+                    return hood.name
+                }
             }
         }
         return nil
