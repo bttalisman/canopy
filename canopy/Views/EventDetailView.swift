@@ -540,7 +540,7 @@ struct EventMapView: View {
                 .padding(.horizontal)
             }
 
-            if event.mapPins.isEmpty && event.mapImageURL == nil
+            if event.mapImageURL == nil
                 && (event.latitude == nil || event.longitude == nil) {
                 ContentUnavailableView(
                     "No Map Data",
@@ -548,10 +548,25 @@ struct EventMapView: View {
                     description: Text("Venue map details haven't been added yet.")
                 )
                 .padding(.top, 40)
-            } else if let mapImageURL = event.mapImageURL, let url = URL(string: mapImageURL) {
-                // Custom venue map image with pin overlays
-                CustomMapView(url: url, pins: filteredPins, selectedPin: $selectedPin, pinSizePercent: CGFloat(event.mapPinSize ?? 3))
             } else {
+                // "View Venue Map" link when a custom map image is available
+                if let mapImageURL = event.mapImageURL, let url = URL(string: mapImageURL) {
+                    Link(destination: url) {
+                        Label("View Venue Map", systemImage: "map.fill")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(LinearGradient(
+                                        colors: [Color.leafLight.opacity(0.35), Color.leafDeep.opacity(0.20)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                            )
+                            .foregroundStyle(Color.leafDeep)
+                    }
+                    .padding(.horizontal)
+                }
                 // MapKit map with annotation pins
                 Map(position: $mapPosition) {
                     UserAnnotation()
