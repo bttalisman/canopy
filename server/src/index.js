@@ -74,6 +74,14 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
+// One-time: activate pending tacoma events
+app.post('/api/fix-tacoma', async (req, res) => {
+  const { rowCount } = await pool.query(
+    "UPDATE events SET status = 'active' WHERE city = 'tacoma' AND (status != 'active' OR status IS NULL)"
+  );
+  res.json({ activated: rowCount });
+});
+
 // Health check
 app.get('/health', async (req, res) => {
   try {
