@@ -44,6 +44,7 @@ struct RideShareView: View {
                     .background(Color.black)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.5), lineWidth: 1))
                 }
                 .accessibilityLabel("Request Uber ride to \(venueName)")
                 .accessibilityHint("Opens Uber app or App Store")
@@ -64,6 +65,7 @@ struct RideShareView: View {
                     .background(Color(red: 0.92, green: 0.0, blue: 0.55))
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.5), lineWidth: 1))
                 }
                 .accessibilityLabel("Request Lyft ride to \(venueName)")
                 .accessibilityHint("Opens Lyft app or App Store")
