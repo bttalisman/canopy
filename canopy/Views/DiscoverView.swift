@@ -432,23 +432,16 @@ struct DiscoverView: View {
                         // Expanded neighborhood list
                         if let expanded = expandedNeighborhoodGroup,
                            let group = groupedNeighborhoods.first(where: { $0.label == expanded }) {
-                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                                ForEach(group.hoods, id: \.self) { hood in
-                                    Button {
-                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                            selectedNeighborhood = hood
-                                            expandedNeighborhoodGroup = nil
-                                        }
-                                    } label: {
-                                        Text(hood)
-                                            .font(.subheadline)
-                                            .frame(maxWidth: .infinity, minHeight: 32)
-                                            .padding(.horizontal, 8)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .fill(Color(.systemGray6))
-                                            )
-                                            .foregroundStyle(.orange)
+                            HStack(alignment: .top, spacing: 8) {
+                                let midpoint = (group.hoods.count + 1) / 2
+                                VStack(spacing: 8) {
+                                    ForEach(group.hoods.prefix(midpoint), id: \.self) { hood in
+                                        neighborhoodGridButton(hood)
+                                    }
+                                }
+                                VStack(spacing: 8) {
+                                    ForEach(group.hoods.suffix(from: midpoint), id: \.self) { hood in
+                                        neighborhoodGridButton(hood)
                                     }
                                 }
                             }
@@ -604,6 +597,25 @@ struct DiscoverView: View {
                     await fetchEvents()
                 }.value
             }
+        }
+    }
+
+    private func neighborhoodGridButton(_ hood: String) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                selectedNeighborhood = hood
+                expandedNeighborhoodGroup = nil
+            }
+        } label: {
+            Text(hood)
+                .font(.subheadline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color(.systemGray6))
+                )
+                .foregroundStyle(.orange)
         }
     }
 
