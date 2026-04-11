@@ -70,7 +70,16 @@ actor TicketmasterService {
                 Calendar.current.isDate(event.startDate, inSameDayAs: startDate)
             }
 
-            if isDuplicate { continue }
+            if isDuplicate {
+                // Backfill neighborhood from geo lookup if still set to city name
+                if let event = existing.first,
+                   (event.neighborhood == CityConfig.defaultLocation || event.neighborhood == CityConfig.greaterAreaName),
+                   let lat = event.latitude, let lng = event.longitude,
+                   let hood = NeighborhoodLookup.lookup(latitude: lat, longitude: lng) {
+                    event.neighborhood = hood
+                }
+                continue
+            }
 
             // Skip if a curated event already covers this venue + date range
             let venueName = tmEvent.venue?.name ?? ""
@@ -96,7 +105,7 @@ actor TicketmasterService {
                 startDate: startDate,
                 endDate: endDate,
                 location: tmEvent.venue?.name ?? CityConfig.defaultLocation,
-                neighborhood: tmEvent.venue?.city?.name ?? CityConfig.defaultLocation,
+                neighborhood: CityConfig.greaterAreaName,
                 logoSystemImage: category.systemImage,
                 ticketingURL: tmEvent.url,
                 category: category
@@ -116,7 +125,8 @@ actor TicketmasterService {
             if let loc = tmEvent.venue?.location {
                 event.latitude = loc.latitudeDouble
                 event.longitude = loc.longitudeDouble
-                if let hood = NeighborhoodLookup.lookup(latitude: loc.latitudeDouble, longitude: loc.longitudeDouble) {
+                if let lat = loc.latitudeDouble, let lng = loc.longitudeDouble,
+                   let hood = NeighborhoodLookup.lookup(latitude: lat, longitude: lng) {
                     event.neighborhood = hood
                 }
             }

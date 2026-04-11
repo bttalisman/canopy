@@ -588,7 +588,14 @@ struct DiscoverView: View {
         }
 
         let cityCounts = Dictionary(grouping: events, by: { $0.city ?? "nil" }).mapValues(\.count)
+        let hoodCounts = Dictionary(grouping: events, by: { $0.neighborhood }).mapValues(\.count)
         print("[Canopy] Total events in SwiftData: \(events.count), by city: \(cityCounts), filtered for \(CityConfig.citySlug): \(filteredEvents.count)")
+        print("[Canopy] Neighborhoods: \(hoodCounts)")
+        // Log a few coordinate samples
+        for e in events.prefix(3) {
+            let hood = e.latitude.flatMap { lat in e.longitude.flatMap { lng in NeighborhoodLookup.lookup(latitude: lat, longitude: lng) } }
+            print("[Canopy] Event '\(e.name)' at (\(e.latitude ?? 0), \(e.longitude ?? 0)) → neighborhood: \(e.neighborhood), lookup: \(hood ?? "nil")")
+        }
 
         if totalImported > 0 {
             lastFetchedCount = totalImported

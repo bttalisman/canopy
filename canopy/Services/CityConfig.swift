@@ -32,4 +32,6 @@ enum CityConfig {
     }
 
     static var defaultLocation: String { cityDisplayName }
+
+    static var greaterAreaName: String { "Greater \(cityDisplayName)" }
 }
