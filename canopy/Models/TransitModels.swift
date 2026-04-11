@@ -109,15 +109,15 @@ struct OTPPlace: Codable, Sendable {
 
 // MARK: - OneBusAway API Response Models
 
-struct OBAResponse<T: Codable & Sendable>: Codable, Sendable {
+struct OBAResponse<T: Decodable & Sendable>: Decodable, Sendable {
     let data: T
 }
 
-struct OBAStopListData: Codable, Sendable {
+struct OBAStopListData: Decodable, Sendable {
     let list: [OBAStop]
 }
 
-struct OBAStop: Codable, Sendable {
+struct OBAStop: Decodable, Sendable {
     let id: String
     let name: String
     let lat: Double
@@ -125,15 +125,15 @@ struct OBAStop: Codable, Sendable {
     let routeIds: [String]?
 }
 
-struct OBAArrivalEntryData: Codable, Sendable {
+struct OBAArrivalEntryData: Decodable, Sendable {
     let entry: OBAArrivalEntry
 }
 
-struct OBAArrivalEntry: Codable, Sendable {
+struct OBAArrivalEntry: Decodable, Sendable {
     let arrivalsAndDepartures: [OBAArrival]
 }
 
-struct OBAArrival: Codable, Sendable {
+struct OBAArrival: Decodable, Sendable {
     let routeId: String?
     let routeShortName: String?
     let tripHeadsign: String?

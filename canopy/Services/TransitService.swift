@@ -251,7 +251,7 @@ actor TransitService {
         }
     }
 
-    private nonisolated static func decodeOBA<T: Codable & Sendable>(_ type: T.Type, from data: Data) throws -> OBAResponse<T> {
+    private nonisolated static func decodeOBA<T: Decodable & Sendable>(_ type: T.Type, from data: Data) throws -> OBAResponse<T> {
         try JSONDecoder().decode(OBAResponse<T>.self, from: data)
     }
 }
