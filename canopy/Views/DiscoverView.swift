@@ -7,7 +7,7 @@ struct DiscoverView: View {
     @State private var searchText = ""
     @State private var selectedCategory: EventCategory?
     @State private var selectedTimeFilter: TimeFilter = .all
-    @State private var selectedNeighborhood: String?
+    @State private var selectedNeighborhoods: Set<String> = []
     @State private var freeOnly: Bool = false
     @State private var accessibleOnly: Bool = false
     @State private var showMapView = false
@@ -92,8 +92,8 @@ struct DiscoverView: View {
             result = result.filter { $0.category == category }
         }
 
-        if let neighborhood = selectedNeighborhood {
-            result = result.filter { $0.neighborhood == neighborhood }
+        if !selectedNeighborhoods.isEmpty {
+            result = result.filter { selectedNeighborhoods.contains($0.neighborhood) }
         }
 
         let now = Date()
@@ -364,11 +364,13 @@ struct DiscoverView: View {
                         ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                // Show selected neighborhood pill if one is chosen
-                                if let selected = selectedNeighborhood {
+                                // Show selected neighborhood/region pills
+                                ForEach(Array(selectedNeighborhoods).sorted(), id: \.self) { selected in
                                     let selectedColor = CityConfig.groupColor(for: selected)
                                     Button {
-                                        withAnimation(.easeInOut(duration: 0.25)) { selectedNeighborhood = nil }
+                                        withAnimation(.easeInOut(duration: 0.25)) {
+                                            selectedNeighborhoods.remove(selected)
+                                        }
                                     } label: {
                                         HStack(spacing: 4) {
                                             Text(selected)
@@ -386,7 +388,10 @@ struct DiscoverView: View {
                                         .foregroundStyle(selectedColor)
                                     }
                                     .transition(.move(edge: .leading).combined(with: .opacity))
-                                    .id("selectedNeighborhood")
+                                }
+
+                                if !selectedNeighborhoods.isEmpty {
+                                    Color.clear.frame(width: 1).id("selectedNeighborhood")
                                 }
 
                                 // Region group pills
@@ -398,8 +403,8 @@ struct DiscoverView: View {
                             }
                             .padding(.horizontal)
                         }
-                        .onChange(of: selectedNeighborhood) { _, newValue in
-                            if newValue != nil {
+                        .onChange(of: selectedNeighborhoods) { _, newValue in
+                            if !newValue.isEmpty {
                                 withAnimation(.easeInOut(duration: 0.3)) {
                                     proxy.scrollTo("selectedNeighborhood", anchor: .leading)
                                 }
@@ -411,6 +416,34 @@ struct DiscoverView: View {
                         // Expanded neighborhood list
                         if let expanded = expandedNeighborhoodGroup,
                            let group = groupedNeighborhoods.first(where: { $0.label == expanded }) {
+                            VStack(spacing: 8) {
+                                // Select entire region button
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        let hoodSet = Set(group.hoods)
+                                        if hoodSet.isSubset(of: selectedNeighborhoods) {
+                                            selectedNeighborhoods.subtract(hoodSet)
+                                        } else {
+                                            selectedNeighborhoods.formUnion(hoodSet)
+                                        }
+                                        expandedNeighborhoodGroup = nil
+                                    }
+                                } label: {
+                                    let allSelected = Set(group.hoods).isSubset(of: selectedNeighborhoods)
+                                    Text(allSelected ? "Deselect All \(group.label)" : "Select All \(group.label)")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(LinearGradient(
+                                                    colors: [group.color.opacity(0.25), group.color.opacity(0.10)],
+                                                    startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        )
+                                        .foregroundStyle(group.color)
+                                }
+
                             HStack(alignment: .top, spacing: 8) {
                                 let midpoint = (group.hoods.count + 1) / 2
                                 VStack(spacing: 8) {
@@ -424,6 +457,7 @@ struct DiscoverView: View {
                                     }
                                 }
                             }
+                            } // end VStack
                             .padding(.top, 6)
                             .padding(.horizontal)
                             .padding(.bottom, 4)
@@ -477,7 +511,7 @@ struct DiscoverView: View {
                         allEvents: events,
                         selectedEvent: $selectedMapEvent,
                         showDateSlider: selectedTimeFilter == .all,
-                        selectedNeighborhood: selectedNeighborhood
+                        selectedNeighborhood: selectedNeighborhoods.first
                     )
                     .toolbar(.visible, for: .tabBar)
                 } else {
@@ -584,13 +618,15 @@ struct DiscoverView: View {
 
     private func regionPillButton(_ group: NeighborhoodGroupView) -> some View {
         let isExpanded = expandedNeighborhoodGroup == group.label
+        let regionSelected = Set(group.hoods).isSubset(of: selectedNeighborhoods)
+        let isActive = isExpanded || regionSelected
         let chevron = isExpanded ? "chevron.up" : "chevron.down"
-        let bgStyle: AnyShapeStyle = isExpanded
+        let bgStyle: AnyShapeStyle = isActive
             ? AnyShapeStyle(LinearGradient(
                 colors: [group.color.opacity(0.25), group.color.opacity(0.10)],
                 startPoint: .topLeading, endPoint: .bottomTrailing))
             : AnyShapeStyle(Color(.systemGray6))
-        let fgColor: Color = isExpanded ? group.color : .secondary
+        let fgColor: Color = isActive ? group.color : .secondary
 
         return Button {
             withAnimation(.easeInOut(duration: 0.25)) {
@@ -611,9 +647,14 @@ struct DiscoverView: View {
     }
 
     private func neighborhoodGridButton(_ hood: String, color: Color = .orange) -> some View {
-        Button {
+        let isSelected = selectedNeighborhoods.contains(hood)
+        return Button {
             withAnimation(.easeInOut(duration: 0.25)) {
-                selectedNeighborhood = hood
+                if isSelected {
+                    selectedNeighborhoods.remove(hood)
+                } else {
+                    selectedNeighborhoods.insert(hood)
+                }
                 expandedNeighborhoodGroup = nil
             }
         } label: {
@@ -623,7 +664,11 @@ struct DiscoverView: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(.systemGray6))
+                        .fill(isSelected
+                            ? AnyShapeStyle(LinearGradient(
+                                colors: [color.opacity(0.35), color.opacity(0.15)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing))
+                            : AnyShapeStyle(Color(.systemGray6)))
                 )
                 .foregroundStyle(color)
         }
