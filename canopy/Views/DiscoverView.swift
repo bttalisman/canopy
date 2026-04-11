@@ -366,28 +366,7 @@ struct DiscoverView: View {
                             HStack(spacing: 8) {
                                 // Show selected neighborhood/region pills
                                 ForEach(Array(selectedNeighborhoods).sorted(), id: \.self) { selected in
-                                    let selectedColor = CityConfig.groupColor(for: selected)
-                                    Button {
-                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                            selectedNeighborhoods.remove(selected)
-                                        }
-                                    } label: {
-                                        HStack(spacing: 4) {
-                                            Text(selected)
-                                            Image(systemName: "xmark.circle.fill")
-                                                .font(.caption)
-                                        }
-                                        .font(.subheadline)
-                                        .padding(.horizontal, 14)
-                                        .padding(.vertical, 6)
-                                        .background(
-                                            Capsule().fill(LinearGradient(
-                                                colors: [selectedColor.opacity(0.35), selectedColor.opacity(0.15)],
-                                                startPoint: .topLeading, endPoint: .bottomTrailing))
-                                        )
-                                        .foregroundStyle(selectedColor)
-                                    }
-                                    .transition(.move(edge: .leading).combined(with: .opacity))
+                                    selectedNeighborhoodPill(selected)
                                 }
 
                                 if !selectedNeighborhoods.isEmpty {
@@ -619,6 +598,31 @@ struct DiscoverView: View {
             .background(Capsule().fill(bgStyle))
             .foregroundStyle(fgColor)
         }
+    }
+
+    private func selectedNeighborhoodPill(_ name: String) -> some View {
+        let pillColor = CityConfig.groupColor(for: name)
+        let bg = LinearGradient(
+            colors: [pillColor.opacity(0.35), pillColor.opacity(0.15)],
+            startPoint: .topLeading, endPoint: .bottomTrailing)
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                selectedNeighborhoods.remove(name)
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(name)
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+            }
+            .font(.subheadline)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(bg))
+            .foregroundStyle(pillColor)
+        }
+        .transition(.move(edge: .leading).combined(with: .opacity))
     }
 
     private func regionSelectAllButton(_ group: NeighborhoodGroupView) -> some View {
