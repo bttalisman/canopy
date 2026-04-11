@@ -214,11 +214,6 @@ struct DiscoverView: View {
                 // Filter pills — hidden while searching or manually collapsed
                 if !pillsHidden {
                 VStack(spacing: 2) {
-                    LeafyDivider()
-                        .padding(.horizontal)
-                        .padding(.vertical, 0)
-
-
                     // Time filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -300,10 +295,6 @@ struct DiscoverView: View {
                         }
                         .padding(.horizontal)
                     }
-
-                    TwoLeavesIconDivider()
-                        .padding(.horizontal)
-                        .padding(.vertical, 0)
 
                     // Category filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
