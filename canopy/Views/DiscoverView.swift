@@ -381,6 +381,7 @@ struct DiscoverView: View {
                                         .foregroundStyle(.orange)
                                     }
                                     .transition(.move(edge: .leading).combined(with: .opacity))
+                                    .id("selectedNeighborhood")
                                 }
 
                                 // Region group pills
@@ -418,7 +419,7 @@ struct DiscoverView: View {
                         .onChange(of: selectedNeighborhood) { _, newValue in
                             if newValue != nil {
                                 withAnimation(.easeInOut(duration: 0.3)) {
-                                    proxy.scrollTo("neighborhoodTrailing", anchor: .trailing)
+                                    proxy.scrollTo("selectedNeighborhood", anchor: .leading)
                                 }
                             }
                         }
