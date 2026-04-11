@@ -8,6 +8,7 @@ struct DiscoverView: View {
     @State private var selectedCategory: EventCategory?
     @State private var selectedTimeFilter: TimeFilter = .all
     @State private var selectedNeighborhoods: Set<String> = []
+    @State private var selectedRegions: Set<String> = []
     @State private var freeOnly: Bool = false
     @State private var accessibleOnly: Bool = false
     @State private var showMapView = false
@@ -92,8 +93,14 @@ struct DiscoverView: View {
             result = result.filter { $0.category == category }
         }
 
-        if !selectedNeighborhoods.isEmpty {
-            result = result.filter { selectedNeighborhoods.contains($0.neighborhood) }
+        if !selectedNeighborhoods.isEmpty || !selectedRegions.isEmpty {
+            var allowed = selectedNeighborhoods
+            for region in selectedRegions {
+                if let group = CityConfig.neighborhoodGroups.first(where: { $0.label == region }) {
+                    allowed.formUnion(group.members)
+                }
+            }
+            result = result.filter { allowed.contains($0.neighborhood) }
         }
 
         let now = Date()
@@ -364,7 +371,12 @@ struct DiscoverView: View {
                         ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                // Show selected neighborhood/region pills
+                                // Show selected region pills
+                                ForEach(Array(selectedRegions).sorted(), id: \.self) { region in
+                                    selectedRegionPill(region)
+                                }
+
+                                // Show selected individual neighborhood pills
                                 ForEach(Array(selectedNeighborhoods).sorted(), id: \.self) { selected in
                                     selectedNeighborhoodPill(selected)
                                 }
@@ -382,6 +394,14 @@ struct DiscoverView: View {
                             let added = newValue.subtracting(oldValue)
                             let scrollTarget = added.sorted().first ?? newValue.sorted().first
                             if let target = scrollTarget {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    proxy.scrollTo(target, anchor: .leading)
+                                }
+                            }
+                        }
+                        .onChange(of: selectedRegions) { oldValue, newValue in
+                            let added = newValue.subtracting(oldValue)
+                            if let target = added.sorted().first {
                                 withAnimation(.easeInOut(duration: 0.3)) {
                                     proxy.scrollTo(target, anchor: .leading)
                                 }
@@ -570,7 +590,7 @@ struct DiscoverView: View {
 
     private func regionPillButton(_ group: NeighborhoodGroupView) -> some View {
         let isExpanded = expandedNeighborhoodGroup == group.label
-        let regionSelected = Set(group.hoods).isSubset(of: selectedNeighborhoods)
+        let regionSelected = selectedRegions.contains(group.label)
         let isActive = isExpanded || regionSelected
         let chevron = isExpanded ? "chevron.up" : "chevron.down"
         let bgStyle: AnyShapeStyle = isActive
@@ -596,6 +616,33 @@ struct DiscoverView: View {
             .background(Capsule().fill(bgStyle))
             .foregroundStyle(fgColor)
         }
+    }
+
+    private func selectedRegionPill(_ region: String) -> some View {
+        let cfgGroup = CityConfig.neighborhoodGroups.first(where: { $0.label == region })
+        let pillColor = cfgGroup?.color ?? .orange
+        let bg = LinearGradient(
+            colors: [pillColor.opacity(0.35), pillColor.opacity(0.15)],
+            startPoint: .topLeading, endPoint: .bottomTrailing)
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                _ = selectedRegions.remove(region)
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(region)
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+            }
+            .font(.subheadline)
+            .fontWeight(.semibold)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(bg))
+            .foregroundStyle(pillColor)
+        }
+        .transition(.move(edge: .leading).combined(with: .opacity))
     }
 
     private func selectedNeighborhoodPill(_ name: String) -> some View {
@@ -624,16 +671,15 @@ struct DiscoverView: View {
     }
 
     private func regionSelectAllButton(_ group: NeighborhoodGroupView) -> some View {
-        let hoodSet = Set(group.hoods)
-        let allSelected = hoodSet.isSubset(of: selectedNeighborhoods)
-        let title = allSelected ? "Deselect All \(group.label)" : "Select All \(group.label)"
+        let isSelected = selectedRegions.contains(group.label)
+        let title = isSelected ? "Deselect All \(group.label)" : "Select All \(group.label)"
 
         return Button {
             withAnimation(.easeInOut(duration: 0.25)) {
-                if allSelected {
-                    selectedNeighborhoods.subtract(hoodSet)
+                if isSelected {
+                    _ = selectedRegions.remove(group.label)
                 } else {
-                    selectedNeighborhoods.formUnion(hoodSet)
+                    selectedRegions.insert(group.label)
                 }
                 expandedNeighborhoodGroup = nil
             }
