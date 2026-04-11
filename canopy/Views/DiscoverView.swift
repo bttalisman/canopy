@@ -369,10 +369,6 @@ struct DiscoverView: View {
                                     selectedNeighborhoodPill(selected)
                                 }
 
-                                if !selectedNeighborhoods.isEmpty {
-                                    Color.clear.frame(width: 1).id("selectedNeighborhood")
-                                }
-
                                 // Region group pills
                                 ForEach(groupedNeighborhoods, id: \.label) { group in
                                     regionPillButton(group)
@@ -382,10 +378,12 @@ struct DiscoverView: View {
                             }
                             .padding(.horizontal)
                         }
-                        .onChange(of: selectedNeighborhoods) { _, newValue in
-                            if !newValue.isEmpty {
+                        .onChange(of: selectedNeighborhoods) { oldValue, newValue in
+                            let added = newValue.subtracting(oldValue)
+                            let scrollTarget = added.sorted().first ?? newValue.sorted().first
+                            if let target = scrollTarget {
                                 withAnimation(.easeInOut(duration: 0.3)) {
-                                    proxy.scrollTo("selectedNeighborhood", anchor: .leading)
+                                    proxy.scrollTo(target, anchor: .leading)
                                 }
                             }
                         }
