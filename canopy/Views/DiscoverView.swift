@@ -432,7 +432,7 @@ struct DiscoverView: View {
                         // Expanded neighborhood list
                         if let expanded = expandedNeighborhoodGroup,
                            let group = groupedNeighborhoods.first(where: { $0.label == expanded }) {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                                 ForEach(group.hoods, id: \.self) { hood in
                                     Button {
                                         withAnimation(.easeInOut(duration: 0.25)) {
@@ -442,8 +442,8 @@ struct DiscoverView: View {
                                     } label: {
                                         Text(hood)
                                             .font(.subheadline)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 8)
+                                            .frame(maxWidth: .infinity, minHeight: 32)
+                                            .padding(.horizontal, 8)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 10)
                                                     .fill(Color(.systemGray6))
@@ -452,6 +452,7 @@ struct DiscoverView: View {
                                     }
                                 }
                             }
+                            .padding(.top, 6)
                             .padding(.horizontal)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
