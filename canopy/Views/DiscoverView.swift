@@ -608,7 +608,7 @@ struct DiscoverView: View {
 
         return Button {
             withAnimation(.easeInOut(duration: 0.25)) {
-                selectedNeighborhoods.remove(name)
+                _ = selectedNeighborhoods.remove(name)
             }
         } label: {
             HStack(spacing: 4) {
