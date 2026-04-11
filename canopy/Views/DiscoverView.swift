@@ -357,10 +357,6 @@ struct DiscoverView: View {
 
                     // Neighborhood filter
                     if neighborhoods.count > 1 {
-                        ThreeLeavesDivider()
-                            .padding(.horizontal)
-                            .padding(.vertical, 0)
-
                         ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {

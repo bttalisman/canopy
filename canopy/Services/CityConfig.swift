@@ -44,24 +44,30 @@ enum CityConfig {
         switch citySlug {
         case "seattle":
             return [
-                NeighborhoodGroup(label: "Seattle", members: [
-                    "Ballard", "Beacon Hill", "Bitter Lake", "Broadview", "Bryant",
+                NeighborhoodGroup(label: "North Seattle", members: [
+                    "Ballard", "Bitter Lake", "Broadview", "Bryant", "Crown Hill",
+                    "Fremont", "Green Lake", "Greenwood", "Lake City",
+                    "Laurelhurst", "North Beach - Blue Ridge", "Northgate",
+                    "Phinney Ridge", "Ravenna", "Roosevelt", "Sand Point",
+                    "Shoreline", "University District", "View Ridge",
+                    "Wallingford", "Wedgwood", "Windermere",
+                ]),
+                NeighborhoodGroup(label: "Central Seattle", members: [
                     "Capitol Hill", "Cascade", "Central Area", "Central District",
-                    "Chinatown-International District", "Crown Hill", "Delridge",
-                    "Downtown", "Downtown / Citywide", "Fremont", "Georgetown",
-                    "Green Lake", "Greenwood", "Harbor Island", "Industrial District",
-                    "Interbay", "Lake City", "Laurelhurst", "Lower Queen Anne",
-                    "Magnolia", "Mount Baker", "North Beach - Blue Ridge", "Northgate",
-                    "Phinney Ridge", "Pioneer Square", "Queen Anne", "Rainier Valley",
-                    "Ravenna", "Roosevelt", "Sand Point", "Seward Park", "South Park",
-                    "University District", "View Ridge", "Wallingford", "Wedgwood",
-                    "West Seattle", "Windermere", "Shoreline",
+                    "Chinatown-International District", "Downtown", "Downtown / Citywide",
+                    "Interbay", "Lower Queen Anne", "Magnolia", "Pioneer Square",
+                    "Queen Anne",
+                ]),
+                NeighborhoodGroup(label: "South Seattle", members: [
+                    "Beacon Hill", "Delridge", "Georgetown", "Harbor Island",
+                    "Industrial District", "Mount Baker", "Rainier Valley",
+                    "Seward Park", "South Park", "West Seattle",
                 ]),
                 NeighborhoodGroup(label: "Eastside", members: [
                     "Bellevue", "Bothell", "Issaquah", "Kenmore", "Kirkland",
                     "Mercer Island", "Newcastle", "Redmond", "Sammamish", "Woodinville",
                 ]),
-                NeighborhoodGroup(label: "Southside", members: [
+                NeighborhoodGroup(label: "South King", members: [
                     "Auburn", "Burien", "Des Moines", "Federal Way", "Kent",
                     "Renton", "SeaTac", "Tukwila",
                 ]),
