@@ -76,22 +76,22 @@ struct RealTimeArrival: Identifiable {
 
 // MARK: - OpenTripPlanner API Response Models
 
-struct OTPResponse: Codable {
+struct OTPResponse: Codable, Sendable {
     let plan: OTPPlan?
 }
 
-struct OTPPlan: Codable {
+struct OTPPlan: Codable, Sendable {
     let itineraries: [OTPItinerary]
 }
 
-struct OTPItinerary: Codable {
+struct OTPItinerary: Codable, Sendable {
     let duration: Int // seconds
     let startTime: Int64 // epoch ms
     let endTime: Int64 // epoch ms
     let legs: [OTPLeg]
 }
 
-struct OTPLeg: Codable {
+struct OTPLeg: Codable, Sendable {
     let mode: String // WALK, BUS, RAIL, TRAM, FERRY
     let route: String?
     let routeShortName: String?
@@ -101,7 +101,7 @@ struct OTPLeg: Codable {
     let to: OTPPlace
 }
 
-struct OTPPlace: Codable {
+struct OTPPlace: Codable, Sendable {
     let name: String
     let lat: Double?
     let lon: Double?
@@ -109,15 +109,15 @@ struct OTPPlace: Codable {
 
 // MARK: - OneBusAway API Response Models
 
-struct OBAResponse<T: Codable>: Codable {
+struct OBAResponse<T: Codable & Sendable>: Codable, Sendable {
     let data: T
 }
 
-struct OBAStopListData: Codable {
+struct OBAStopListData: Codable, Sendable {
     let list: [OBAStop]
 }
 
-struct OBAStop: Codable {
+struct OBAStop: Codable, Sendable {
     let id: String
     let name: String
     let lat: Double
@@ -125,15 +125,15 @@ struct OBAStop: Codable {
     let routeIds: [String]?
 }
 
-struct OBAArrivalEntryData: Codable {
+struct OBAArrivalEntryData: Codable, Sendable {
     let entry: OBAArrivalEntry
 }
 
-struct OBAArrivalEntry: Codable {
+struct OBAArrivalEntry: Codable, Sendable {
     let arrivalsAndDepartures: [OBAArrival]
 }
 
-struct OBAArrival: Codable {
+struct OBAArrival: Codable, Sendable {
     let routeId: String?
     let routeShortName: String?
     let tripHeadsign: String?

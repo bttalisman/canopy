@@ -40,23 +40,13 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error {
-                return
-            }
-            if let http = response as? HTTPURLResponse {
-                let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-            }
-        }.resume()
+        URLSession.shared.dataTask(with: request) { _, _, _ in }.resume()
     }
 
     // MARK: - Permission
 
     func requestPermission() {
-        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if let error {
-            }
-        }
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
     }
 
     private var isEnabled: Bool {
@@ -103,11 +93,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let id = "session-\(item.id.uuidString)"
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
 
-        center.add(request) { error in
-            if let error {
-            } else {
-            }
-        }
+        center.add(request) { _ in }
     }
 
     // MARK: - Remove Reminder
@@ -165,11 +151,7 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let id = "event-eve-\(event.id.uuidString)"
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
 
-        center.add(request) { error in
-            if let error {
-            } else {
-            }
-        }
+        center.add(request) { _ in }
     }
 
     func removeEventEveReminder(for event: Event) {

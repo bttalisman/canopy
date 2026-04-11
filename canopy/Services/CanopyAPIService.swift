@@ -3,7 +3,7 @@ import SwiftData
 
 // MARK: - API Response Models
 
-struct APIEvent: Codable, Identifiable {
+struct APIEvent: Codable, Sendable, Identifiable {
     let id: String
     let name: String
     let slug: String
@@ -30,14 +30,14 @@ struct APIEvent: Codable, Identifiable {
     let mapPins: [APIMapPin]?
 }
 
-struct APIStage: Codable {
+struct APIStage: Codable, Sendable {
     let id: String
     let name: String
     let mapX: Double?
     let mapY: Double?
 }
 
-struct APIScheduleItem: Codable {
+struct APIScheduleItem: Codable, Sendable {
     let id: String
     let stageId: String?
     let title: String
@@ -52,7 +52,7 @@ struct APIScheduleItem: Codable {
     let performerLinks: String?
 }
 
-struct APIMapPin: Codable {
+struct APIMapPin: Codable, Sendable {
     let id: String
     let label: String
     let pinType: String?

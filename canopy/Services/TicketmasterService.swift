@@ -55,9 +55,19 @@ actor TicketmasterService {
     @MainActor
     func importEvents(_ tmEvents: [TMEvent], into context: ModelContext) -> Int {
         var importedCount = 0
+        var skippedDuplicate = 0
+        var skippedCurated = 0
+        var skippedNoDate = 0
 
         for tmEvent in tmEvents {
-            guard let startDate = tmEvent.startDate else { continue }
+            let venueCity = tmEvent.venue?.city?.name ?? "?"
+            let venueName = tmEvent.venue?.name ?? "?"
+
+            guard let startDate = tmEvent.startDate else {
+                skippedNoDate += 1
+                print("[TM] Skipped (no date): \(tmEvent.name) at \(venueName), \(venueCity)")
+                continue
+            }
 
             // Check for duplicates by name + start date
             let name = tmEvent.name
@@ -71,6 +81,7 @@ actor TicketmasterService {
             }
 
             if isDuplicate {
+                skippedDuplicate += 1
                 // Backfill neighborhood from geo lookup if still set to city name
                 if let event = existing.first,
                    (event.neighborhood == CityConfig.defaultLocation || event.neighborhood == CityConfig.greaterAreaName),
@@ -82,17 +93,23 @@ actor TicketmasterService {
             }
 
             // Skip if a curated event already covers this venue + date range
-            let venueName = tmEvent.venue?.name ?? ""
-            if !venueName.isEmpty {
+            let venueNameCheck = tmEvent.venue?.name ?? ""
+            if !venueNameCheck.isEmpty {
                 let allEvents = (try? context.fetch(FetchDescriptor<Event>())) ?? []
                 let coveredByCurated = allEvents.contains { curated in
-                    curated.location.localizedCaseInsensitiveContains(venueName) &&
+                    curated.location.localizedCaseInsensitiveContains(venueNameCheck) &&
                     curated.startDate <= startDate &&
                     curated.endDate >= startDate &&
                     !curated.scheduleItems.isEmpty
                 }
-                if coveredByCurated { continue }
+                if coveredByCurated {
+                    skippedCurated += 1
+                    print("[TM] Skipped (curated): \(tmEvent.name) at \(venueName), \(venueCity)")
+                    continue
+                }
             }
+
+            print("[TM] Importing: \(tmEvent.name) at \(venueName), \(venueCity)")
 
             let endDate = tmEvent.endDate ?? Calendar.current.date(byAdding: .hour, value: 3, to: startDate)!
 
@@ -111,9 +128,7 @@ actor TicketmasterService {
                 category: category
             )
 
-            // Store the image URL in the event description if we have one
-            if let imageURL = tmEvent.primaryImage?.url,
-               event.eventDescription.isEmpty {
+            if tmEvent.primaryImage?.url != nil, event.eventDescription.isEmpty {
                 event.eventDescription = "Event at \(event.location)"
             }
 
@@ -162,6 +177,7 @@ actor TicketmasterService {
             importedCount += 1
         }
 
+        print("[TM] Summary: \(importedCount) imported, \(skippedDuplicate) duplicate, \(skippedCurated) curated, \(skippedNoDate) no date, \(tmEvents.count) total")
         return importedCount
     }
 

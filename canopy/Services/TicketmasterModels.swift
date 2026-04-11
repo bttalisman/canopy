@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Top-level Response
 
-struct TMResponse: Codable {
+struct TMResponse: Codable, Sendable {
     let embedded: TMEmbeddedEvents?
     let page: TMPage?
 
@@ -12,11 +12,11 @@ struct TMResponse: Codable {
     }
 }
 
-struct TMEmbeddedEvents: Codable {
+struct TMEmbeddedEvents: Codable, Sendable {
     let events: [TMEvent]
 }
 
-struct TMPage: Codable {
+struct TMPage: Codable, Sendable {
     let size: Int
     let totalElements: Int
     let totalPages: Int
@@ -25,7 +25,7 @@ struct TMPage: Codable {
 
 // MARK: - Event
 
-struct TMEvent: Codable, Identifiable {
+struct TMEvent: Codable, Sendable, Identifiable {
     let id: String
     let name: String
     let url: String?
@@ -107,7 +107,7 @@ struct TMEvent: Codable, Identifiable {
 
 // MARK: - Dates
 
-struct TMDates: Codable {
+struct TMDates: Codable, Sendable {
     let start: TMDateStart?
     let end: TMDateEnd?
     let timezone: String?
@@ -115,7 +115,7 @@ struct TMDates: Codable {
     let spanMultipleDays: Bool?
 }
 
-struct TMDateStart: Codable {
+struct TMDateStart: Codable, Sendable {
     let localDate: String?
     let localTime: String?
     let dateTime: String?
@@ -125,7 +125,7 @@ struct TMDateStart: Codable {
     let noSpecificTime: Bool?
 }
 
-struct TMDateEnd: Codable {
+struct TMDateEnd: Codable, Sendable {
     let localDate: String?
     let localTime: String?
     let dateTime: String?
@@ -133,13 +133,13 @@ struct TMDateEnd: Codable {
     let noSpecificTime: Bool?
 }
 
-struct TMDateStatus: Codable {
+struct TMDateStatus: Codable, Sendable {
     let code: String?
 }
 
 // MARK: - Image
 
-struct TMImage: Codable {
+struct TMImage: Codable, Sendable {
     let url: String
     let ratio: String?
     let width: Int?
@@ -149,7 +149,7 @@ struct TMImage: Codable {
 
 // MARK: - Classification
 
-struct TMClassification: Codable {
+struct TMClassification: Codable, Sendable {
     let primary: Bool?
     let family: Bool?
     let segment: TMNamedEntity?
@@ -157,14 +157,14 @@ struct TMClassification: Codable {
     let subGenre: TMNamedEntity?
 }
 
-struct TMNamedEntity: Codable {
+struct TMNamedEntity: Codable, Sendable {
     let id: String?
     let name: String?
 }
 
 // MARK: - Price Range
 
-struct TMPriceRange: Codable {
+struct TMPriceRange: Codable, Sendable {
     let type: String?
     let currency: String?
     let min: Double?
@@ -173,12 +173,12 @@ struct TMPriceRange: Codable {
 
 // MARK: - Venue (embedded in event)
 
-struct TMEventEmbedded: Codable {
+struct TMEventEmbedded: Codable, Sendable {
     let venues: [TMVenue]?
     let attractions: [TMAttraction]?
 }
 
-struct TMVenue: Codable {
+struct TMVenue: Codable, Sendable {
     let id: String?
     let name: String?
     let url: String?
@@ -196,26 +196,26 @@ struct TMVenue: Codable {
     }
 }
 
-struct TMAddress: Codable {
+struct TMAddress: Codable, Sendable {
     let line1: String?
     let line2: String?
 }
 
-struct TMCity: Codable {
+struct TMCity: Codable, Sendable {
     let name: String?
 }
 
-struct TMState: Codable {
+struct TMState: Codable, Sendable {
     let stateCode: String?
     let name: String?
 }
 
-struct TMCountry: Codable {
+struct TMCountry: Codable, Sendable {
     let countryCode: String?
     let name: String?
 }
 
-struct TMLocation: Codable {
+struct TMLocation: Codable, Sendable {
     let longitude: String?
     let latitude: String?
 
@@ -230,7 +230,7 @@ struct TMLocation: Codable {
     }
 }
 
-struct TMAttraction: Codable {
+struct TMAttraction: Codable, Sendable {
     let id: String?
     let name: String?
     let url: String?

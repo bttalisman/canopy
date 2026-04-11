@@ -1,11 +1,11 @@
 import SwiftUI
 
 enum CityConfig {
-    static let citySlug: String = {
+    nonisolated(unsafe) static let citySlug: String = {
         Bundle.main.infoDictionary?["CANOPY_CITY"] as? String ?? "seattle"
     }()
 
-    static let cityDisplayName: String = {
+    nonisolated(unsafe) static let cityDisplayName: String = {
         Bundle.main.infoDictionary?["CANOPY_CITY_DISPLAY_NAME"] as? String ?? "Seattle"
     }()
 
