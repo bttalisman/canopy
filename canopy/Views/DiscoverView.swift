@@ -40,6 +40,32 @@ struct DiscoverView: View {
         Array(Set(events.filter { $0.isActive && !$0.neighborhood.isEmpty }.map(\.neighborhood))).sorted()
     }
 
+    struct NeighborhoodGroupView: Identifiable {
+        let label: String
+        let hoods: [String]
+        var id: String { label }
+    }
+
+    var groupedNeighborhoods: [NeighborhoodGroupView] {
+        let groups = CityConfig.neighborhoodGroups
+        if groups.isEmpty {
+            return [NeighborhoodGroupView(label: CityConfig.cityDisplayName, hoods: neighborhoods)]
+        }
+        var result: [NeighborhoodGroupView] = []
+        for group in groups {
+            let matching = neighborhoods.filter { group.members.contains($0) }
+            if !matching.isEmpty {
+                result.append(NeighborhoodGroupView(label: group.label, hoods: matching))
+            }
+        }
+        let allGrouped = Set(groups.flatMap(\.members))
+        let ungrouped = neighborhoods.filter { !allGrouped.contains($0) }
+        if !ungrouped.isEmpty {
+            result.append(NeighborhoodGroupView(label: "Other", hoods: ungrouped))
+        }
+        return result
+    }
+
     var filteredEvents: [Event] {
         var result = events.filter { $0.isActive && $0.city == CityConfig.citySlug }
 
@@ -358,28 +384,36 @@ struct DiscoverView: View {
                                         .foregroundStyle(selectedNeighborhood == nil ? .orange : .secondary)
                                 }
 
-                                ForEach(neighborhoods, id: \.self) { hood in
-                                    Button {
-                                        withAnimation { selectedNeighborhood = hood }
-                                    } label: {
-                                        Text(hood)
-                                            .font(.subheadline)
-                                            .padding(.horizontal, 14)
-                                            .padding(.vertical, 6)
-                                            .background(
-                                                Capsule()
-                                                    .fill(
-                                                        selectedNeighborhood == hood
-                                                            ? AnyShapeStyle(LinearGradient(
-                                                                colors: [Color.orange.opacity(0.35), Color.orange.opacity(0.15)],
-                                                                startPoint: .topLeading,
-                                                                endPoint: .bottomTrailing))
-                                                            : AnyShapeStyle(Color(.systemGray6))
-                                                    )
-                                            )
-                                            .foregroundStyle(selectedNeighborhood == hood ? .orange : .secondary)
-                                            .accessibilityLabel("\(hood) neighborhood filter")
-                                            .accessibilityAddTraits(selectedNeighborhood == hood ? .isSelected : [])
+                                ForEach(groupedNeighborhoods, id: \.label) { group in
+                                    Text(group.label)
+                                        .font(.caption2)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.leading, 4)
+
+                                    ForEach(group.hoods, id: \.self) { hood in
+                                        Button {
+                                            withAnimation { selectedNeighborhood = hood }
+                                        } label: {
+                                            Text(hood)
+                                                .font(.subheadline)
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 6)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(
+                                                            selectedNeighborhood == hood
+                                                                ? AnyShapeStyle(LinearGradient(
+                                                                    colors: [Color.orange.opacity(0.35), Color.orange.opacity(0.15)],
+                                                                    startPoint: .topLeading,
+                                                                    endPoint: .bottomTrailing))
+                                                                : AnyShapeStyle(Color(.systemGray6))
+                                                        )
+                                                )
+                                                .foregroundStyle(selectedNeighborhood == hood ? .orange : .secondary)
+                                                .accessibilityLabel("\(hood) neighborhood filter")
+                                                .accessibilityAddTraits(selectedNeighborhood == hood ? .isSelected : [])
+                                        }
                                     }
                                 }
                             }

@@ -34,4 +34,47 @@ enum CityConfig {
     static var defaultLocation: String { cityDisplayName }
 
     static var greaterAreaName: String { "Greater \(cityDisplayName)" }
+
+    struct NeighborhoodGroup {
+        let label: String
+        let members: Set<String>
+    }
+
+    static var neighborhoodGroups: [NeighborhoodGroup] {
+        switch citySlug {
+        case "seattle":
+            return [
+                NeighborhoodGroup(label: "Seattle", members: [
+                    "Ballard", "Beacon Hill", "Bitter Lake", "Broadview", "Bryant",
+                    "Capitol Hill", "Cascade", "Central Area", "Crown Hill", "Delridge",
+                    "Downtown", "Fremont", "Georgetown", "Green Lake", "Greenwood",
+                    "Harbor Island", "Industrial District", "Interbay", "Lake City",
+                    "Laurelhurst", "Magnolia", "North Beach - Blue Ridge", "Northgate",
+                    "Phinney Ridge", "Queen Anne", "Rainier Valley", "Ravenna",
+                    "Roosevelt", "Sand Point", "Seward Park", "South Park",
+                    "University District", "View Ridge", "Wallingford", "Wedgwood",
+                    "West Seattle", "Windermere", "Shoreline",
+                ]),
+                NeighborhoodGroup(label: "Eastside", members: [
+                    "Bellevue", "Bothell", "Issaquah", "Kenmore", "Kirkland",
+                    "Mercer Island", "Newcastle", "Redmond", "Sammamish", "Woodinville",
+                ]),
+                NeighborhoodGroup(label: "Southside", members: [
+                    "Auburn", "Burien", "Des Moines", "Federal Way", "Kent",
+                    "Renton", "SeaTac", "Tukwila",
+                ]),
+            ]
+        default:
+            return []
+        }
+    }
+
+    static func groupLabel(for neighborhood: String) -> String? {
+        for group in neighborhoodGroups {
+            if group.members.contains(neighborhood) {
+                return group.label
+            }
+        }
+        return nil
+    }
 }
