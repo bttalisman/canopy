@@ -137,7 +137,7 @@ actor TransitService {
             throw TransitError.serverError
         }
 
-        let obaResponse = try decoder.decode(OBAResponse<OBAStopListData>.self, from: data)
+        let obaResponse = try Self.decodeOBA(OBAStopListData.self, from: data)
         return obaResponse.data.list
     }
 
@@ -165,7 +165,7 @@ actor TransitService {
             throw TransitError.serverError
         }
 
-        let obaResponse = try decoder.decode(OBAResponse<OBAArrivalEntryData>.self, from: data)
+        let obaResponse = try Self.decodeOBA(OBAArrivalEntryData.self, from: data)
         let now = Date().timeIntervalSince1970 * 1000
 
         // Look up stop name
@@ -249,6 +249,10 @@ actor TransitService {
         } catch {
             return []
         }
+    }
+
+    private nonisolated static func decodeOBA<T: Codable & Sendable>(_ type: T.Type, from data: Data) throws -> OBAResponse<T> {
+        try JSONDecoder().decode(OBAResponse<T>.self, from: data)
     }
 }
 
