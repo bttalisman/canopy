@@ -41,40 +41,47 @@ enum CityConfig {
         let color: Color
     }
 
+    private static let seattleGroups: [NeighborhoodGroup] = {
+        let northSeattle: Set<String> = [
+            "Ballard", "Bitter Lake", "Broadview", "Bryant", "Crown Hill",
+            "Fremont", "Green Lake", "Greenwood", "Lake City",
+            "Laurelhurst", "North Beach - Blue Ridge", "Northgate",
+            "Phinney Ridge", "Ravenna", "Roosevelt", "Sand Point",
+            "Shoreline", "University District", "View Ridge",
+            "Wallingford", "Wedgwood", "Windermere",
+        ]
+        let centralSeattle: Set<String> = [
+            "Capitol Hill", "Cascade", "Central Area", "Central District",
+            "Chinatown-International District", "Downtown", "Downtown / Citywide",
+            "Interbay", "Lower Queen Anne", "Magnolia", "Pioneer Square",
+            "Queen Anne",
+        ]
+        let southSeattle: Set<String> = [
+            "Beacon Hill", "Delridge", "Georgetown", "Harbor Island",
+            "Industrial District", "Mount Baker", "Rainier Valley",
+            "Seward Park", "South Park", "West Seattle",
+        ]
+        let eastside: Set<String> = [
+            "Bellevue", "Bothell", "Issaquah", "Kenmore", "Kirkland",
+            "Mercer Island", "Newcastle", "Redmond", "Sammamish", "Woodinville",
+        ]
+        let southKing: Set<String> = [
+            "Auburn", "Burien", "Des Moines", "Federal Way", "Kent",
+            "Renton", "SeaTac", "Tukwila",
+        ]
+        return [
+            NeighborhoodGroup(label: "North Seattle", members: northSeattle, color: .blue),
+            NeighborhoodGroup(label: "Central Seattle", members: centralSeattle, color: .purple),
+            NeighborhoodGroup(label: "South Seattle", members: southSeattle, color: .green),
+            NeighborhoodGroup(label: "Eastside", members: eastside, color: .teal),
+            NeighborhoodGroup(label: "South King", members: southKing, color: .indigo),
+        ]
+    }()
+
     static var neighborhoodGroups: [NeighborhoodGroup] {
         switch citySlug {
-        case "seattle":
-            return [
-                NeighborhoodGroup(label: "North Seattle", color: .blue, members: [
-                    "Ballard", "Bitter Lake", "Broadview", "Bryant", "Crown Hill",
-                    "Fremont", "Green Lake", "Greenwood", "Lake City",
-                    "Laurelhurst", "North Beach - Blue Ridge", "Northgate",
-                    "Phinney Ridge", "Ravenna", "Roosevelt", "Sand Point",
-                    "Shoreline", "University District", "View Ridge",
-                    "Wallingford", "Wedgwood", "Windermere",
-                ]),
-                NeighborhoodGroup(label: "Central Seattle", color: .purple, members: [
-                    "Capitol Hill", "Cascade", "Central Area", "Central District",
-                    "Chinatown-International District", "Downtown", "Downtown / Citywide",
-                    "Interbay", "Lower Queen Anne", "Magnolia", "Pioneer Square",
-                    "Queen Anne",
-                ]),
-                NeighborhoodGroup(label: "South Seattle", color: .green, members: [
-                    "Beacon Hill", "Delridge", "Georgetown", "Harbor Island",
-                    "Industrial District", "Mount Baker", "Rainier Valley",
-                    "Seward Park", "South Park", "West Seattle",
-                ]),
-                NeighborhoodGroup(label: "Eastside", color: .teal, members: [
-                    "Bellevue", "Bothell", "Issaquah", "Kenmore", "Kirkland",
-                    "Mercer Island", "Newcastle", "Redmond", "Sammamish", "Woodinville",
-                ]),
-                NeighborhoodGroup(label: "South King", color: .indigo, members: [
-                    "Auburn", "Burien", "Des Moines", "Federal Way", "Kent",
-                    "Renton", "SeaTac", "Tukwila",
-                ]),
-            ]
-        default:
-            return []
+        case "seattle": return seattleGroups
+        default: return []
         }
     }
 
