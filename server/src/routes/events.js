@@ -183,14 +183,29 @@ router.get('/ticketmaster/search', async (req, res) => {
       return res.status(500).json({ error: 'Ticketmaster API key not configured' });
     }
 
+    // Use lat/long + radius for metro-area search instead of city name
+    const metros = {
+      'Seattle':  { latlong: '47.6062,-122.3321', radius: '30' },
+      'Tacoma':   { latlong: '47.2529,-122.4443', radius: '15' },
+    };
+    const cityName = req.query.city || 'Seattle';
+    const metro = metros[cityName];
+
     const params = new URLSearchParams({
       apikey: apiKey,
-      city: req.query.city || 'Seattle',
-      stateCode: req.query.stateCode || 'WA',
       page: req.query.page || '0',
       size: req.query.size || '50',
       sort: req.query.sort || 'date,asc',
     });
+
+    if (metro) {
+      params.set('latlong', metro.latlong);
+      params.set('radius', metro.radius);
+      params.set('unit', 'miles');
+    } else {
+      params.set('city', cityName);
+      params.set('stateCode', req.query.stateCode || 'WA');
+    }
 
     if (req.query.startDateTime) params.set('startDateTime', req.query.startDateTime);
     if (req.query.endDateTime) params.set('endDateTime', req.query.endDateTime);
