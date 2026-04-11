@@ -365,6 +365,7 @@ struct DiscoverView: View {
                             HStack(spacing: 8) {
                                 // Show selected neighborhood pill if one is chosen
                                 if let selected = selectedNeighborhood {
+                                    let selectedColor = CityConfig.groupColor(for: selected)
                                     Button {
                                         withAnimation(.easeInOut(duration: 0.25)) { selectedNeighborhood = nil }
                                     } label: {
@@ -378,10 +379,10 @@ struct DiscoverView: View {
                                         .padding(.vertical, 6)
                                         .background(
                                             Capsule().fill(LinearGradient(
-                                                colors: [Color.orange.opacity(0.35), Color.orange.opacity(0.15)],
+                                                colors: [selectedColor.opacity(0.35), selectedColor.opacity(0.15)],
                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
                                         )
-                                        .foregroundStyle(.orange)
+                                        .foregroundStyle(selectedColor)
                                     }
                                     .transition(.move(edge: .leading).combined(with: .opacity))
                                     .id("selectedNeighborhood")
@@ -406,12 +407,12 @@ struct DiscoverView: View {
                                             Capsule().fill(
                                                 expandedNeighborhoodGroup == group.label
                                                     ? AnyShapeStyle(LinearGradient(
-                                                        colors: [Color.orange.opacity(0.25), Color.orange.opacity(0.10)],
+                                                        colors: [group.color.opacity(0.25), group.color.opacity(0.10)],
                                                         startPoint: .topLeading, endPoint: .bottomTrailing))
                                                     : AnyShapeStyle(Color(.systemGray6))
                                             )
                                         )
-                                        .foregroundStyle(expandedNeighborhoodGroup == group.label ? .orange : .secondary)
+                                        .foregroundStyle(expandedNeighborhoodGroup == group.label ? group.color : .secondary)
                                     }
                                 }
 
@@ -431,22 +432,25 @@ struct DiscoverView: View {
 
                         // Expanded neighborhood list
                         if let expanded = expandedNeighborhoodGroup,
-                           let group = groupedNeighborhoods.first(where: { $0.label == expanded }) {
+                           let group = groupedNeighborhoods.first(where: { $0.label == expanded }),
+                           let cfgGroup = CityConfig.neighborhoodGroups.first(where: { $0.label == expanded }) {
                             HStack(alignment: .top, spacing: 8) {
                                 let midpoint = (group.hoods.count + 1) / 2
                                 VStack(spacing: 8) {
                                     ForEach(group.hoods.prefix(midpoint), id: \.self) { hood in
-                                        neighborhoodGridButton(hood)
+                                        neighborhoodGridButton(hood, color: cfgGroup.color)
                                     }
                                 }
                                 VStack(spacing: 8) {
                                     ForEach(group.hoods.suffix(from: midpoint), id: \.self) { hood in
-                                        neighborhoodGridButton(hood)
+                                        neighborhoodGridButton(hood, color: cfgGroup.color)
                                     }
                                 }
                             }
                             .padding(.top, 6)
                             .padding(.horizontal)
+                            .padding(.bottom, 4)
+                            .background(Color(.systemBackground))
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
@@ -600,7 +604,7 @@ struct DiscoverView: View {
         }
     }
 
-    private func neighborhoodGridButton(_ hood: String) -> some View {
+    private func neighborhoodGridButton(_ hood: String, color: Color = .orange) -> some View {
         Button {
             withAnimation(.easeInOut(duration: 0.25)) {
                 selectedNeighborhood = hood
@@ -615,7 +619,7 @@ struct DiscoverView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color(.systemGray6))
                 )
-                .foregroundStyle(.orange)
+                .foregroundStyle(color)
         }
     }
 

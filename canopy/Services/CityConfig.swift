@@ -38,13 +38,14 @@ enum CityConfig {
     struct NeighborhoodGroup {
         let label: String
         let members: Set<String>
+        let color: Color
     }
 
     static var neighborhoodGroups: [NeighborhoodGroup] {
         switch citySlug {
         case "seattle":
             return [
-                NeighborhoodGroup(label: "North Seattle", members: [
+                NeighborhoodGroup(label: "North Seattle", color: .blue, members: [
                     "Ballard", "Bitter Lake", "Broadview", "Bryant", "Crown Hill",
                     "Fremont", "Green Lake", "Greenwood", "Lake City",
                     "Laurelhurst", "North Beach - Blue Ridge", "Northgate",
@@ -52,22 +53,22 @@ enum CityConfig {
                     "Shoreline", "University District", "View Ridge",
                     "Wallingford", "Wedgwood", "Windermere",
                 ]),
-                NeighborhoodGroup(label: "Central Seattle", members: [
+                NeighborhoodGroup(label: "Central Seattle", color: .purple, members: [
                     "Capitol Hill", "Cascade", "Central Area", "Central District",
                     "Chinatown-International District", "Downtown", "Downtown / Citywide",
                     "Interbay", "Lower Queen Anne", "Magnolia", "Pioneer Square",
                     "Queen Anne",
                 ]),
-                NeighborhoodGroup(label: "South Seattle", members: [
+                NeighborhoodGroup(label: "South Seattle", color: .green, members: [
                     "Beacon Hill", "Delridge", "Georgetown", "Harbor Island",
                     "Industrial District", "Mount Baker", "Rainier Valley",
                     "Seward Park", "South Park", "West Seattle",
                 ]),
-                NeighborhoodGroup(label: "Eastside", members: [
+                NeighborhoodGroup(label: "Eastside", color: .teal, members: [
                     "Bellevue", "Bothell", "Issaquah", "Kenmore", "Kirkland",
                     "Mercer Island", "Newcastle", "Redmond", "Sammamish", "Woodinville",
                 ]),
-                NeighborhoodGroup(label: "South King", members: [
+                NeighborhoodGroup(label: "South King", color: .indigo, members: [
                     "Auburn", "Burien", "Des Moines", "Federal Way", "Kent",
                     "Renton", "SeaTac", "Tukwila",
                 ]),
@@ -84,5 +85,14 @@ enum CityConfig {
             }
         }
         return nil
+    }
+
+    static func groupColor(for neighborhood: String) -> Color {
+        for group in neighborhoodGroups {
+            if group.members.contains(neighborhood) {
+                return group.color
+            }
+        }
+        return .orange
     }
 }
