@@ -17,6 +17,7 @@ struct DiscoverView: View {
     @State private var lastFetchedCount: Int?
     @FocusState private var searchFieldFocused: Bool
     @State private var filterPillsCollapsed: Bool = true
+    @State private var expandedNeighborhoodGroup: String?
     @AppStorage("eventSortOrder") private var eventSortOrder = 0
     @ObservedObject private var locationManager = LocationManager.shared
     @State private var scrollMetrics = ScrollMetrics(offset: 0, contentHeight: 0)
@@ -354,7 +355,7 @@ struct DiscoverView: View {
                         .padding(.horizontal)
                     }
 
-                    // Neighborhood filter — inline with category pills
+                    // Neighborhood filter
                     if neighborhoods.count > 1 {
                         ThreeLeavesDivider()
                             .padding(.horizontal)
@@ -362,44 +363,85 @@ struct DiscoverView: View {
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                Menu {
+                                // Show selected neighborhood pill if one is chosen
+                                if let selected = selectedNeighborhood {
                                     Button {
-                                        withAnimation { selectedNeighborhood = nil }
+                                        withAnimation(.easeInOut(duration: 0.25)) { selectedNeighborhood = nil }
                                     } label: {
-                                        Label("All Areas", systemImage: selectedNeighborhood == nil ? "checkmark" : "mappin.and.ellipse")
-                                    }
-
-                                    ForEach(groupedNeighborhoods, id: \.label) { group in
-                                        Section(group.label) {
-                                            ForEach(group.hoods, id: \.self) { hood in
-                                                Button {
-                                                    withAnimation { selectedNeighborhood = hood }
-                                                } label: {
-                                                    Label(hood, systemImage: selectedNeighborhood == hood ? "checkmark" : "mappin")
-                                                }
-                                            }
+                                        HStack(spacing: 4) {
+                                            Text(selected)
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.caption)
                                         }
-                                    }
-                                } label: {
-                                    Label(selectedNeighborhood ?? "All Areas", systemImage: "mappin.and.ellipse")
                                         .font(.subheadline)
                                         .padding(.horizontal, 14)
                                         .padding(.vertical, 6)
                                         .background(
-                                            Capsule()
-                                                .fill(
-                                                    selectedNeighborhood != nil
-                                                        ? AnyShapeStyle(LinearGradient(
-                                                            colors: [Color.orange.opacity(0.35), Color.orange.opacity(0.15)],
-                                                            startPoint: .topLeading,
-                                                            endPoint: .bottomTrailing))
-                                                        : AnyShapeStyle(Color(.systemGray6))
-                                                )
+                                            Capsule().fill(LinearGradient(
+                                                colors: [Color.orange.opacity(0.35), Color.orange.opacity(0.15)],
+                                                startPoint: .topLeading, endPoint: .bottomTrailing))
                                         )
-                                        .foregroundStyle(selectedNeighborhood != nil ? .orange : .secondary)
+                                        .foregroundStyle(.orange)
+                                    }
+                                    .transition(.move(edge: .leading).combined(with: .opacity))
+                                }
+
+                                // Region group pills
+                                ForEach(groupedNeighborhoods, id: \.label) { group in
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.25)) {
+                                            expandedNeighborhoodGroup = expandedNeighborhoodGroup == group.label ? nil : group.label
+                                        }
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Text(group.label)
+                                            Image(systemName: expandedNeighborhoodGroup == group.label ? "chevron.up" : "chevron.down")
+                                                .font(.caption2)
+                                        }
+                                        .font(.subheadline)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            Capsule().fill(
+                                                expandedNeighborhoodGroup == group.label
+                                                    ? AnyShapeStyle(LinearGradient(
+                                                        colors: [Color.orange.opacity(0.25), Color.orange.opacity(0.10)],
+                                                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                    : AnyShapeStyle(Color(.systemGray6))
+                                            )
+                                        )
+                                        .foregroundStyle(expandedNeighborhoodGroup == group.label ? .orange : .secondary)
+                                    }
                                 }
                             }
                             .padding(.horizontal)
+                        }
+
+                        // Expanded neighborhood list
+                        if let expanded = expandedNeighborhoodGroup,
+                           let group = groupedNeighborhoods.first(where: { $0.label == expanded }) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                                ForEach(group.hoods, id: \.self) { hood in
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.25)) {
+                                            selectedNeighborhood = hood
+                                            expandedNeighborhoodGroup = nil
+                                        }
+                                    } label: {
+                                        Text(hood)
+                                            .font(.subheadline)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 8)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .fill(Color(.systemGray6))
+                                            )
+                                            .foregroundStyle(.orange)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
 
