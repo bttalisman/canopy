@@ -74,6 +74,121 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
+// One-time: seed tacoma schedule data
+app.post('/api/seed-tacoma-schedule', async (req, res) => {
+  try {
+    // Get tacoma events
+    const { rows: events } = await pool.query("SELECT id, slug, start_date FROM events WHERE city = 'tacoma'");
+    const bySlug = {};
+    for (const e of events) bySlug[e.slug] = e;
+
+    let stagesCreated = 0, itemsCreated = 0;
+
+    // MOSAIC
+    const mosaic = bySlug['mosaic-tacoma-2026'];
+    if (mosaic) {
+      const { rows: [s1] } = await pool.query("INSERT INTO stages (event_id, name) VALUES ($1, 'Main Stage') ON CONFLICT DO NOTHING RETURNING id", [mosaic.id]);
+      const { rows: [s2] } = await pool.query("INSERT INTO stages (event_id, name) VALUES ($1, 'Cultural Stage') ON CONFLICT DO NOTHING RETURNING id", [mosaic.id]);
+      stagesCreated += 2;
+      const ms = s1?.id, cs = s2?.id;
+      if (ms && cs) {
+        const items = [
+          [ms, 'Opening Ceremony & Parade of Cultures', '2026-07-25T12:00:00-07:00', '2026-07-25T12:45:00-07:00', 'General'],
+          [ms, 'Polynesian Dance Ensemble', '2026-07-25T13:00:00-07:00', '2026-07-25T13:45:00-07:00', 'Performance'],
+          [ms, 'Mariachi Sol de Tacoma', '2026-07-25T14:00:00-07:00', '2026-07-25T14:45:00-07:00', 'Music'],
+          [ms, 'West African Drum Circle', '2026-07-25T15:00:00-07:00', '2026-07-25T15:45:00-07:00', 'Music'],
+          [ms, 'K-Pop Dance Showcase', '2026-07-25T16:00:00-07:00', '2026-07-25T16:45:00-07:00', 'Performance'],
+          [ms, 'Closing Performance: Tacoma Community Choir', '2026-07-25T17:00:00-07:00', '2026-07-25T18:00:00-07:00', 'Music'],
+          [cs, 'Japanese Taiko Drumming', '2026-07-25T12:30:00-07:00', '2026-07-25T13:15:00-07:00', 'Music'],
+          [cs, 'Indian Classical Dance', '2026-07-25T13:30:00-07:00', '2026-07-25T14:15:00-07:00', 'Performance'],
+          [cs, 'Chinese Lion Dance', '2026-07-25T14:30:00-07:00', '2026-07-25T15:15:00-07:00', 'Performance'],
+          [cs, 'Ethiopian Coffee Ceremony Demo', '2026-07-25T15:30:00-07:00', '2026-07-25T16:15:00-07:00', 'Workshop'],
+          [cs, 'Filipino Folk Dance', '2026-07-26T12:00:00-07:00', '2026-07-26T12:45:00-07:00', 'Performance'],
+          [cs, 'Capoeira Demonstration', '2026-07-26T13:00:00-07:00', '2026-07-26T13:45:00-07:00', 'Performance'],
+        ];
+        for (const [sid, title, st, et, cat] of items) {
+          await pool.query("INSERT INTO schedule_items (event_id, stage_id, title, start_time, end_time, category) VALUES ($1,$2,$3,$4,$5,$6)", [mosaic.id, sid, title, st, et, cat]);
+          itemsCreated++;
+        }
+      }
+    }
+
+    // Glass Fest
+    const glass = bySlug['glass-fest-nw-2026'];
+    if (glass) {
+      const { rows: [s1] } = await pool.query("INSERT INTO stages (event_id, name) VALUES ($1, 'Hot Shop') ON CONFLICT DO NOTHING RETURNING id", [glass.id]);
+      const { rows: [s2] } = await pool.query("INSERT INTO stages (event_id, name) VALUES ($1, 'Museum Plaza') ON CONFLICT DO NOTHING RETURNING id", [glass.id]);
+      stagesCreated += 2;
+      const hs = s1?.id, mp = s2?.id;
+      if (hs && mp) {
+        const items = [
+          [hs, 'Live Glassblowing: Vessels', '2026-08-08T10:00:00-07:00', '2026-08-08T11:00:00-07:00', 'Demo'],
+          [hs, 'Live Glassblowing: Sculptures', '2026-08-08T11:30:00-07:00', '2026-08-08T12:30:00-07:00', 'Demo'],
+          [hs, 'Neon Bending Workshop', '2026-08-08T13:00:00-07:00', '2026-08-08T14:00:00-07:00', 'Workshop'],
+          [hs, 'Guest Artist Demo: Flamework Jewelry', '2026-08-08T14:30:00-07:00', '2026-08-08T15:30:00-07:00', 'Demo'],
+          [mp, 'Kids Glass Fusing Activity', '2026-08-08T10:00:00-07:00', '2026-08-08T16:00:00-07:00', 'Workshop'],
+          [mp, 'Live Music: Pacific Sound Collective', '2026-08-08T12:00:00-07:00', '2026-08-08T13:30:00-07:00', 'Music'],
+          [mp, 'Artist Panel: Glass Art in the PNW', '2026-08-08T14:00:00-07:00', '2026-08-08T15:00:00-07:00', 'Talk'],
+        ];
+        for (const [sid, title, st, et, cat] of items) {
+          await pool.query("INSERT INTO schedule_items (event_id, stage_id, title, start_time, end_time, category) VALUES ($1,$2,$3,$4,$5,$6)", [glass.id, sid, title, st, et, cat]);
+          itemsCreated++;
+        }
+      }
+    }
+
+    // Taste of Tacoma
+    const taste = bySlug['taste-of-tacoma-2026'];
+    if (taste) {
+      const { rows: [s1] } = await pool.query("INSERT INTO stages (event_id, name) VALUES ($1, 'Main Stage') ON CONFLICT DO NOTHING RETURNING id", [taste.id]);
+      const { rows: [s2] } = await pool.query("INSERT INTO stages (event_id, name) VALUES ($1, 'Craft Beer Garden') ON CONFLICT DO NOTHING RETURNING id", [taste.id]);
+      stagesCreated += 2;
+      const ms = s1?.id, bg = s2?.id;
+      if (ms && bg) {
+        const items = [
+          [ms, 'Tacoma School of Rock', '2026-06-26T12:00:00-07:00', '2026-06-26T13:00:00-07:00', 'Music'],
+          [ms, 'The Beatniks', '2026-06-26T14:00:00-07:00', '2026-06-26T15:30:00-07:00', 'Music'],
+          [ms, 'Star Anna', '2026-06-26T16:00:00-07:00', '2026-06-26T17:30:00-07:00', 'Music'],
+          [ms, 'La Fonda', '2026-06-27T13:00:00-07:00', '2026-06-27T14:30:00-07:00', 'Music'],
+          [ms, 'Brothers From Another', '2026-06-27T15:00:00-07:00', '2026-06-27T16:30:00-07:00', 'Music'],
+          [ms, 'Headliner TBA', '2026-06-27T17:30:00-07:00', '2026-06-27T19:30:00-07:00', 'Music'],
+          [bg, 'Craft Beer Tasting: Local Breweries', '2026-06-26T12:00:00-07:00', '2026-06-26T20:00:00-07:00', 'Food & Drink'],
+          [bg, 'Cider & Mead Showcase', '2026-06-27T12:00:00-07:00', '2026-06-27T20:00:00-07:00', 'Food & Drink'],
+          [bg, 'Chef Cook-Off Competition', '2026-06-28T13:00:00-07:00', '2026-06-28T15:00:00-07:00', 'Food & Drink'],
+        ];
+        for (const [sid, title, st, et, cat] of items) {
+          await pool.query("INSERT INTO schedule_items (event_id, stage_id, title, start_time, end_time, category) VALUES ($1,$2,$3,$4,$5,$6)", [taste.id, sid, title, st, et, cat]);
+          itemsCreated++;
+        }
+      }
+    }
+
+    // Tacoma Freedom Fair
+    const freedom = bySlug['tacoma-freedom-fair-2026'];
+    if (freedom) {
+      const { rows: [s1] } = await pool.query("INSERT INTO stages (event_id, name) VALUES ($1, 'Waterfront Stage') ON CONFLICT DO NOTHING RETURNING id", [freedom.id]);
+      stagesCreated++;
+      if (s1?.id) {
+        const items = [
+          [s1.id, 'Community Band', '2026-07-04T12:00:00-07:00', '2026-07-04T13:00:00-07:00', 'Music'],
+          [s1.id, 'Pacific Islanders Dance Troupe', '2026-07-04T13:30:00-07:00', '2026-07-04T14:15:00-07:00', 'Performance'],
+          [s1.id, 'Hot Dog Eating Contest', '2026-07-04T15:00:00-07:00', '2026-07-04T15:45:00-07:00', 'Competition'],
+          [s1.id, 'Tacoma Symphony Orchestra Pops', '2026-07-04T18:00:00-07:00', '2026-07-04T20:00:00-07:00', 'Music'],
+          [s1.id, 'Fireworks over Commencement Bay', '2026-07-04T22:00:00-07:00', '2026-07-04T22:30:00-07:00', 'General'],
+        ];
+        for (const [sid, title, st, et, cat] of items) {
+          await pool.query("INSERT INTO schedule_items (event_id, stage_id, title, start_time, end_time, category) VALUES ($1,$2,$3,$4,$5,$6)", [freedom.id, sid, title, st, et, cat]);
+          itemsCreated++;
+        }
+      }
+    }
+
+    res.json({ stagesCreated, itemsCreated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // One-time: seed tacoma events
 app.post('/api/seed-tacoma', async (req, res) => {
   const events = [
