@@ -230,7 +230,12 @@
   <div id="eventListView">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2>Events</h2>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="cityFilter" onchange="loadEvents()" style="padding:6px 12px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:13px;">
+          <option value="">All Cities</option>
+          <option value="seattle">Seattle</option>
+          <option value="tacoma">Tacoma</option>
+        </select>
         <button class="btn-secondary" onclick="showAnalytics()" style="font-size:13px">📈 Analytics</button>
         <button class="btn-secondary" onclick="showSeattleImport()" style="font-size:13px">📊 Import from Seattle Data</button>
         <button class="btn-primary" onclick="showCreateEvent()">+ New Event</button>
@@ -888,7 +893,10 @@ async function loadEvents() {
   hideAll();
   document.getElementById('eventListView').style.display = 'block';
   try {
-    const res = await fetch(`${API}/api/events`);
+    const cityFilter = document.getElementById('cityFilter')?.value || '';
+    const cityParam = cityFilter ? `?city=${cityFilter}` : '';
+    const headers = await adminHeaders();
+    const res = await fetch(`${API}/api/admin/events${cityParam}`, { headers });
     const events = await res.json();
     renderEventList(events);
   } catch (e) {

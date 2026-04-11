@@ -31,17 +31,23 @@ const lookupPinEvent = 'SELECT event_id FROM map_pins WHERE id = $1';
 router.get('/events', async (req, res) => {
   try {
     const auth = getAuth(req);
+    const cityFilter = req.query.city || null;
     if (isSuperadmin(req)) {
-      const { rows } = await pool.query('SELECT * FROM events ORDER BY start_date DESC');
+      const query = cityFilter
+        ? 'SELECT * FROM events WHERE city = $1 ORDER BY start_date DESC'
+        : 'SELECT * FROM events ORDER BY start_date DESC';
+      const params = cityFilter ? [cityFilter] : [];
+      const { rows } = await pool.query(query, params);
       return res.json(rows);
     }
     if (!auth?.orgId) {
       return res.status(403).json({ error: 'No organization selected' });
     }
-    const { rows } = await pool.query(
-      'SELECT * FROM events WHERE owner_org_id = $1 ORDER BY start_date DESC',
-      [auth.orgId]
-    );
+    const query = cityFilter
+      ? 'SELECT * FROM events WHERE owner_org_id = $1 AND city = $2 ORDER BY start_date DESC'
+      : 'SELECT * FROM events WHERE owner_org_id = $1 ORDER BY start_date DESC';
+    const params = cityFilter ? [auth.orgId, cityFilter] : [auth.orgId];
+    const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
     console.error('admin GET /events error:', err);
