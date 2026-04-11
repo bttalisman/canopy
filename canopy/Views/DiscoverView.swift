@@ -213,7 +213,7 @@ struct DiscoverView: View {
 
                 // Filter pills — hidden while searching or manually collapsed
                 if !pillsHidden {
-                VStack(spacing: 4) {
+                VStack(spacing: 2) {
                     LeafyDivider()
                         .padding(.horizontal)
                         .padding(.vertical, 0)
@@ -486,8 +486,8 @@ struct DiscoverView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal)
-                .padding(.top, 6)
-                .padding(.bottom, 6)
+                .padding(.top, 2)
+                .padding(.bottom, 4)
                 .accessibilityLabel(filterPillsCollapsed ? "Show filters" : "Hide filters")
 
                 if showMapView {
