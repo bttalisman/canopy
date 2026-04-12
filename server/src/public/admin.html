@@ -835,8 +835,11 @@ window.addEventListener('load', async () => {
         window.Clerk.mountUserButton(userEl);
         userEl.dataset.mounted = '1';
       }
-      // Kick off the initial event list load now that we have a session
-      if (typeof loadEvents === 'function') loadEvents();
+      // Kick off the initial event list load only once
+      if (typeof loadEvents === 'function' && !window._initialLoadDone) {
+        window._initialLoadDone = true;
+        loadEvents();
+      }
     } else {
       const signInEl = document.getElementById('clerk-sign-in');
       if (signInEl && !signInEl.dataset.mounted) {
