@@ -865,7 +865,19 @@ window.addEventListener('load', async () => {
       const orgEl = document.getElementById('clerk-org-switcher');
       const userEl = document.getElementById('clerk-user-button');
       if (orgEl && !orgEl.dataset.mounted) {
-        window.Clerk.mountOrganizationSwitcher(orgEl, { hidePersonal: false });
+        window.Clerk.mountOrganizationSwitcher(orgEl, {
+          hidePersonal: false,
+          appearance: {
+            elements: {
+              organizationSwitcherTrigger: {
+                color: '#e2e8f0',
+              },
+              organizationSwitcherTriggerIcon: {
+                color: '#e2e8f0',
+              },
+            },
+          },
+        });
         orgEl.dataset.mounted = '1';
       }
       if (userEl && !userEl.dataset.mounted) {
