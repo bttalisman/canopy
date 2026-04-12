@@ -384,9 +384,10 @@
   <!-- Add Schedule Item Form (modal-like) -->
   <div id="scheduleFormView" style="display:none">
     <span class="back-link" onclick="backToEventDetail()">← Back to Event</span>
-    <h2>Add Schedule Item</h2>
+    <h2 id="scheduleFormTitle">Add Schedule Item</h2>
     <div class="card">
       <form id="scheduleForm" onsubmit="saveScheduleItem(event)">
+        <input type="hidden" id="siEditId" value="" />
         <div class="form-group">
           <label>Title</label>
           <input type="text" id="siTitle" required />
@@ -416,7 +417,7 @@
           </div>
         </div>
         <div class="actions">
-          <button type="submit" class="btn-primary">Add Session</button>
+          <button type="submit" class="btn-primary" id="siSubmitBtn">Add Session</button>
           <button type="button" class="btn-secondary" onclick="backToEventDetail()">Cancel</button>
         </div>
       </form>
@@ -960,6 +961,7 @@ function renderEventDetail(e) {
             <div class="detail">${si.description || ''} ${si.stageId ? '· ' + (e.stages?.find(s => s.id === si.stageId)?.name || '') : ''}</div>
           </div>
           <div style="display:flex;gap:6px">
+            <button class="btn-secondary" onclick="showEditScheduleItem('${si.id}')" style="font-size:11px;padding:3px 8px">Edit</button>
             <button class="btn-secondary" onclick="sendItemPush('${si.id}', '${si.title.replace(/'/g, "\\'")}')" style="font-size:11px;padding:3px 8px">📣</button>
             <button class="btn-danger" onclick="deleteScheduleItem('${si.id}')">Delete</button>
           </div>
@@ -1149,6 +1151,9 @@ function showAddScheduleItem() {
   hideAll();
   document.getElementById('scheduleFormView').style.display = 'block';
   document.getElementById('scheduleForm').reset();
+  document.getElementById('siEditId').value = '';
+  document.getElementById('scheduleFormTitle').textContent = 'Add Schedule Item';
+  document.getElementById('siSubmitBtn').textContent = 'Add Session';
 
   // Populate stage dropdown
   const select = document.getElementById('siStage');
@@ -1158,8 +1163,25 @@ function showAddScheduleItem() {
   });
 }
 
+function showEditScheduleItem(id) {
+  const si = (currentEventData?.scheduleItems || []).find(s => s.id === id);
+  if (!si) return;
+
+  showAddScheduleItem(); // sets up form and stage dropdown
+  document.getElementById('siEditId').value = id;
+  document.getElementById('scheduleFormTitle').textContent = 'Edit Schedule Item';
+  document.getElementById('siSubmitBtn').textContent = 'Save Changes';
+  document.getElementById('siTitle').value = si.title || '';
+  document.getElementById('siDescription').value = si.description || '';
+  document.getElementById('siStartTime').value = toLocalDatetime(si.startTime);
+  document.getElementById('siEndTime').value = toLocalDatetime(si.endTime);
+  document.getElementById('siStage').value = si.stageId || '';
+  document.getElementById('siCategory').value = si.category || 'General';
+}
+
 async function saveScheduleItem(evt) {
   evt.preventDefault();
+  const editId = document.getElementById('siEditId').value;
   const body = {
     title: document.getElementById('siTitle').value,
     description: document.getElementById('siDescription').value,
@@ -1169,11 +1191,18 @@ async function saveScheduleItem(evt) {
     category: document.getElementById('siCategory').value,
   };
   try {
-    const res = await fetch(`${API}/api/admin/events/${currentEventId}/schedule`, {
-      method: 'POST', headers: (await adminHeaders()), body: JSON.stringify(body)
-    });
+    let res;
+    if (editId) {
+      res = await fetch(`${API}/api/admin/schedule/${editId}`, {
+        method: 'PUT', headers: (await adminHeaders()), body: JSON.stringify(body)
+      });
+    } else {
+      res = await fetch(`${API}/api/admin/events/${currentEventId}/schedule`, {
+        method: 'POST', headers: (await adminHeaders()), body: JSON.stringify(body)
+      });
+    }
     if (!res.ok) throw new Error(await res.text());
-    toast('Session added!');
+    toast(editId ? 'Session updated!' : 'Session added!');
     backToEventDetail();
   } catch (e) {
     toast('Error: ' + e.message);
