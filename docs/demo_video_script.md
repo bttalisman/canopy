@@ -7,7 +7,7 @@
 "Canopy puts every festival, concert, and fair in one app — filterable by date, category, neighborhood, and accessibility."
 
 **[0:14–0:22] Tap an event → Event detail screen**
-"Each event has full details — schedule, venue map, ticketing, weather — and a city permit ID badge so residents know it's legitimate."
+"Each event has full details — schedule, venue map, ticketing, weather"
 
 **[0:22–0:30] Tap the map tab → Map view with pins**
 "This interactive map shows what's happening across the city, complete with street closure overlays pulled from city data."
@@ -28,4 +28,4 @@
 "This is one app that residents keep installed year-round. No more downloading, learning, and deleting a new app for every weekend."
 
 **[1:14–1:22] End card / Canopy logo**
-"This is Canopy. One app for every Seattle event. Learn more at canopyseattle.com."
+"This is Canopy. One app for every Seattle event. Learn more at canopyevents.app."
