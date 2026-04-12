@@ -1049,10 +1049,7 @@ function renderEventDetail(e) {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <h3>Schedule (${e.scheduleItems?.length || 0})</h3>
-        <div style="display:flex;gap:6px">
-          <button class="btn-secondary" onclick="showPasteSchedule()" style="font-size:13px;padding:5px 14px">📋 Paste Schedule</button>
-          <button class="btn-primary" onclick="showAddScheduleItem()" style="font-size:13px;padding:5px 14px">+ Session</button>
-        </div>
+        <button class="btn-primary" onclick="showAddScheduleItem()" style="font-size:13px;padding:5px 14px">+ Session</button>
       </div>
       ${scheduleHtml}
     </div>
