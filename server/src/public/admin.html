@@ -1408,7 +1408,7 @@ async function loadPushHistory(page = 0) {
     ` : '';
 
     document.getElementById('pushHistory').innerHTML = notifications.map(n => `
-      <div class="schedule-item">
+      <div class="schedule-item" style="display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div class="title">${n.title}</div>
           <div class="detail">${n.body}</div>
@@ -1416,6 +1416,7 @@ async function loadPushHistory(page = 0) {
             Sent: ${n.sent_count} · Failed: ${n.failed_count} · ${new Date(n.created_at).toLocaleString()}
           </div>
         </div>
+        <button class="btn-secondary" style="font-size:12px;white-space:nowrap;margin-left:12px;" onclick="resendPush('${n.title.replace(/'/g, "\\'")}', '${n.body.replace(/'/g, "\\'")}')">Resend</button>
       </div>
     `).join('') + paginationHtml;
   } catch (e) {
@@ -1430,6 +1431,13 @@ function onPushCategoryChange() {
     titleInput.value = category;
   }
   titleInput.focus();
+}
+
+function resendPush(title, body) {
+  if (!confirm(`Resend notification?\n\n"${title}"\n${body}`)) return;
+  document.getElementById('pushTitle').value = title;
+  document.getElementById('pushBody').value = body;
+  document.getElementById('pushForm').dispatchEvent(new Event('submit'));
 }
 
 async function sendPush(evt) {
