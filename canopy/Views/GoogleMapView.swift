@@ -6,6 +6,7 @@ struct GoogleMapView: UIViewRepresentable {
     let longitude: Double
     let span: Double
     var markers: [(lat: Double, lng: Double, title: String, color: UIColor)]
+    @AppStorage("appearanceMode") private var appearanceMode = 0
 
     func makeUIView(context: Context) -> GMSMapView {
         let camera = GMSCameraPosition(
@@ -17,10 +18,10 @@ struct GoogleMapView: UIViewRepresentable {
         options.camera = camera
         let mapView = GMSMapView(options: options)
 
-        mapView.overrideUserInterfaceStyle = .dark
-        if let styleURL = Bundle.main.url(forResource: "google-map-style", withExtension: "json"),
-           let style = try? GMSMapStyle(contentsOfFileURL: styleURL) {
-            mapView.mapStyle = style
+        switch appearanceMode {
+        case 1: mapView.overrideUserInterfaceStyle = .light
+        case 2: mapView.overrideUserInterfaceStyle = .dark
+        default: mapView.overrideUserInterfaceStyle = .unspecified
         }
 
         mapView.settings.compassButton = true
@@ -32,6 +33,11 @@ struct GoogleMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ mapView: GMSMapView, context: Context) {
+        switch appearanceMode {
+        case 1: mapView.overrideUserInterfaceStyle = .light
+        case 2: mapView.overrideUserInterfaceStyle = .dark
+        default: mapView.overrideUserInterfaceStyle = .unspecified
+        }
         mapView.clear()
         addMarkers(to: mapView)
     }

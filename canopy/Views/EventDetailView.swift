@@ -746,12 +746,15 @@ struct EventMapView: View {
     }
 
     private var googleMapMarkers: [(lat: Double, lng: Double, title: String, color: UIColor)] {
-        if filteredPins.isEmpty, let lat = event.latitude, let lng = event.longitude {
-            return [(lat: lat, lng: lng, title: event.location, color: UIColor(Color.leafDeep))]
+        if filteredPins.isEmpty {
+            if let lat = event.latitude, let lng = event.longitude {
+                return [(lat: lat, lng: lng, title: event.location, color: UIColor(Color.leafDeep))]
+            }
+            return []
         }
-        return filteredPins.compactMap { pin in
-            guard let lat = pin.latitude, let lng = pin.longitude else { return nil }
-            return (lat: lat, lng: lng, title: pin.label, color: UIColor(pinColor(pin.pinType)))
+        return filteredPins.map { pin in
+            let coord = pinCoordinate(pin)
+            return (lat: coord.latitude, lng: coord.longitude, title: pin.label, color: UIColor(pinColor(pin.pinType)))
         }
     }
 

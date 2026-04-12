@@ -7,6 +7,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         if let key = Bundle.main.infoDictionary?["GOOGLE_MAPS_API_KEY"] as? String, !key.isEmpty {
             GMSServices.provideAPIKey(key)
+            print("[Canopy] Google Maps SDK initialized")
+        } else {
+            print("[Canopy] Warning: GOOGLE_MAPS_API_KEY not found")
         }
         application.registerForRemoteNotifications()
         return true
