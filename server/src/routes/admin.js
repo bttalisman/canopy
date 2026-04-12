@@ -34,8 +34,8 @@ router.get('/events', async (req, res) => {
     const cityFilter = req.query.city || null;
     if (isSuperadmin(req)) {
       const query = cityFilter
-        ? 'SELECT * FROM events WHERE city = $1 ORDER BY start_date DESC'
-        : 'SELECT * FROM events ORDER BY start_date DESC';
+        ? 'SELECT * FROM events WHERE city = $1 ORDER BY name ASC'
+        : 'SELECT * FROM events ORDER BY name ASC';
       const params = cityFilter ? [cityFilter] : [];
       const { rows } = await pool.query(query, params);
       return res.json(rows);
@@ -44,8 +44,8 @@ router.get('/events', async (req, res) => {
       return res.status(403).json({ error: 'No organization selected' });
     }
     const query = cityFilter
-      ? 'SELECT * FROM events WHERE owner_org_id = $1 AND city = $2 ORDER BY start_date DESC'
-      : 'SELECT * FROM events WHERE owner_org_id = $1 ORDER BY start_date DESC';
+      ? 'SELECT * FROM events WHERE owner_org_id = $1 AND city = $2 ORDER BY name ASC'
+      : 'SELECT * FROM events WHERE owner_org_id = $1 ORDER BY name ASC';
     const params = cityFilter ? [auth.orgId, cityFilter] : [auth.orgId];
     const { rows } = await pool.query(query, params);
     res.json(rows);
