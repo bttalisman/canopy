@@ -584,7 +584,10 @@
     </div>
 
     <div class="card" style="margin-top:16px">
-      <h3 style="margin-bottom:12px">Notification History</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">Notification History</h3>
+        <button class="btn-danger" onclick="clearPushHistory()" style="font-size:11px;padding:3px 10px">Clear History</button>
+      </div>
       <div id="pushHistory"><div class="empty">No notifications sent yet</div></div>
     </div>
   </div>
@@ -1493,6 +1496,20 @@ async function loadPushHistory(page = 0) {
     `).join('') + paginationHtml;
   } catch (e) {
     document.getElementById('pushHistory').innerHTML = '<div class="empty">Error loading history</div>';
+  }
+}
+
+async function clearPushHistory() {
+  if (!confirm('Delete all notification history for this event?')) return;
+  try {
+    const res = await fetch(`${API}/api/admin/events/${currentEventId}/push`, {
+      method: 'DELETE', headers: (await adminHeaders())
+    });
+    if (!res.ok) throw new Error(await res.text());
+    toast('History cleared');
+    loadPushHistory(0);
+  } catch (e) {
+    toast('Error: ' + e.message);
   }
 }
 

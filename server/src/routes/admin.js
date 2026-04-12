@@ -478,6 +478,19 @@ router.get('/events/:eventId/push', requireEventAccess, async (req, res) => {
   }
 });
 
+// DELETE /api/admin/events/:eventId/push — clear notification history
+router.delete('/events/:eventId/push', requireEventAccess, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      'DELETE FROM push_notifications WHERE event_id = $1',
+      [req.params.eventId]
+    );
+    res.json({ deleted: rowCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // =====================
 // LLM SCHEDULE PARSING
 // =====================
