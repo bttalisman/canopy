@@ -480,11 +480,14 @@ struct EventMapView: View {
     @State private var streetClosures: [StreetClosure] = []
     @State private var useGoogleMaps = false
 
+    var availablePinTypes: [MapPinType] {
+        let types = Set(event.mapPins.map(\.pinType))
+        return MapPinType.allCases.filter { types.contains($0) }
+    }
+
     var filteredPins: [MapPin] {
-        if let type = selectedPinType {
-            return event.mapPins.filter { $0.pinType == type }
-        }
-        return event.mapPins
+        guard let type = selectedPinType else { return [] }
+        return event.mapPins.filter { $0.pinType == type }
     }
 
     // Convert a pin's relative x/y (0–1) to lat/long around the venue center.
@@ -513,20 +516,9 @@ struct EventMapView: View {
             // Filter pills
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    Button {
-                        selectedPinType = nil
-                    } label: {
-                        Label("All", systemImage: "map")
-                            .font(.caption)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(selectedPinType == nil ? Color.green : Color(.systemGray5))
-                            .foregroundStyle(selectedPinType == nil ? .white : .primary)
-                            .clipShape(Capsule())
-                    }
-                    ForEach(MapPinType.allCases) { type in
+                    ForEach(availablePinTypes, id: \.self) { type in
                         Button {
-                            selectedPinType = type
+                            selectedPinType = selectedPinType == type ? nil : type
                         } label: {
                             Label(type.rawValue, systemImage: type.systemImage)
                                 .font(.caption)
