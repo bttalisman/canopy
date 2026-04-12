@@ -386,16 +386,16 @@ router.post('/events/:eventId/push', requireEventAccess, async (req, res) => {
     // Look up event name to prefix the notification
     const eventResult = await pool.query('SELECT name FROM events WHERE id = $1', [req.params.eventId]);
     const eventName = eventResult.rows[0]?.name || 'Event';
-    const fullTitle = `${eventName}: ${title}`;
+    const pushTitle = `${eventName}: ${title}`;
 
-    const result = await sendPushToEvent(req.params.eventId, fullTitle, body);
+    const result = await sendPushToEvent(req.params.eventId, pushTitle, body);
 
-    // Record in push_notifications history
+    // Record original title in history (without event name prefix)
     const { rows } = await pool.query(
       `INSERT INTO push_notifications (event_id, title, body, sent_count, failed_count)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [req.params.eventId, fullTitle, body, result.sent, result.failed]
+      [req.params.eventId, title, body, result.sent, result.failed]
     );
 
     res.json({ notification: rows[0], ...result });

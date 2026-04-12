@@ -1523,10 +1523,10 @@ function onPushCategoryChange() {
 }
 
 function resendPush(title, body) {
-  if (!confirm(`Resend notification?\n\n"${title}"\n${body}`)) return;
+  if (!confirm(`Resend this notification?\n\n${title}\n${body}`)) return;
   document.getElementById('pushTitle').value = title;
   document.getElementById('pushBody').value = body;
-  document.getElementById('pushForm').dispatchEvent(new Event('submit'));
+  sendPush(new Event('submit'));
 }
 
 async function sendPush(evt) {
