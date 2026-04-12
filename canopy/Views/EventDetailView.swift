@@ -560,27 +560,19 @@ struct EventMapView: View {
                     }
                     .padding(.horizontal)
                 }
-                // Map provider toggle
-                Picker("Map", selection: $useGoogleMaps) {
-                    Text("Apple Maps").tag(false)
-                    Text("Google Maps").tag(true)
-                }
-                .pickerStyle(.segmented)
+                // Google Maps
+                GoogleMapView(
+                    latitude: event.latitude ?? 47.6062,
+                    longitude: event.longitude ?? -122.3321,
+                    span: VenueMapData.findVenue(for: event.location)?.mapSpan ?? 0.004,
+                    markers: googleMapMarkers
+                )
+                .frame(height: 380)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal)
-                .padding(.bottom, 4)
 
-                if useGoogleMaps {
-                    // Google Maps
-                    GoogleMapView(
-                        latitude: event.latitude ?? 47.6062,
-                        longitude: event.longitude ?? -122.3321,
-                        span: VenueMapData.findVenue(for: event.location)?.mapSpan ?? 0.004,
-                        markers: googleMapMarkers
-                    )
-                    .frame(height: 380)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .padding(.horizontal)
-                } else {
+                // Apple Maps (kept for future use, currently hidden)
+                if false {
                 // MapKit map with annotation pins
                 Map(position: $mapPosition) {
                     UserAnnotation()
