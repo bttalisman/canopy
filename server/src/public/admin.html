@@ -263,16 +263,15 @@
 <div class="container" id="signedInContainer" style="display:none">
   <!-- Event List View -->
   <div id="eventListView">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h2>Events</h2>
-      <div style="display:flex;gap:8px;align-items:center;">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:16px">
+      <h2 style="margin-bottom:0">Events</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <select id="cityFilter" onchange="loadEvents()" style="padding:6px 12px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:13px;">
           <option value="">All Cities</option>
           <option value="seattle">Seattle</option>
           <option value="tacoma">Tacoma</option>
         </select>
         <button class="btn-secondary" onclick="showAnalytics()" style="font-size:13px">📈 Analytics</button>
-        <button class="btn-secondary" onclick="showSeattleImport()" style="font-size:13px">📊 Import from Seattle Data</button>
         <button class="btn-primary" onclick="showCreateEvent()">+ New Event</button>
       </div>
     </div>
