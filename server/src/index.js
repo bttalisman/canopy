@@ -217,6 +217,14 @@ app.post('/api/seed-tacoma', async (req, res) => {
   res.json({ created: count });
 });
 
+// One-time: mark events as accessible
+app.post('/api/fix-accessible', async (req, res) => {
+  const { rowCount } = await pool.query(
+    "UPDATE events SET is_accessible = true WHERE city = 'seattle' AND (is_accessible IS NULL OR is_accessible = false)"
+  );
+  res.json({ updated: rowCount });
+});
+
 // Health check
 app.get('/health', async (req, res) => {
   try {
