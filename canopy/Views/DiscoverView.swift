@@ -214,10 +214,12 @@ struct DiscoverView: View {
                     }
                 }
                 .padding(10)
-                .background(Color(.systemGray5).opacity(0.8))
+                .background(Color(.systemGray5))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal)
                 .padding(.vertical, 10)
+                .background(Color(.systemBackground))
+                .zIndex(1)
 
                 // Filter pills — hidden while searching or manually collapsed
                 if !pillsHidden {
