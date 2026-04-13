@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import GoogleMaps
 
 struct VenueCluster: Identifiable {
     let id = UUID()
@@ -27,10 +28,6 @@ struct DiscoverMapView: View {
         return now...sixMonths
     }()
 
-    @State private var position = MapCameraPosition.region(MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 47.6200, longitude: -122.3350),
-        span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
-    ))
 
     private var dateMin: Date {
         let source = allEvents.isEmpty ? events : allEvents
@@ -105,43 +102,16 @@ struct DiscoverMapView: View {
             }
 
             ZStack(alignment: .bottom) {
-            Map(position: $position) {
-                ForEach(venueClusters) { cluster in
-                    Annotation(cluster.location, coordinate: cluster.coordinate) {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                selectedCluster = cluster
-                                selectedEvent = nil
-                            }
-                        } label: {
-                            ZStack {
-                                Image(systemName: cluster.primaryCategory.systemImage)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 32, height: 32)
-                                    .background(
-                                        selectedCluster?.id == cluster.id
-                                            ? Color.green
-                                            : categoryColor(cluster.primaryCategory)
-                                    )
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
-
-                                if cluster.events.count > 1 {
-                                    Text("\(cluster.events.count)")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .padding(3)
-                                        .background(Color.red)
-                                        .clipShape(Circle())
-                                        .offset(x: 12, y: -12)
-                                }
-                            }
-                        }
-                        .accessibilityLabel("\(cluster.events.count) event\(cluster.events.count == 1 ? "" : "s") at \(cluster.location)")
+            DiscoverGoogleMap(
+                clusters: venueClusters,
+                selectedClusterId: selectedCluster?.id,
+                onClusterTap: { cluster in
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedCluster = cluster
+                        selectedEvent = nil
                     }
                 }
-            }
+            )
 
             // Selected venue card overlay
             if let cluster = selectedCluster {
@@ -240,22 +210,6 @@ struct DiscoverMapView: View {
     }
 
     private func panToFilteredEvents() {
-        let eventsWithCoords = dateFilteredEvents.filter { $0.latitude != nil && $0.longitude != nil }
-        guard !eventsWithCoords.isEmpty else { return }
-
-        let lats = eventsWithCoords.compactMap(\.latitude)
-        let lngs = eventsWithCoords.compactMap(\.longitude)
-        let centerLat = (lats.min()! + lats.max()!) / 2
-        let centerLng = (lngs.min()! + lngs.max()!) / 2
-        let spanLat = max((lats.max()! - lats.min()!) * 1.5, 0.01)
-        let spanLng = max((lngs.max()! - lngs.min()!) * 1.5, 0.01)
-
-        withAnimation(.easeInOut(duration: 0.4)) {
-            position = .region(MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLng),
-                span: MKCoordinateSpan(latitudeDelta: spanLat, longitudeDelta: spanLng)
-            ))
-        }
         selectedCluster = nil
     }
 
@@ -278,6 +232,152 @@ struct DiscoverMapView: View {
         case .conference: return .blue
         case .expo: return .cyan
         case .community: return .pink
+        }
+    }
+}
+
+// MARK: - Google Maps wrapper for Discover view
+
+struct DiscoverGoogleMap: UIViewRepresentable {
+    let clusters: [VenueCluster]
+    var selectedClusterId: UUID?
+    var onClusterTap: (VenueCluster) -> Void
+    @AppStorage("appearanceMode") private var appearanceMode = 0
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onClusterTap: onClusterTap)
+    }
+
+    func makeUIView(context: Context) -> GMSMapView {
+        let camera = GMSCameraPosition(latitude: 47.6200, longitude: -122.3350, zoom: 11)
+        let options = GMSMapViewOptions()
+        options.camera = camera
+        let mapView = GMSMapView(options: options)
+        mapView.delegate = context.coordinator
+        applyAppearance(mapView)
+        mapView.settings.compassButton = true
+        mapView.settings.myLocationButton = true
+        mapView.isMyLocationEnabled = true
+        return mapView
+    }
+
+    func updateUIView(_ mapView: GMSMapView, context: Context) {
+        applyAppearance(mapView)
+        context.coordinator.clusters = clusters
+        context.coordinator.onClusterTap = onClusterTap
+        mapView.clear()
+
+        for cluster in clusters {
+            let marker = GMSMarker()
+            marker.position = cluster.coordinate
+            marker.userData = cluster.id.uuidString
+
+            let isSelected = selectedClusterId == cluster.id
+            let color = isSelected ? UIColor.systemGreen : uiCategoryColor(cluster.primaryCategory)
+
+            let pinView = makeClusterPin(
+                icon: cluster.primaryCategory.systemImage,
+                count: cluster.events.count,
+                color: color
+            )
+            marker.iconView = pinView
+            marker.groundAnchor = CGPoint(x: 0.5, y: 1.0)
+            marker.map = mapView
+        }
+    }
+
+    private func applyAppearance(_ mapView: GMSMapView) {
+        switch appearanceMode {
+        case 1: mapView.overrideUserInterfaceStyle = .light
+        case 2: mapView.overrideUserInterfaceStyle = .dark
+        default: mapView.overrideUserInterfaceStyle = .unspecified
+        }
+    }
+
+    private func makeClusterPin(icon: String, count: Int, color: UIColor) -> UIView {
+        let size: CGFloat = 36
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: size + 16, height: size + 8))
+
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+        let pinImage = renderer.image { ctx in
+            let rect = CGRect(x: 2, y: 2, width: size - 4, height: size - 4)
+            let path = UIBezierPath()
+            let cx = rect.midX
+            let radius = rect.width / 2.4
+            let tipY = rect.maxY
+
+            path.addArc(withCenter: CGPoint(x: cx, y: rect.minY + radius), radius: radius, startAngle: .pi * 0.85, endAngle: .pi * 0.15, clockwise: true)
+            path.addLine(to: CGPoint(x: cx, y: tipY))
+            path.close()
+
+            ctx.cgContext.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: UIColor.black.withAlphaComponent(0.5).cgColor)
+            color.setFill()
+            path.fill()
+
+            ctx.cgContext.setShadow(offset: .zero, blur: 0)
+            UIColor.white.setStroke()
+            path.lineWidth = 1.5
+            path.stroke()
+
+            let iconConfig = UIImage.SymbolConfiguration(pointSize: size * 0.3, weight: .bold)
+            if let iconImg = UIImage(systemName: icon, withConfiguration: iconConfig) {
+                let tinted = iconImg.withTintColor(.white, renderingMode: .alwaysOriginal)
+                let iconSize = tinted.size
+                tinted.draw(in: CGRect(
+                    x: cx - iconSize.width / 2,
+                    y: rect.minY + radius - iconSize.height / 2,
+                    width: iconSize.width,
+                    height: iconSize.height
+                ))
+            }
+        }
+
+        let imageView = UIImageView(image: pinImage)
+        imageView.frame = CGRect(x: 8, y: 0, width: size, height: size)
+        container.addSubview(imageView)
+
+        if count > 1 {
+            let badge = UILabel()
+            badge.text = "\(count)"
+            badge.font = .systemFont(ofSize: 9, weight: .bold)
+            badge.textColor = .white
+            badge.textAlignment = .center
+            badge.backgroundColor = .systemRed
+            badge.layer.cornerRadius = 8
+            badge.layer.masksToBounds = true
+            badge.frame = CGRect(x: size - 2, y: 0, width: 16, height: 16)
+            container.addSubview(badge)
+        }
+
+        return container
+    }
+
+    private func uiCategoryColor(_ category: EventCategory) -> UIColor {
+        switch category {
+        case .festival: return .systemGreen
+        case .concert: return .systemPurple
+        case .fair: return .systemOrange
+        case .conference: return .systemBlue
+        case .expo: return .systemCyan
+        case .community: return .systemPink
+        }
+    }
+
+    class Coordinator: NSObject, GMSMapViewDelegate {
+        var clusters: [VenueCluster] = []
+        var onClusterTap: (VenueCluster) -> Void
+
+        init(onClusterTap: @escaping (VenueCluster) -> Void) {
+            self.onClusterTap = onClusterTap
+        }
+
+        func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
+            guard let idString = marker.userData as? String,
+                  let cluster = clusters.first(where: { $0.id.uuidString == idString }) else {
+                return false
+            }
+            onClusterTap(cluster)
+            return true
         }
     }
 }
