@@ -698,6 +698,7 @@ struct EventMapView: View {
                 }
 
                 // Pin legend
+                if !filteredPins.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Locations")
                         .font(.headline)
@@ -741,6 +742,7 @@ struct EventMapView: View {
                     }
                 }
                 .padding(.bottom)
+                }
             }
         }
     }
