@@ -191,6 +191,8 @@ struct DiscoverView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
+                .background(Color(.systemBackground))
+                .zIndex(2)
 
                 // Search bar
                 HStack {
