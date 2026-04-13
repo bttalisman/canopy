@@ -6,6 +6,7 @@ struct GoogleMapView: UIViewRepresentable {
     let longitude: Double
     let span: Double
     var markers: [(lat: Double, lng: Double, title: String, color: UIColor)]
+    var isSatellite: Bool = false
     @AppStorage("appearanceMode") private var appearanceMode = 0
 
     func makeUIView(context: Context) -> GMSMapView {
@@ -24,6 +25,7 @@ struct GoogleMapView: UIViewRepresentable {
         default: mapView.overrideUserInterfaceStyle = .unspecified
         }
 
+        mapView.mapType = isSatellite ? .hybrid : .normal
         mapView.settings.compassButton = true
         mapView.settings.myLocationButton = true
         mapView.isMyLocationEnabled = true
@@ -38,6 +40,7 @@ struct GoogleMapView: UIViewRepresentable {
         case 2: mapView.overrideUserInterfaceStyle = .dark
         default: mapView.overrideUserInterfaceStyle = .unspecified
         }
+        mapView.mapType = isSatellite ? .hybrid : .normal
         mapView.clear()
         addMarkers(to: mapView)
     }

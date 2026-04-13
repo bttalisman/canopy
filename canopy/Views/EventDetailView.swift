@@ -479,6 +479,7 @@ struct EventMapView: View {
     @State private var mapPosition: MapCameraPosition = .automatic
     @State private var streetClosures: [StreetClosure] = []
     @State private var useGoogleMaps = false
+    @State private var showSatellite = false
 
     var availablePinTypes: [MapPinType] {
         let types = Set(event.mapPins.map(\.pinType))
@@ -561,14 +562,29 @@ struct EventMapView: View {
                     .padding(.horizontal)
                 }
                 // Google Maps
-                GoogleMapView(
-                    latitude: event.latitude ?? 47.6062,
-                    longitude: event.longitude ?? -122.3321,
-                    span: VenueMapData.findVenue(for: event.location)?.mapSpan ?? 0.004,
-                    markers: googleMapMarkers
-                )
-                .frame(height: 380)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                ZStack(alignment: .topTrailing) {
+                    GoogleMapView(
+                        latitude: event.latitude ?? 47.6062,
+                        longitude: event.longitude ?? -122.3321,
+                        span: VenueMapData.findVenue(for: event.location)?.mapSpan ?? 0.004,
+                        markers: googleMapMarkers,
+                        isSatellite: showSatellite
+                    )
+                    .frame(height: 380)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    Button {
+                        showSatellite.toggle()
+                    } label: {
+                        Image(systemName: showSatellite ? "map.fill" : "globe.americas.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .padding(8)
+                }
                 .padding(.horizontal)
 
                 // Apple Maps (kept for future use, currently hidden)
