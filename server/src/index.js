@@ -225,6 +225,35 @@ app.post('/api/fix-accessible', async (req, res) => {
   res.json({ updated: rowCount });
 });
 
+// One-time: mark free events
+app.post('/api/fix-free', async (req, res) => {
+  const freeSlugs = [
+    'uw-cherry-blossom-2026', 'first-thursday-art-walk-2026',
+    'u-district-street-fair-2026', 'northwest-folklife-2026',
+    'juneteenth-seattle-2026', 'fremont-solstice-2026',
+    'capitol-hill-pride-2026', 'seattle-pride-2026',
+    'fourth-july-2026', 'kexp-mural-2026',
+    'ballard-seafood-2026', 'west-seattle-summerfest-2026',
+    'bite-of-seattle-2026', 'dragon-fest-2026',
+    'seafair-2026', 'dia-de-los-muertos-2026',
+    'winterfest-2026',
+  ];
+  const ticketedSlugs = [
+    'uw-baseball-2026', 'siff-2026',
+    'scms-summer-2026', 'timber-outdoor-2026',
+    'chbp-2026', 'eccc-2026', 'bumbershoot-2026',
+    'pax-west-2026', 'uw-football-2026',
+    'fremont-oktoberfest-2026', 'earshot-jazz-2026',
+  ];
+  const r1 = await pool.query(
+    "UPDATE events SET is_free = true WHERE slug = ANY($1)", [freeSlugs]
+  );
+  const r2 = await pool.query(
+    "UPDATE events SET is_free = false WHERE slug = ANY($1)", [ticketedSlugs]
+  );
+  res.json({ markedFree: r1.rowCount, markedTicketed: r2.rowCount });
+});
+
 // Health check
 app.get('/health', async (req, res) => {
   try {
