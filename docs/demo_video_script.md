@@ -1,31 +1,190 @@
-# Canopy — City Demo Script (90s)
 
-**[0:00–0:06] Open app → Discover feed**
+
+
+
+
+
+
+
+load -> scroll
+
+8
+
+scroll -> filter
+
+17
+
+map view
+
+
+choose Festival -> Central Seattle -> Lower Queen Anne
+
+22
+
+Bumbershoot Details
+
+
+Schedule -> Comedy Showcase
+
+30
+
+
+click Info -> Scroll
+
+40
+
+click Bus route
+
+
+Send Notification
+
+49
+
+Highlight Notification
+
+
+Load Admin Portal
+
+60
+
+Load Bumbershoot ADMIN
+
+Click ANALYTICS
+
+1'12
+
+
+scroll ANALYTICS
+
+
+1'20
+
+
+Back to Canopy
+
+Reset filters -> Close Filters
+
+Scroll Scroll
+
+
+1'30
+
+
+
+
+
+
+
+
+
+
+
+
+
+______________________________
+
+
+
+
+
+
+
 "Seattle hosts hundreds of events every year. Right now, there's no single place for residents to find them all."
 
-**[0:06–0:14] Scroll through events, tap filter pills**
+
+load -> scroll
+
+
+8
+
+
 "Canopy puts every festival, concert, and fair in one app — filterable by date, category, neighborhood, and accessibility."
 
-**[0:14–0:22] Tap an event → Event detail screen**
+
+scroll -> filter
+
+17
+
+map view
+
+
+"This interactive map shows what's happening across the city
+
+
+choose Festival -> Central Seattle -> Lower Queen Anne
+
+
+22
+
+Bumbershoot Details
+
+
 "Each event has full details — schedule, venue map, ticketing, weather"
 
-**[0:22–0:30] Tap the map tab → Map view with pins**
-"This interactive map shows what's happening across the city, complete with street closure overlays pulled from city data."
 
-**[0:30–0:38] Tap transit / "Getting There" section**
-"Real-time transit directions are built in — bus arrivals, light rail, bike routes — so attendees can leave the car at home."
+Schedule -> Comedy Showcase
 
-**[0:38–0:46] Show push notification or schedule save**
+
+30
+
+
+
+
+"Real-time transit directions are built in — bus arrivals and light rail — so attendees can leave the car at home."
+
+
+click Info -> Scroll
+
+40
+
+click Bus route
+
+
 "When plans change — a cancellation, a weather delay — organizers can push updates directly to the people who saved that event."
 
-**[0:46–0:54] Show admin portal — event list, schedule editor**
+
+Send Notification
+
+49
+
+Highlight Notification
+
+
 "Event organizers get a secure management portal where they control stages, schedules, and push notifications — all visible to attendees in real time."
 
-**[0:54–1:04] Show analytics dashboard — charts, neighborhood breakdown**
-"And the city gets analytics — event engagement by neighborhood, category breakdowns, and registration trends so you can see what's resonating and where."
 
-**[1:04–1:14] Quick montage: scroll a few more events**
+Load Admin Portal
+
+60
+
+
+Load Bumbershoot ADMIN
+
+
+"And the city gets analytics — event engagement by neighborhood, category breakdown, and registration trends so you can see what's resonating and where."
+
+
+Click ANALYTICS
+
+1'12
+
+
+Back to Canopy
+
+
 "This is one app that residents keep installed year-round. No more downloading, learning, and deleting a new app for every weekend."
 
-**[1:14–1:22] End card / Canopy logo**
-"This is Canopy. One app for every Seattle event. Learn more at canopyevents.app."
+
+Reset filters -> Close Filters
+
+
+1'20
+
+Scroll Scroll
+
+"This is Canopy. One app for all Seattle events. Learn more at canopyevents.app"
+
+
+1'30
+
+

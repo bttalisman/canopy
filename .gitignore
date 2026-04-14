@@ -13,5 +13,8 @@ Config.xcconfig
 server/node_modules/
 server/.env
 
+# Demo video raw files
+assets/demoVid/
+
 # macOS
 .DS_Store

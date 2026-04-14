@@ -478,7 +478,7 @@ struct DiscoverView: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal)
                 .padding(.top, 2)
-                .padding(.bottom, 10)
+                .padding(.bottom, 8)
                 .accessibilityLabel(filterPillsCollapsed ? "Show filters" : "Hide filters")
 
                 if showMapView {

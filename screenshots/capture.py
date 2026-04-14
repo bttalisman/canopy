@@ -9,44 +9,51 @@ OUT_W, OUT_H = 1290, 2796
 
 SCREENS = [
     {
-        "file": "IPhone15ProMax/discover.png",
+        "file": "IPhone15ProMax_2/discover.png",
         "title": "Discover Seattle",
-        "subtitle": "Every festival, concert, and fair\nin one app",
+        "subtitle": "Every festival, concert, \nand fair in one app",
         "bg": [(15, 32, 39), (32, 58, 67)],
     },
     {
-        "file": "IPhone15ProMax/mapView.png",
+        "file": "IPhone15ProMax_2/mapView.png",
         "title": "Explore the Map",
         "subtitle": "See what's happening\nacross the city",
         "bg": [(26, 26, 46), (15, 52, 96)],
     },
+    
     {
-        "file": "IPhone15ProMax/eventDetail.png",
-        "title": "Full Event Details",
+        "file": "IPhone15ProMax_2/mapViewEastSide.png",
+        "title": "Explore the \nEast Side",
+        "subtitle": "See what's happening\nacross the region",
+        "bg": [(26, 26, 46), (15, 52, 96)],
+    },    
+    {
+        "file": "IPhone15ProMax_2/eventDetails.png",
+        "title": "Event Details",
         "subtitle": "Schedules, maps, tickets,\nand more",
         "bg": [(13, 27, 42), (26, 42, 26)],
     },
     {
-        "file": "IPhone15ProMax/transit.png",
-        "title": "Get There by Transit",
+        "file": "IPhone15ProMax_2/transit.png",
+        "title": "Arrive by Transit",
         "subtitle": "Real-time bus arrivals\nand route planning",
         "bg": [(26, 10, 46), (15, 32, 39)],
     },
     {
-        "file": "IPhone15ProMax/eventMap.png",
-        "title": "Interactive Venue Maps",
+        "file": "IPhone15ProMax_2/eventMap.png",
+        "title": "Explore \nthe Venue",
         "subtitle": "Find stages, food,\nrestrooms, and exits",
         "bg": [(45, 27, 0), (15, 32, 39)],
     },
     {
-        "file": "IPhone15ProMax/mySchedule.png",
-        "title": "Your Personal Schedule",
+        "file": "IPhone15ProMax_2/mySchedule.png",
+        "title": "Your Schedule",
         "subtitle": "Save sessions and\nnever miss a set",
         "bg": [(10, 26, 10), (20, 40, 30)],
     },
     {
-        "file": "IPhone15ProMax/artistProfile.png",
-        "title": "Meet the Artists",
+        "file": "IPhone15ProMax_2/artistProfile.png",
+        "title": "Meet \nthe Artists",
         "subtitle": "Bios, photos,\nand social links",
         "bg": [(15, 32, 39), (26, 42, 26)],
     },
@@ -82,12 +89,12 @@ def make_screenshot(screen, index):
 
     # Try to load a nice font, fall back to default
     try:
-        title_font = ImageFont.truetype("/System/Library/Fonts/SFProDisplay-Bold.otf", 120)
-        sub_font = ImageFont.truetype("/System/Library/Fonts/SFProDisplay-Regular.otf", 80)
+        title_font = ImageFont.truetype("/System/Library/Fonts/SFProDisplay-Bold.otf", 105)
+        sub_font = ImageFont.truetype("/System/Library/Fonts/SFProDisplay-Regular.otf", 90)
     except (IOError, OSError):
         try:
-            title_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 120)
-            sub_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 80)
+            title_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 150)
+            sub_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 100)
         except (IOError, OSError):
             title_font = ImageFont.load_default()
             sub_font = ImageFont.load_default()
@@ -115,38 +122,44 @@ def make_screenshot(screen, index):
 
     # Position phone centered at bottom
     phone_x = (OUT_W - border_w) // 2
-    phone_y = OUT_H - border_h - 40
+    phone_y = OUT_H - border_h + 200
 
     # Title above phone
     title = screen["title"]
-    words = title.split(" ")
-    accent_word = words[-1]
-    normal_part = " ".join(words[:-1]) + " " if len(words) > 1 else ""
+    title_lines = title.split("\n")
 
     # Center text in the space above the phone
     text_area_h = phone_y
-    y_title = text_area_h // 2 - 80
+    title_line_h = 160  # line spacing for title
+    total_title_h = len(title_lines) * title_line_h
+    y_title = text_area_h // 2 - total_title_h // 2 - 40
 
-    normal_bbox = draw.textbbox((0, 0), normal_part, font=title_font) if normal_part.strip() else (0, 0, 0, 0)
-    accent_bbox = draw.textbbox((0, 0), accent_word, font=title_font)
-    total_w = (normal_bbox[2] - normal_bbox[0]) + (accent_bbox[2] - accent_bbox[0])
-    x_start = (OUT_W - total_w) // 2
+    for tline in title_lines:
+        words = tline.split(" ")
+        accent_word = words[-1]
+        normal_part = " ".join(words[:-1]) + " " if len(words) > 1 else ""
 
-    if normal_part.strip():
-        draw.text((x_start, y_title), normal_part, fill=WHITE, font=title_font)
-        x_accent = x_start + (normal_bbox[2] - normal_bbox[0])
-    else:
-        x_accent = x_start
-    draw.text((x_accent, y_title), accent_word, fill=GREEN, font=title_font)
+        normal_bbox = draw.textbbox((0, 0), normal_part, font=title_font) if normal_part.strip() else (0, 0, 0, 0)
+        accent_bbox = draw.textbbox((0, 0), accent_word, font=title_font)
+        total_w = (normal_bbox[2] - normal_bbox[0]) + (accent_bbox[2] - accent_bbox[0])
+        x_start = (OUT_W - total_w) // 2
+
+        if normal_part.strip():
+            draw.text((x_start, y_title), normal_part, fill=WHITE, font=title_font)
+            x_accent = x_start + (normal_bbox[2] - normal_bbox[0])
+        else:
+            x_accent = x_start
+        draw.text((x_accent, y_title), accent_word, fill=GREEN, font=title_font)
+        y_title += title_line_h
 
     # Subtitle
     sub_lines = screen["subtitle"].split("\n")
-    y_sub = y_title + 145
+    y_sub = y_title + 15
     for line in sub_lines:
         sub_bbox = draw.textbbox((0, 0), line, font=sub_font)
         sub_w = sub_bbox[2] - sub_bbox[0]
         draw.text(((OUT_W - sub_w) // 2, y_sub), line, fill=GRAY, font=sub_font)
-        y_sub += 95
+        y_sub += 115
 
     # Paste onto canvas
     canvas = canvas.convert("RGBA")
