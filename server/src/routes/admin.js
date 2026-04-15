@@ -1267,7 +1267,9 @@ router.get('/analytics/export', requireSuperadmin, async (req, res) => {
   const { type = 'events', format = 'csv' } = req.query;
   try {
     let result;
-    if (type === 'sessions') {
+    if (type === 'venues') {
+      result = await pool.query(`SELECT * FROM venues ORDER BY name ASC`);
+    } else if (type === 'sessions') {
       result = await pool.query(`
         SELECT e.name as event_name, si.title, si.category, si.start_time, si.end_time,
                s.name as stage_name, COUNT(dsi.id)::int as save_count
