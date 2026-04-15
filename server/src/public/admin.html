@@ -408,7 +408,7 @@
             <input type="url" id="evTicketURL" />
           </div>
           <div class="form-group">
-            <label>Image URL</label>
+            <label>Event Image <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(landscape 16:9 recommended, auto-cropped on upload)</span></label>
             <div style="display:flex;gap:8px;">
               <input type="url" id="evImageURL" style="flex:1;" />
               <button type="button" class="btn-secondary" onclick="openUploadWidget('canopy/events', 'evImageURL')" style="font-size:12px;padding:4px 10px;white-space:nowrap;">📷 Upload</button>
@@ -2913,7 +2913,12 @@ async function openUploadWidget(folder, targetInputId) {
   }, (error, result) => {
     if (error) { toast('Upload error'); return; }
     if (result?.event === 'success') {
-      document.getElementById(targetInputId).value = result.info.secure_url;
+      let url = result.info.secure_url;
+      // Apply 16:9 crop for event images
+      if (folder === 'canopy/events') {
+        url = url.replace('/upload/', '/upload/c_fill,ar_16:9,w_1200,q_auto/');
+      }
+      document.getElementById(targetInputId).value = url;
       toast('Upload complete!');
     }
   });
