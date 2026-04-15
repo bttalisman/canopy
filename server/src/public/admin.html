@@ -2821,6 +2821,7 @@ async function importSeattleEvents() {
 }
 
 // ---- Init ----
+console.log('[Admin] Version: 2026-04-15-v2');
 // loadEvents() is called by the Clerk auth callback after sign-in
 
 // =====================
@@ -3030,6 +3031,7 @@ var editingVenueId = null;
 var allVenues = []; // cached list for venue dropdown in event form
 
 function showVenues() {
+  console.log('[Venues] showVenues called');
   hideAll();
   document.getElementById('venuesView').style.display = 'block';
   document.getElementById('venueFormSection').style.display = 'none';
@@ -3037,10 +3039,19 @@ function showVenues() {
 }
 
 async function loadVenues() {
+  console.log('[Venues] loadVenues called');
   const headers = await adminHeaders();
+  console.log('[Venues] headers:', JSON.stringify(headers));
   const res = await fetch(`${API}/api/admin/venues`, { headers });
-  if (!res.ok) { toast('Failed to load venues'); return; }
+  console.log('[Venues] response status:', res.status);
+  if (!res.ok) {
+    const text = await res.text();
+    console.error('[Venues] error response:', text);
+    toast('Failed to load venues');
+    return;
+  }
   const venues = await res.json();
+  console.log('[Venues] loaded', venues.length, 'venues');
   allVenues = venues;
 
   const listEl = document.getElementById('venueList');
@@ -3065,6 +3076,7 @@ async function loadVenues() {
 }
 
 function showVenueForm(venue) {
+  console.log('[Venues] showVenueForm called, venue:', venue ? venue.name : 'new');
   document.getElementById('venueFormSection').style.display = 'block';
   document.getElementById('venueFormTitle').textContent = venue ? 'Edit Venue' : 'New Venue';
   document.getElementById('venueEditId').value = venue ? venue.id : '';
