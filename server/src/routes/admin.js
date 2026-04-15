@@ -91,6 +91,137 @@ router.post('/events', async (req, res) => {
   }
 });
 
+// GET /api/admin/ticketmaster-browse — browse TM events for import (superadmin only)
+router.get('/ticketmaster-browse', requireSuperadmin, async (req, res) => {
+  try {
+    const apiKey = process.env.TICKETMASTER_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Ticketmaster API key not configured' });
+    }
+
+    const metros = {
+      'Seattle':  { latlong: '47.6062,-122.3321', radius: '30' },
+      'Tacoma':   { latlong: '47.2529,-122.4443', radius: '15' },
+    };
+    const cityName = req.query.city || 'Seattle';
+    const metro = metros[cityName];
+
+    const params = new URLSearchParams({
+      apikey: apiKey,
+      page: req.query.page || '0',
+      size: req.query.size || '50',
+      sort: 'date,asc',
+    });
+
+    if (metro) {
+      params.set('latlong', metro.latlong);
+      params.set('radius', metro.radius);
+      params.set('unit', 'miles');
+    } else {
+      params.set('city', cityName);
+      params.set('stateCode', 'WA');
+    }
+
+    if (req.query.keyword) params.set('keyword', req.query.keyword);
+
+    const response = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${params}`);
+    if (!response.ok) {
+      return res.status(response.status).json({ error: `Ticketmaster API error: ${response.status}` });
+    }
+
+    const data = await response.json();
+    const rawEvents = data._embedded?.events || [];
+
+    const simplified = rawEvents.map(ev => {
+      const venue = ev._embedded?.venues?.[0];
+      // Prefer 16:9 ratio image, fallback to largest
+      const images = ev.images || [];
+      const img16x9 = images.find(i => i.ratio === '16_9' && i.width >= 640);
+      const imageURL = img16x9?.url || images[0]?.url || null;
+      const priceRange = ev.priceRanges?.[0];
+      const classification = ev.classifications?.[0];
+
+      return {
+        tmId: ev.id,
+        name: ev.name,
+        startDate: ev.dates?.start?.dateTime || ev.dates?.start?.localDate || null,
+        endDate: ev.dates?.end?.dateTime || null,
+        location: venue?.name || '',
+        latitude: venue?.location?.latitude ? parseFloat(venue.location.latitude) : null,
+        longitude: venue?.location?.longitude ? parseFloat(venue.location.longitude) : null,
+        imageURL,
+        ticketingURL: ev.url || null,
+        category: classification?.segment?.name?.toLowerCase() || 'other',
+        priceMin: priceRange?.min || null,
+        priceMax: priceRange?.max || null,
+      };
+    });
+
+    res.json(simplified);
+  } catch (err) {
+    console.error('admin GET /ticketmaster-browse error:', err);
+    res.status(500).json({ error: 'Failed to fetch from Ticketmaster' });
+  }
+});
+
+// POST /api/admin/events/import-from-tm — import a TM event into the DB (superadmin only)
+router.post('/events/import-from-tm', requireSuperadmin, async (req, res) => {
+  try {
+    const { tmId, name, startDate, endDate, location, latitude, longitude,
+            imageURL, ticketingURL, category, city, priceMin, priceMax, description } = req.body;
+
+    if (!name || !startDate) {
+      return res.status(400).json({ error: 'name and startDate are required' });
+    }
+
+    // Generate slug: tm-{slugified name}-{date}
+    const datePart = startDate.slice(0, 10); // YYYY-MM-DD
+    const nameSlug = name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    let slug = `tm-${nameSlug}-${datePart}`;
+
+    // Check for duplicate slugs and append suffix if needed
+    const { rows: existing } = await pool.query(
+      "SELECT slug FROM events WHERE slug LIKE $1 || '%'", [slug]
+    );
+    if (existing.length > 0) {
+      const existingSlugs = new Set(existing.map(r => r.slug));
+      if (existingSlugs.has(slug)) {
+        let suffix = 2;
+        while (existingSlugs.has(`${slug}-${suffix}`)) suffix++;
+        slug = `${slug}-${suffix}`;
+      }
+    }
+
+    // Try to match a venue by location name
+    let venueId = null;
+    if (location) {
+      const { rows: venueRows } = await pool.query(
+        'SELECT id FROM venues WHERE LOWER(name) = LOWER($1) LIMIT 1', [location]
+      );
+      if (venueRows.length > 0) {
+        venueId = venueRows[0].id;
+      }
+    }
+
+    const { rows } = await pool.query(`
+      INSERT INTO events (name, slug, description, start_date, end_date, location,
+                          image_url, ticketing_url, latitude, longitude, category,
+                          city, venue_id, price_min, price_max, is_active, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, true, 'active')
+      RETURNING *
+    `, [name, slug, description || '', startDate, endDate || null, location || '',
+        imageURL || null, ticketingURL || null, latitude || null, longitude || null,
+        category || 'other', city || 'seattle', venueId, priceMin || null, priceMax || null]);
+
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('admin POST /events/import-from-tm error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/admin/events/:id/approve — superadmin only
 router.post('/events/:id/approve', requireSuperadmin, async (req, res) => {
   try {

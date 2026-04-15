@@ -286,6 +286,7 @@
         </select>
         <button class="btn-secondary" onclick="showAnalytics()" style="font-size:13px">📈 Analytics</button>
         <button class="btn-secondary" onclick="showVenues()" style="font-size:13px">📍 Venues</button>
+        <button class="btn-secondary" onclick="showTMBrowseModal()" style="font-size:13px">🎫 Browse Ticketmaster</button>
         <button class="btn-primary" onclick="showCreateEvent()">+ New Event</button>
       </div>
     </div>
@@ -2929,6 +2930,140 @@ async function openUploadWidget(folder, targetInputId) {
       toast('Upload complete!');
     }
   });
+}
+
+// ---- Ticketmaster Browse Modal ----
+
+let tmExistingEventNames = new Set();
+
+async function showTMBrowseModal() {
+  // Build the modal overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'tmBrowseModal';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;width:90%;max-width:800px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:20px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;font-size:18px;color:#f8fafc;">Browse Ticketmaster Events</h2>
+        <button class="btn-secondary" onclick="closeTMBrowseModal()" style="font-size:13px;">Close</button>
+      </div>
+      <div style="padding:16px;border-bottom:1px solid #334155;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <select id="tmCityFilter" style="padding:6px 12px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px;">
+          <option value="Seattle">Seattle</option>
+          <option value="Tacoma">Tacoma</option>
+        </select>
+        <input type="text" id="tmKeywordFilter" placeholder="Search keyword..." style="padding:6px 12px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px;width:200px;" />
+        <button class="btn-primary" onclick="fetchTMEvents()" style="font-size:13px;">Search</button>
+      </div>
+      <div id="tmEventList" style="flex:1;overflow-y:auto;padding:16px;">
+        <div class="empty">Select a city and click Search to browse Ticketmaster events.</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Pre-load existing event names for duplicate detection
+  try {
+    const headers = await adminHeaders();
+    const res = await fetch(`${API}/api/admin/events`, { headers });
+    const events = await res.json();
+    tmExistingEventNames = new Set(events.map(e => e.name.toLowerCase()));
+  } catch (e) {
+    tmExistingEventNames = new Set();
+  }
+}
+
+function closeTMBrowseModal() {
+  const modal = document.getElementById('tmBrowseModal');
+  if (modal) modal.remove();
+}
+
+async function fetchTMEvents() {
+  const listEl = document.getElementById('tmEventList');
+  listEl.innerHTML = '<div class="empty">Loading...</div>';
+
+  const city = document.getElementById('tmCityFilter').value;
+  const keyword = document.getElementById('tmKeywordFilter').value;
+
+  try {
+    const headers = await adminHeaders();
+    let url = `${API}/api/admin/ticketmaster-browse?city=${encodeURIComponent(city)}`;
+    if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
+
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    const events = await res.json();
+
+    if (events.length === 0) {
+      listEl.innerHTML = '<div class="empty">No events found.</div>';
+      return;
+    }
+
+    listEl.innerHTML = events.map(ev => {
+      const dateStr = ev.startDate ? new Date(ev.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      const priceStr = ev.priceMin ? `$${ev.priceMin}${ev.priceMax ? ' - $' + ev.priceMax : ''}` : 'N/A';
+      const alreadyImported = tmExistingEventNames.has(ev.name.toLowerCase());
+      const actionBtn = alreadyImported
+        ? '<span style="color:#94a3b8;font-size:12px;white-space:nowrap;">Already imported</span>'
+        : `<button class="btn-primary" style="font-size:12px;padding:4px 12px;white-space:nowrap;" onclick='importTMEvent(${JSON.stringify(ev).replace(/'/g, "&#39;")})'>Import</button>`;
+
+      return `
+        <div style="display:flex;gap:12px;align-items:center;padding:12px;background:#0f172a;border-radius:8px;margin-bottom:8px;border:1px solid #334155;">
+          ${ev.imageURL ? `<img src="${ev.imageURL}" style="width:80px;height:45px;object-fit:cover;border-radius:4px;flex-shrink:0;" />` : '<div style="width:80px;height:45px;background:#334155;border-radius:4px;flex-shrink:0;"></div>'}
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:14px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ev.name}</div>
+            <div style="font-size:12px;color:#94a3b8;">${ev.location} &middot; ${dateStr} &middot; ${priceStr}</div>
+          </div>
+          <div style="flex-shrink:0;">${actionBtn}</div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty">Error loading events: ${e.message}</div>`;
+  }
+}
+
+async function importTMEvent(ev) {
+  try {
+    const city = document.getElementById('tmCityFilter').value.toLowerCase();
+    const headers = await adminHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    const res = await fetch(`${API}/api/admin/events/import-from-tm`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        tmId: ev.tmId,
+        name: ev.name,
+        startDate: ev.startDate,
+        endDate: ev.endDate,
+        location: ev.location,
+        latitude: ev.latitude,
+        longitude: ev.longitude,
+        imageURL: ev.imageURL,
+        ticketingURL: ev.ticketingURL,
+        category: ev.category,
+        city,
+        priceMin: ev.priceMin,
+        priceMax: ev.priceMax,
+        description: '',
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Import failed');
+    }
+
+    tmExistingEventNames.add(ev.name.toLowerCase());
+    toast('Imported: ' + ev.name);
+    // Re-render the TM list to show "Already imported"
+    fetchTMEvents();
+    // Also refresh the main event list in the background
+    loadEvents();
+  } catch (e) {
+    toast('Import error: ' + e.message);
+  }
 }
 
 // ---- Init ----
