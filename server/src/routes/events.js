@@ -119,9 +119,9 @@ router.get('/venue-boundaries', async (req, res) => {
 
     // Query venues table for boundaries
     const { rows: venueRows } = await pool.query(
-      `SELECT id, name AS venue_name, boundary_coordinates AS coordinates, city
+      `SELECT id, name AS venue_name, boundary_coordinates AS coordinates, city, latitude, longitude
        FROM venues
-       WHERE city = $1 AND boundary_coordinates IS NOT NULL AND boundary_coordinates::text != '[]'
+       WHERE city = $1
        ORDER BY name ASC`,
       [city]
     );
@@ -142,8 +142,10 @@ router.get('/venue-boundaries', async (req, res) => {
     res.json(combined.map(r => ({
       id: r.id,
       venueName: r.venue_name,
-      coordinates: r.coordinates,
+      coordinates: r.coordinates || [],
       city: r.city,
+      latitude: r.latitude || null,
+      longitude: r.longitude || null,
     })));
   } catch (err) {
     console.error('Error fetching venue boundaries:', err);

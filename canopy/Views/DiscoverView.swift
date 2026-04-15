@@ -775,7 +775,9 @@ struct DiscoverView: View {
 
                 let tmEvents = response.embedded?.events ?? []
                 print("[Canopy] Ticketmaster returned \(tmEvents.count) events")
-                let count = await TicketmasterService.shared.importEvents(tmEvents, into: modelContext)
+                // Fetch admin venues for coordinate override
+                let adminVenues = (try? await CanopyAPIService.shared.fetchVenueBoundaries()) ?? []
+                let count = await TicketmasterService.shared.importEvents(tmEvents, into: modelContext, venues: adminVenues)
                 totalImported += count
                 print("[Canopy] Imported \(count) events from Ticketmaster")
             } catch is CancellationError {

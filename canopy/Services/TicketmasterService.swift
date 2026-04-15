@@ -53,7 +53,7 @@ actor TicketmasterService {
     // MARK: - Import into SwiftData
 
     @MainActor
-    func importEvents(_ tmEvents: [TMEvent], into context: ModelContext) -> Int {
+    func importEvents(_ tmEvents: [TMEvent], into context: ModelContext, venues: [APIVenueBoundary] = []) -> Int {
         var importedCount = 0
         var skippedDuplicate = 0
         var skippedCurated = 0
@@ -82,8 +82,20 @@ actor TicketmasterService {
 
             if isDuplicate {
                 skippedDuplicate += 1
-                // Backfill neighborhood from geo lookup if still set to city name
+                // Override coords from admin venue if available
                 if let event = existing.first,
+                   let matchedVenue = venues.first(where: {
+                       $0.venueName.lowercased() == event.location.lowercased()
+                   }),
+                   let vLat = matchedVenue.latitude, let vLng = matchedVenue.longitude {
+                    event.latitude = vLat
+                    event.longitude = vLng
+                    if let hood = NeighborhoodLookup.lookup(latitude: vLat, longitude: vLng) {
+                        event.neighborhood = hood
+                    }
+                }
+                // Backfill neighborhood from geo lookup if still set to city name
+                else if let event = existing.first,
                    (event.neighborhood == CityConfig.defaultLocation || event.neighborhood == CityConfig.greaterAreaName),
                    let lat = event.latitude, let lng = event.longitude,
                    let hood = NeighborhoodLookup.lookup(latitude: lat, longitude: lng) {
@@ -143,6 +155,20 @@ actor TicketmasterService {
                 if let lat = loc.latitudeDouble, let lng = loc.longitudeDouble,
                    let hood = NeighborhoodLookup.lookup(latitude: lat, longitude: lng) {
                     event.neighborhood = hood
+                }
+            }
+
+            // Override coordinates from admin-defined venue (exact name match)
+            if let matchedVenue = venues.first(where: {
+                $0.venueName.lowercased() == event.location.lowercased()
+            }) {
+                if let lat = matchedVenue.latitude, let lng = matchedVenue.longitude {
+                    print("[TM] Overriding coords for \(event.location) from admin venue: \(lat), \(lng)")
+                    event.latitude = lat
+                    event.longitude = lng
+                    if let hood = NeighborhoodLookup.lookup(latitude: lat, longitude: lng) {
+                        event.neighborhood = hood
+                    }
                 }
             }
 

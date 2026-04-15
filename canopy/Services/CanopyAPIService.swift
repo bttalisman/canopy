@@ -81,6 +81,8 @@ struct APIVenueBoundary: Codable, Sendable {
     let venueName: String
     let coordinates: [APICoordinate]
     let city: String
+    let latitude: Double?
+    let longitude: Double?
 }
 
 struct APICoordinate: Codable, Sendable {
