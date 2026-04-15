@@ -1547,6 +1547,35 @@ router.delete('/venues/:id', requireSuperadmin, async (req, res) => {
   }
 });
 
+// Geocode an address to lat/lng using Google Maps Geocoding API
+router.post('/venues/geocode', requireSuperadmin, async (req, res) => {
+  try {
+    const { address } = req.body;
+    if (!address) return res.status(400).json({ error: 'Address is required' });
+
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'Google Maps API key not configured' });
+
+    const encoded = encodeURIComponent(address);
+    const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${apiKey}`);
+    const data = await response.json();
+
+    if (data.status !== 'OK' || !data.results?.length) {
+      return res.status(404).json({ error: 'Address not found', status: data.status });
+    }
+
+    const result = data.results[0];
+    const { lat, lng } = result.geometry.location;
+    res.json({
+      latitude: lat,
+      longitude: lng,
+      formattedAddress: result.formatted_address,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Seed venues from hardcoded VenueMapData
 router.post('/venues/seed', requireSuperadmin, async (req, res) => {
   const seedVenues = [

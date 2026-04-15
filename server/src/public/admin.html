@@ -881,6 +881,7 @@
     </div>
     <div style="display:flex; gap:12px; margin-bottom:12px;">
       <input type="text" id="venueAddress" placeholder="Address" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
+      <button class="btn-secondary" onclick="geocodeVenueAddress()" style="font-size:12px; padding:4px 10px; white-space:nowrap;">📍 Lookup</button>
       <input type="text" id="venueWebsite" placeholder="Website URL" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
     </div>
     <div style="display:flex; gap:12px; margin-bottom:12px;">
@@ -3175,6 +3176,31 @@ function initVenueMap() {
   }
 
   renderVenuePolygon();
+}
+
+async function geocodeVenueAddress() {
+  const address = document.getElementById('venueAddress').value.trim();
+  if (!address) { toast('Enter an address first'); return; }
+
+  const headers = await adminHeaders();
+  headers['Content-Type'] = 'application/json';
+  const res = await fetch(`${API}/api/admin/venues/geocode`, {
+    method: 'POST', headers, body: JSON.stringify({ address })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    toast(err.error || 'Address not found');
+    return;
+  }
+  const result = await res.json();
+  document.getElementById('venueLat').value = result.latitude;
+  document.getElementById('venueLng').value = result.longitude;
+  toast(`Found: ${result.formattedAddress}`);
+
+  // Reinit map to show new pin location
+  if (venueMapInstance) {
+    setTimeout(() => initVenueMap(), 100);
+  }
 }
 
 function recenterVenueMap() {
