@@ -847,25 +847,31 @@
   </div>
   <div id="venueList"></div>
 
-  <!-- Create/Edit Venue Form -->
-  <div id="venueFormSection" style="display:none; margin-top:24px;">
-    <h3 id="venueFormTitle" style="margin-bottom:16px;">New Venue</h3>
+  </div>
+
+<!-- Venue Form Modal -->
+<div id="venueFormSection" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; overflow-y:auto;">
+  <div style="max-width:700px; margin:40px auto; background:#1e293b; border:1px solid #334155; border-radius:14px; padding:24px; position:relative;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <h3 id="venueFormTitle" style="margin:0;">New Venue</h3>
+      <button onclick="cancelVenueForm()" style="background:none; border:none; color:#94a3b8; font-size:22px; cursor:pointer; padding:0 4px;">&times;</button>
+    </div>
     <input type="hidden" id="venueEditId">
     <div style="display:flex; gap:12px; margin-bottom:12px;">
-      <input type="text" id="venueName" placeholder="Venue name (e.g. Neumos)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
-      <select id="venueCity" style="padding:8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
+      <input type="text" id="venueName" placeholder="Venue name (e.g. Neumos)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
+      <select id="venueCity" style="padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
         <option value="seattle">Seattle</option>
         <option value="tacoma">Tacoma</option>
       </select>
     </div>
     <div style="display:flex; gap:12px; margin-bottom:12px;">
-      <input type="text" id="venueAddress" placeholder="Address" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
-      <input type="text" id="venueWebsite" placeholder="Website URL" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
+      <input type="text" id="venueAddress" placeholder="Address" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
+      <input type="text" id="venueWebsite" placeholder="Website URL" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
     </div>
     <div style="display:flex; gap:12px; margin-bottom:12px;">
-      <input type="number" step="any" id="venueLat" placeholder="Latitude" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
-      <input type="number" step="any" id="venueLng" placeholder="Longitude" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
-      <input type="text" id="venueCapacity" placeholder="Capacity" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
+      <input type="number" step="any" id="venueLat" placeholder="Latitude" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
+      <input type="number" step="any" id="venueLng" placeholder="Longitude" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
+      <input type="text" id="venueCapacity" placeholder="Capacity" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
     </div>
     <div style="margin-bottom:12px;">
       <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#e2e8f0; font-size:14px;">
@@ -873,7 +879,7 @@
       </label>
     </div>
     <p style="color:#94a3b8; font-size:13px; margin-bottom:8px;">Click on the map to add boundary polygon points. Click a marker to remove it.</p>
-    <div id="venueMapContainer" style="height:400px; border-radius:10px; border:1px solid #334155; margin-bottom:12px;"></div>
+    <div id="venueMapContainer" style="height:350px; border-radius:10px; border:1px solid #334155; margin-bottom:12px;"></div>
     <div id="venuePointsList" style="margin-bottom:12px; font-size:13px; color:#94a3b8;"></div>
     <div style="display:flex; gap:8px;">
       <button class="btn-primary" onclick="saveVenue()">Save Venue</button>
