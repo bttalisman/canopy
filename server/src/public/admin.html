@@ -139,6 +139,14 @@
       font-weight: 600;
     }
     .btn-primary:hover { background: #22c55e; }
+    select {
+      -webkit-appearance: none;
+      appearance: none;
+      padding-right: 28px !important;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
     .venue-boundary-point { cursor: pointer !important; }
     .venue-pin-pulse {
       width: 24px; height: 24px; border-radius: 50%;
@@ -279,7 +287,7 @@
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:16px">
       <h2 style="margin-bottom:0">Events</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <select id="cityFilter" onchange="loadEvents()" style="padding:6px 24px 6px 12px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:13px;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;">
+        <select id="cityFilter" onchange="loadEvents()" style="padding:6px 12px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:13px;">
           <option value="">All Cities</option>
           <option value="seattle">Seattle</option>
           <option value="tacoma">Tacoma</option>
@@ -907,7 +915,7 @@
     <div style="display:flex; gap:12px; margin-bottom:12px;">
       <input type="text" id="venueName" placeholder="Venue name (e.g. Neumos)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
       <button class="btn-secondary" onclick="geocodeVenueName()" style="font-size:12px; padding:4px 10px; white-space:nowrap;">🔍 Lookup</button>
-      <select id="venueCity" style="padding:8px 24px 8px 12px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px; -webkit-appearance:none; appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat:no-repeat; background-position:right 8px center;">
+      <select id="venueCity" style="padding:8px 12px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
         <option value="seattle">Seattle</option>
         <option value="tacoma">Tacoma</option>
       </select>
