@@ -3153,6 +3153,39 @@ function clearVenuePoints() {
   renderVenuePolygon();
 }
 
+// Compute convex hull using Graham scan
+function convexHull(points) {
+  if (points.length < 3) return [...points];
+  // Find lowest point (and leftmost if tie)
+  let start = 0;
+  for (let i = 1; i < points.length; i++) {
+    if (points[i].lat < points[start].lat ||
+        (points[i].lat === points[start].lat && points[i].lng < points[start].lng)) {
+      start = i;
+    }
+  }
+  const pivot = points[start];
+  const sorted = points.slice().sort((a, b) => {
+    const angleA = Math.atan2(a.lat - pivot.lat, a.lng - pivot.lng);
+    const angleB = Math.atan2(b.lat - pivot.lat, b.lng - pivot.lng);
+    if (angleA !== angleB) return angleA - angleB;
+    const distA = (a.lat - pivot.lat) ** 2 + (a.lng - pivot.lng) ** 2;
+    const distB = (b.lat - pivot.lat) ** 2 + (b.lng - pivot.lng) ** 2;
+    return distA - distB;
+  });
+  const hull = [];
+  for (const p of sorted) {
+    while (hull.length >= 2) {
+      const a = hull[hull.length - 2], b = hull[hull.length - 1];
+      const cross = (b.lng - a.lng) * (p.lat - a.lat) - (b.lat - a.lat) * (p.lng - a.lng);
+      if (cross <= 0) hull.pop();
+      else break;
+    }
+    hull.push(p);
+  }
+  return hull;
+}
+
 function renderVenuePolygon() {
   if (!venueMapInstance) return;
   (venueMarkers || []).forEach(m => venueMapInstance.removeLayer(m));
@@ -3169,15 +3202,16 @@ function renderVenuePolygon() {
   });
 
   if (venuePoints.length >= 3) {
+    const hull = convexHull(venuePoints);
     venuePolygon = L.polygon(
-      venuePoints.map(p => [p.lat, p.lng]),
+      hull.map(p => [p.lat, p.lng]),
       { color: '#4ade80', fillColor: '#4ade80', fillOpacity: 0.15, weight: 2 }
     ).addTo(venueMapInstance);
   }
 
   document.getElementById('venuePointsList').innerHTML = venuePoints.length === 0
     ? 'No boundary points added yet.'
-    : `${venuePoints.length} point${venuePoints.length === 1 ? '' : 's'}: ${venuePoints.map((p, i) => `<span style="color:#e2e8f0;">${(i+1)}</span>(${p.lat.toFixed(5)}, ${p.lng.toFixed(5)})`).join(' &rarr; ')}`;
+    : `${venuePoints.length} point${venuePoints.length === 1 ? '' : 's'} (convex hull applied)`;
 }
 
 async function saveVenue() {
@@ -3192,7 +3226,8 @@ async function saveVenue() {
   if (!name) { toast('Venue name is required'); return; }
 
   const headers = await adminHeaders();
-  const body = JSON.stringify({ name, address, city, website, latitude, longitude, capacity, isAccessible, boundaryCoordinates: venuePoints });
+  const hullPoints = venuePoints.length >= 3 ? convexHull(venuePoints) : venuePoints;
+  const body = JSON.stringify({ name, address, city, website, latitude, longitude, capacity, isAccessible, boundaryCoordinates: hullPoints });
 
   let res;
   if (editingVenueId) {
