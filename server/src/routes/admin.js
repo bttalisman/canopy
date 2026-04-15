@@ -170,6 +170,7 @@ router.post('/events/import-from-tm', requireSuperadmin, async (req, res) => {
     const { tmId, name, startDate, endDate, location, latitude, longitude,
             imageURL, ticketingURL, category, city, priceMin, priceMax, description } = req.body;
 
+    console.log('[TM Import] Body:', JSON.stringify({ name, startDate, endDate, location, category, city }));
     if (!name || !startDate) {
       return res.status(400).json({ error: 'name and startDate are required' });
     }
@@ -211,9 +212,12 @@ router.post('/events/import-from-tm', requireSuperadmin, async (req, res) => {
                           city, venue_id, price_min, price_max, is_active, status)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, true, 'active')
       RETURNING *
-    `, [name, slug, description || '', startDate, endDate || null, location || '',
+    // end_date is NOT NULL in schema, default to start + 3 hours
+    const effectiveEndDate = endDate || new Date(new Date(startDate).getTime() + 3 * 60 * 60 * 1000).toISOString();
+
+    `, [name, slug, description || '', startDate, effectiveEndDate, location || '',
         imageURL || null, ticketingURL || null, latitude || null, longitude || null,
-        category || 'other', city || 'seattle', venueId, priceMin || null, priceMax || null]);
+        category || 'community', city || 'seattle', venueId, priceMin || null, priceMax || null]);
 
     res.status(201).json(rows[0]);
   } catch (err) {
