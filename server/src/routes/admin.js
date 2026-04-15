@@ -1577,16 +1577,23 @@ router.post('/venues/seed', requireSuperadmin, async (req, res) => {
     let skipped = 0;
     for (const v of seedVenues) {
       try {
-        const result = await pool.query(
+        // Check if venue already exists
+        const existing = await pool.query(
+          'SELECT id FROM venues WHERE LOWER(name) = LOWER($1) AND city = $2',
+          [v.name, v.city]
+        );
+        if (existing.rows.length > 0) {
+          skipped++;
+          continue;
+        }
+        await pool.query(
           `INSERT INTO venues (name, address, latitude, longitude, city)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (name, city) DO NOTHING
-           RETURNING id`,
+           VALUES ($1, $2, $3, $4, $5)`,
           [v.name, v.address, v.latitude, v.longitude, v.city]
         );
-        if (result.rows.length > 0) created++;
-        else skipped++;
-      } catch {
+        created++;
+      } catch (err) {
+        console.error(`Failed to seed venue ${v.name}:`, err.message);
         skipped++;
       }
     }
