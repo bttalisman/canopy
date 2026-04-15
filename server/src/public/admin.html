@@ -848,17 +848,21 @@
 
 <!-- Venues View -->
 <div id="venuesView" style="display:none; padding:24px; max-width:960px; margin:0 auto;">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
     <h2 style="margin:0;">Venues</h2>
     <div style="display:flex; gap:8px;">
       <button class="btn-secondary" onclick="loadEvents()" style="font-size:13px">&larr; Events</button>
-      <button class="btn-secondary" onclick="seedVenues()" style="font-size:13px">🌱 Seed Venues</button>
       <button class="btn-primary" onclick="showVenueForm()" style="font-size:13px">+ New Venue</button>
     </div>
   </div>
-  <div id="venueList"></div>
-
+  <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
+    <input type="text" id="venueSearch" placeholder="Search venues..." oninput="renderVenueList()" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
+    <span id="venuePageInfo" style="color:#94a3b8; font-size:13px; white-space:nowrap;"></span>
+    <button class="btn-secondary" onclick="venuePagePrev()" style="font-size:12px; padding:4px 10px;">← Prev</button>
+    <button class="btn-secondary" onclick="venuePageNext()" style="font-size:12px; padding:4px 10px;">Next →</button>
   </div>
+  <div id="venueList"></div>
+</div>
 
 <!-- Venue Form Modal -->
 <div id="venueFormSection" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; overflow-y:auto;">
@@ -3049,38 +3053,54 @@ var venueMarkers = [];
 var venuePoints = [];
 var editingVenueId = null;
 var allVenues = []; // cached list for venue dropdown in event form
+var venuePage = 0;
+var venuePageSize = 10;
 
 function showVenues() {
-  console.log('[Venues] showVenues called');
   hideAll();
   document.getElementById('venuesView').style.display = 'block';
   document.getElementById('venueFormSection').style.display = 'none';
+  document.getElementById('venueSearch').value = '';
+  venuePage = 0;
   loadVenues();
 }
 
 async function loadVenues() {
-  console.log('[Venues] loadVenues called');
   const headers = await adminHeaders();
-  console.log('[Venues] headers:', JSON.stringify(headers));
   const res = await fetch(`${API}/api/admin/venues`, { headers });
-  console.log('[Venues] response status:', res.status);
-  if (!res.ok) {
-    const text = await res.text();
-    console.error('[Venues] error response:', text);
-    toast('Failed to load venues');
-    return;
-  }
-  const venues = await res.json();
-  console.log('[Venues] loaded', venues.length, 'venues');
-  allVenues = venues;
+  if (!res.ok) { toast('Failed to load venues'); return; }
+  allVenues = await res.json();
+  venuePage = 0;
+  renderVenueList();
+}
+
+function getFilteredVenues() {
+  const q = (document.getElementById('venueSearch')?.value || '').toLowerCase();
+  if (!q) return allVenues;
+  return allVenues.filter(v =>
+    v.name.toLowerCase().includes(q) ||
+    (v.address || '').toLowerCase().includes(q) ||
+    (v.city || '').toLowerCase().includes(q)
+  );
+}
+
+function renderVenueList() {
+  venuePage = Math.max(0, venuePage);
+  const filtered = getFilteredVenues();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / venuePageSize));
+  if (venuePage >= totalPages) venuePage = totalPages - 1;
+  const start = venuePage * venuePageSize;
+  const page = filtered.slice(start, start + venuePageSize);
+
+  document.getElementById('venuePageInfo').textContent = `${filtered.length} venue${filtered.length === 1 ? '' : 's'} · Page ${venuePage + 1}/${totalPages}`;
 
   const listEl = document.getElementById('venueList');
-  if (venues.length === 0) {
-    listEl.innerHTML = '<p style="color:#94a3b8;">No venues defined yet.</p>';
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<p style="color:#94a3b8;">No venues match your search.</p>';
     return;
   }
 
-  listEl.innerHTML = venues.map(v => `
+  listEl.innerHTML = page.map(v => `
     <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:16px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
       <div>
         <strong>${v.name}</strong>
@@ -3094,6 +3114,9 @@ async function loadVenues() {
     </div>
   `).join('');
 }
+
+function venuePagePrev() { venuePage--; renderVenueList(); }
+function venuePageNext() { venuePage++; renderVenueList(); }
 
 function showVenueForm(venue) {
   console.log('[Venues] showVenueForm called, venue:', venue ? venue.name : 'new');
@@ -3259,15 +3282,7 @@ async function deleteVenue(id) {
   loadVenues();
 }
 
-async function seedVenues() {
-  if (!confirm('Seed 20 Seattle venues from built-in data? Existing venues will not be duplicated.')) return;
-  const headers = await adminHeaders();
-  const res = await fetch(`${API}/api/admin/venues/seed`, { method: 'POST', headers });
-  if (!res.ok) { toast('Failed to seed venues'); return; }
-  const result = await res.json();
-  toast(`Seeded ${result.created} venues (${result.skipped} skipped)`);
-  loadVenues();
-}
+
 
 // Populate venue dropdown in event form
 async function populateVenueDropdown(selectedId) {
