@@ -24,6 +24,8 @@ struct APIEvent: Codable, Sendable, Identifiable {
     let isAccessible: Bool?
     let isFree: Bool?
     let isCityOfficial: Bool?
+    let priceMin: Double?
+    let priceMax: Double?
     let city: String?
     let venue: APIVenue?
     let stages: [APIStage]?
@@ -199,6 +201,8 @@ actor CanopyAPIService {
                     event.isAccessible = apiEvent.isAccessible
                     event.isFree = apiEvent.isFree
                     event.isCityOfficial = apiEvent.isCityOfficial
+                    event.priceMin = apiEvent.priceMin
+                    event.priceMax = apiEvent.priceMax
                     event.city = apiEvent.city
 
                     updateScheduleItems(for: event, from: apiEvent, parseDate: parseDate, context: context)
@@ -239,6 +243,8 @@ actor CanopyAPIService {
             event.isAccessible = apiEvent.isAccessible
             event.isFree = apiEvent.isFree
             event.isCityOfficial = apiEvent.isCityOfficial
+            event.priceMin = apiEvent.priceMin
+            event.priceMax = apiEvent.priceMax
             event.city = apiEvent.city
 
             context.insert(event)

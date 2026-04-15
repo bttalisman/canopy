@@ -25,6 +25,8 @@ final class Event {
     var isAccessible: Bool?
     var isFree: Bool?
     var isCityOfficial: Bool?
+    var priceMin: Double?
+    var priceMax: Double?
     var city: String?
 
     @Relationship(deleteRule: .cascade, inverse: \Stage.event)

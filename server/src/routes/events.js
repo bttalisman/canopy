@@ -60,6 +60,8 @@ router.get('/', async (req, res) => {
       isAccessible: event.is_accessible,
       isFree: event.is_free,
       isCityOfficial: event.is_city_official,
+      priceMin: event.price_min,
+      priceMax: event.price_max,
       city: event.city,
       venue: event.venue__id ? {
         id: event.venue__id,
@@ -205,6 +207,8 @@ router.get('/:slug', async (req, res) => {
       isAccessible: event.is_accessible,
       isFree: event.is_free,
       isCityOfficial: event.is_city_official,
+      priceMin: event.price_min,
+      priceMax: event.price_max,
       city: event.city,
       venue: event.venue__id ? {
         id: event.venue__id,

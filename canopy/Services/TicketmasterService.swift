@@ -180,6 +180,11 @@ actor TicketmasterService {
 
             event.city = CityConfig.citySlug
 
+            if let priceRange = tmEvent.priceRanges?.first {
+                event.priceMin = priceRange.min
+                event.priceMax = priceRange.max
+            }
+
             context.insert(event)
 
             // Auto-create a schedule item so performer profiles work for single events

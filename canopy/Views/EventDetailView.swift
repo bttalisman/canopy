@@ -24,6 +24,16 @@ struct EventDetailView: View {
         }
     }
 
+    private var ticketLabel: String {
+        if event.isFree == true { return "Free" }
+        if let min = event.priceMin, let max = event.priceMax {
+            if min == max { return "Tickets \u{00B7} $\(Int(min))" }
+            return "Tickets \u{00B7} $\(Int(min))\u{2013}$\(Int(max))"
+        }
+        if let min = event.priceMin { return "Tickets \u{00B7} From $\(Int(min))" }
+        return "Tickets"
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -94,7 +104,7 @@ struct EventDetailView: View {
                     HStack(spacing: 12) {
                         if let url = event.ticketingURL, let ticketURL = URL(string: url) {
                             Link(destination: ticketURL) {
-                                Label("Tickets", systemImage: "ticket")
+                                Label(ticketLabel, systemImage: "ticket")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)

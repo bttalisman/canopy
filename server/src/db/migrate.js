@@ -163,6 +163,9 @@ const schema = `
   CREATE UNIQUE INDEX IF NOT EXISTS idx_venues_name_city ON venues(name, city);
   ALTER TABLE events ADD COLUMN IF NOT EXISTS venue_id UUID REFERENCES venues(id) ON DELETE SET NULL;
   CREATE INDEX IF NOT EXISTS idx_events_venue ON events(venue_id);
+
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS price_min DOUBLE PRECISION;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS price_max DOUBLE PRECISION;
 `;
 
 async function migrate(pool) {

@@ -65,7 +65,8 @@ router.post('/events', async (req, res) => {
     }
 
     const { name, slug, description, startDate, endDate, location, neighborhood,
-            logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, city, venueId } = req.body;
+            logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, city, venueId,
+            priceMin, priceMax } = req.body;
 
     // Superadmins create active events; organizers create pending_review.
     const status = superadmin ? 'active' : 'pending_review';
@@ -75,12 +76,12 @@ router.post('/events', async (req, res) => {
     const { rows } = await pool.query(`
       INSERT INTO events (name, slug, description, start_date, end_date, location, neighborhood,
                           logo_system_image, image_url, map_image_url, ticketing_url, latitude, longitude, category,
-                          owner_org_id, created_by_user_id, status, city, venue_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                          owner_org_id, created_by_user_id, status, city, venue_id, price_min, price_max)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
       RETURNING *
     `, [name, slug, description || '', startDate, endDate, location, neighborhood || '',
         logoSystemImage || 'party.popper', imageURL, mapImageURL || null, ticketingURL, latitude, longitude, category || 'community',
-        ownerOrgId, createdByUserId, status, city || 'seattle', venueId || null]);
+        ownerOrgId, createdByUserId, status, city || 'seattle', venueId || null, priceMin || null, priceMax || null]);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -108,7 +109,7 @@ router.put('/events/:id', requireEventAccess, async (req, res) => {
   try {
     const { name, description, startDate, endDate, location, neighborhood,
             logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
-            permitId, isAccessible, isFree, isCityOfficial, city, venueId } = req.body;
+            permitId, isAccessible, isFree, isCityOfficial, city, venueId, priceMin, priceMax } = req.body;
 
     const { rows } = await pool.query(`
       UPDATE events SET
@@ -134,13 +135,15 @@ router.put('/events/:id', requireEventAccess, async (req, res) => {
         is_city_official = COALESCE($21, is_city_official),
         city = COALESCE($22, city),
         venue_id = CASE WHEN $23::text = '__KEEP__' THEN venue_id ELSE $24::uuid END,
+        price_min = COALESCE($25, price_min),
+        price_max = COALESCE($26, price_max),
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `, [req.params.id, name, description, startDate, endDate, location, neighborhood,
         logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
         permitId, isAccessible, isFree, isCityOfficial, city,
-        venueId !== undefined ? 'SET' : '__KEEP__', venueId || null]);
+        venueId !== undefined ? 'SET' : '__KEEP__', venueId || null, priceMin || null, priceMax || null]);
 
     if (rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     res.json(rows[0]);
