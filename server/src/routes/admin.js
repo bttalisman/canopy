@@ -1547,4 +1547,53 @@ router.delete('/venues/:id', requireSuperadmin, async (req, res) => {
   }
 });
 
+// Seed venues from hardcoded VenueMapData
+router.post('/venues/seed', requireSuperadmin, async (req, res) => {
+  const seedVenues = [
+    { name: 'Seattle Center', address: '305 Harrison St, Seattle, WA 98109', latitude: 47.6215, longitude: -122.3510, city: 'seattle' },
+    { name: 'Climate Pledge Arena', address: '334 1st Ave N, Seattle, WA 98109', latitude: 47.6221, longitude: -122.3540, city: 'seattle' },
+    { name: 'Washington State Convention Center', address: '705 Pike St, Seattle, WA 98101', latitude: 47.6117, longitude: -122.3316, city: 'seattle' },
+    { name: 'T-Mobile Park', address: '1250 1st Ave S, Seattle, WA 98134', latitude: 47.5914, longitude: -122.3325, city: 'seattle' },
+    { name: 'Lumen Field', address: '800 Occidental Ave S, Seattle, WA 98134', latitude: 47.5952, longitude: -122.3316, city: 'seattle' },
+    { name: 'Paramount Theatre', address: '911 Pine St, Seattle, WA 98101', latitude: 47.6133, longitude: -122.3314, city: 'seattle' },
+    { name: 'The Showbox', address: '1426 1st Ave, Seattle, WA 98101', latitude: 47.6087, longitude: -122.3404, city: 'seattle' },
+    { name: 'Gas Works Park', address: '2101 N Northlake Way, Seattle, WA 98103', latitude: 47.6456, longitude: -122.3344, city: 'seattle' },
+    { name: 'Volunteer Park', address: '1247 15th Ave E, Seattle, WA 98112', latitude: 47.6164, longitude: -122.3196, city: 'seattle' },
+    { name: 'The Gorge Amphitheatre', address: '754 Silica Rd NW, George, WA 98848', latitude: 47.1028, longitude: -119.9962, city: 'seattle' },
+    { name: 'Genesee Park', address: '4316 S Genesee St, Seattle, WA 98118', latitude: 47.5535, longitude: -122.2612, city: 'seattle' },
+    { name: 'Capitol Hill Block Party', address: 'Pike/Pine Corridor, Capitol Hill, Seattle, WA', latitude: 47.6145, longitude: -122.3210, city: 'seattle' },
+    { name: 'West Seattle Junction', address: 'California Ave SW & SW Alaska St, Seattle, WA 98116', latitude: 47.5605, longitude: -122.3868, city: 'seattle' },
+    { name: 'Hing Hay Park', address: '423 Maynard Ave S, Seattle, WA 98104', latitude: 47.5984, longitude: -122.3232, city: 'seattle' },
+    { name: 'Fremont', address: 'N 36th St & Fremont Ave N, Seattle, WA 98103', latitude: 47.6510, longitude: -122.3500, city: 'seattle' },
+    { name: 'Judkins Park', address: '2150 S Norman St, Seattle, WA 98144', latitude: 47.5945, longitude: -122.3028, city: 'seattle' },
+    { name: 'Ballard Avenue', address: 'Ballard Ave NW, Seattle, WA 98107', latitude: 47.6634, longitude: -122.3838, city: 'seattle' },
+    { name: 'Tractor Tavern', address: '5213 Ballard Ave NW, Seattle, WA 98107', latitude: 47.6636, longitude: -122.3846, city: 'seattle' },
+    { name: 'Chop Suey', address: '1325 E Madison St, Seattle, WA 98122', latitude: 47.6148, longitude: -122.3185, city: 'seattle' },
+    { name: 'Neumos', address: '925 E Pike St, Seattle, WA 98122', latitude: 47.6140, longitude: -122.3197, city: 'seattle' },
+  ];
+
+  try {
+    let created = 0;
+    let skipped = 0;
+    for (const v of seedVenues) {
+      try {
+        const result = await pool.query(
+          `INSERT INTO venues (name, address, latitude, longitude, city)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (name, city) DO NOTHING
+           RETURNING id`,
+          [v.name, v.address, v.latitude, v.longitude, v.city]
+        );
+        if (result.rows.length > 0) created++;
+        else skipped++;
+      } catch {
+        skipped++;
+      }
+    }
+    res.json({ created, skipped, total: seedVenues.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

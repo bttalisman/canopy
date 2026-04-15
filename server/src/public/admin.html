@@ -841,6 +841,7 @@
     <h2 style="margin:0;">Venues</h2>
     <div style="display:flex; gap:8px;">
       <button class="btn-secondary" onclick="loadEvents()" style="font-size:13px">&larr; Events</button>
+      <button class="btn-secondary" onclick="seedVenues()" style="font-size:13px">🌱 Seed Venues</button>
       <button class="btn-primary" onclick="showVenueForm()" style="font-size:13px">+ New Venue</button>
     </div>
   </div>
@@ -3202,6 +3203,16 @@ async function deleteVenue(id) {
   const res = await fetch(`${API}/api/admin/venues/${id}`, { method: 'DELETE', headers });
   if (!res.ok) { toast('Failed to delete'); return; }
   toast('Venue deleted');
+  loadVenues();
+}
+
+async function seedVenues() {
+  if (!confirm('Seed 20 Seattle venues from built-in data? Existing venues will not be duplicated.')) return;
+  const headers = await adminHeaders();
+  const res = await fetch(`${API}/api/admin/venues/seed`, { method: 'POST', headers });
+  if (!res.ok) { toast('Failed to seed venues'); return; }
+  const result = await res.json();
+  toast(`Seeded ${result.created} venues (${result.skipped} skipped)`);
   loadVenues();
 }
 
