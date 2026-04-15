@@ -187,6 +187,11 @@ struct GoogleMapView: UIViewRepresentable {
         polygon.strokeColor = UIColor.systemGreen.withAlphaComponent(0.6)
         polygon.strokeWidth = 2
         polygon.map = mapView
+
+        // Zoom to fit boundary with padding (~20% of view)
+        let bounds = GMSCoordinateBounds(path: path)
+        let update = GMSCameraUpdate.fit(bounds, withPadding: 80)
+        mapView.animate(with: update)
     }
 
     private func zoomFromSpan(_ span: Double) -> Float {
