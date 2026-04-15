@@ -93,6 +93,26 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/events/venue-boundaries — public venue boundary data for iOS
+router.get('/venue-boundaries', async (req, res) => {
+  try {
+    const city = req.query.city || 'seattle';
+    const { rows } = await pool.query(
+      'SELECT id, venue_name, coordinates, city FROM venue_boundaries WHERE city = $1 ORDER BY venue_name ASC',
+      [city]
+    );
+    res.json(rows.map(r => ({
+      id: r.id,
+      venueName: r.venue_name,
+      coordinates: r.coordinates,
+      city: r.city,
+    })));
+  } catch (err) {
+    console.error('Error fetching venue boundaries:', err);
+    res.status(500).json({ error: 'Failed to fetch venue boundaries' });
+  }
+});
+
 // GET /api/events/:slug — single event with full details
 router.get('/:slug', async (req, res) => {
   try {

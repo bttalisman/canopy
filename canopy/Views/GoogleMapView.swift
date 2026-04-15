@@ -7,6 +7,8 @@ struct GoogleMapView: UIViewRepresentable {
     let span: Double
     var markers: [(lat: Double, lng: Double, title: String, color: UIColor)]
     var isSatellite: Bool = false
+    var boundaryCoords: [CLLocationCoordinate2D] = []
+    var recenterTrigger: Int = 0
     @AppStorage("appearanceMode") private var appearanceMode = 0
 
     func makeUIView(context: Context) -> GMSMapView {
@@ -31,6 +33,7 @@ struct GoogleMapView: UIViewRepresentable {
         mapView.isMyLocationEnabled = true
 
         addMarkers(to: mapView)
+        if !boundaryCoords.isEmpty { addBoundary(to: mapView) }
         return mapView
     }
 
@@ -43,6 +46,26 @@ struct GoogleMapView: UIViewRepresentable {
         mapView.mapType = isSatellite ? .hybrid : .normal
         mapView.clear()
         addMarkers(to: mapView)
+        if !boundaryCoords.isEmpty { addBoundary(to: mapView) }
+
+        // Recenter when trigger changes
+        if context.coordinator.lastRecenterTrigger != recenterTrigger {
+            context.coordinator.lastRecenterTrigger = recenterTrigger
+            let camera = GMSCameraPosition(
+                latitude: latitude,
+                longitude: longitude,
+                zoom: zoomFromSpan(span)
+            )
+            mapView.animate(to: camera)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    class Coordinator {
+        var lastRecenterTrigger: Int = 0
     }
 
     private func addMarkers(to mapView: GMSMapView) {
@@ -151,6 +174,19 @@ struct GoogleMapView: UIViewRepresentable {
         if t.contains("shop") || t.contains("merch") || t.contains("gift") { return "bag.fill" }
         if t.contains("bus") || t.contains("transit") { return "bus.fill" }
         return "mappin"
+    }
+
+    private func addBoundary(to mapView: GMSMapView) {
+        let path = GMSMutablePath()
+        for coord in boundaryCoords {
+            path.add(coord)
+        }
+
+        let polygon = GMSPolygon(path: path)
+        polygon.fillColor = UIColor.systemGreen.withAlphaComponent(0.08)
+        polygon.strokeColor = UIColor.systemGreen.withAlphaComponent(0.6)
+        polygon.strokeWidth = 2
+        polygon.map = mapView
     }
 
     private func zoomFromSpan(_ span: Double) -> Float {

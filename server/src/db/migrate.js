@@ -131,6 +131,18 @@ const schema = `
     message TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
+
+  CREATE TABLE IF NOT EXISTS venue_boundaries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    venue_name TEXT UNIQUE NOT NULL,
+    coordinates JSONB NOT NULL DEFAULT '[]',
+    city TEXT DEFAULT 'seattle',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_venue_boundaries_city ON venue_boundaries(city);
+  CREATE INDEX IF NOT EXISTS idx_venue_boundaries_venue_name ON venue_boundaries(venue_name);
 `;
 
 async function migrate(pool) {

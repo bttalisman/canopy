@@ -1402,4 +1402,71 @@ router.delete('/analytics/demo-data', requireSuperadmin, async (req, res) => {
   }
 });
 
+// =====================
+// VENUE BOUNDARIES
+// =====================
+
+router.get('/venue-boundaries', async (req, res) => {
+  try {
+    const city = req.query.city || null;
+    const query = city
+      ? 'SELECT * FROM venue_boundaries WHERE city = $1 ORDER BY venue_name ASC'
+      : 'SELECT * FROM venue_boundaries ORDER BY venue_name ASC';
+    const params = city ? [city] : [];
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/venue-boundaries', requireSuperadmin, async (req, res) => {
+  try {
+    const { venueName, coordinates, city } = req.body;
+    if (!venueName || !coordinates) {
+      return res.status(400).json({ error: 'venueName and coordinates are required' });
+    }
+    const { rows } = await pool.query(
+      `INSERT INTO venue_boundaries (venue_name, coordinates, city)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [venueName, JSON.stringify(coordinates), city || 'seattle']
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'A boundary for this venue already exists' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/venue-boundaries/:id', requireSuperadmin, async (req, res) => {
+  try {
+    const { venueName, coordinates, city } = req.body;
+    const { rows } = await pool.query(
+      `UPDATE venue_boundaries SET
+         venue_name = COALESCE($2, venue_name),
+         coordinates = COALESCE($3, coordinates),
+         city = COALESCE($4, city),
+         updated_at = NOW()
+       WHERE id = $1 RETURNING *`,
+      [req.params.id, venueName, coordinates ? JSON.stringify(coordinates) : null, city]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/venue-boundaries/:id', requireSuperadmin, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query('DELETE FROM venue_boundaries WHERE id = $1', [req.params.id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ deleted: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -480,6 +480,10 @@ struct EventMapView: View {
     @State private var streetClosures: [StreetClosure] = []
     @State private var useGoogleMaps = false
     @State private var showSatellite = false
+    @State private var showBoundary = false
+    @State private var recenterTrigger = 0
+    @State private var boundaryCoords: [CLLocationCoordinate2D] = []
+    @State private var boundaryLoaded = false
 
     var availablePinTypes: [MapPinType] {
         let types = Set(event.mapPins.map(\.pinType))
@@ -568,20 +572,49 @@ struct EventMapView: View {
                         longitude: event.longitude ?? -122.3321,
                         span: VenueMapData.findVenue(for: event.location)?.mapSpan ?? 0.004,
                         markers: googleMapMarkers,
-                        isSatellite: showSatellite
+                        isSatellite: showSatellite,
+                        boundaryCoords: showBoundary ? boundaryCoords : [],
+                        recenterTrigger: recenterTrigger
                     )
                     .frame(height: 380)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
 
-                    Button {
-                        showSatellite.toggle()
-                    } label: {
-                        Image(systemName: showSatellite ? "map.fill" : "globe.americas.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 32, height: 32)
-                            .background(.ultraThinMaterial)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    VStack(spacing: 6) {
+                        Button {
+                            showSatellite.toggle()
+                        } label: {
+                            Image(systemName: showSatellite ? "map.fill" : "globe.americas.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 32, height: 32)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+
+                        Button {
+                            showBoundary.toggle()
+                            if showBoundary && !boundaryLoaded {
+                                loadBoundary()
+                            }
+                        } label: {
+                            Image(systemName: "square.dashed")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(showBoundary ? .green : .white)
+                                .frame(width: 32, height: 32)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+
+                        Button {
+                            recenterTrigger += 1
+                        } label: {
+                            Image(systemName: "scope")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 32, height: 32)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
                     }
                     .padding(8)
                 }
@@ -757,6 +790,56 @@ struct EventMapView: View {
         return filteredPins.map { pin in
             let coord = pinCoordinate(pin)
             return (lat: coord.latitude, lng: coord.longitude, title: pin.label, color: UIColor(pinColor(pin.pinType)))
+        }
+    }
+
+    private func loadBoundary() {
+        print("[Boundary] Loading for event: \(event.name), location: \(event.location)")
+        print("[Boundary] Event coords: \(event.latitude ?? 0), \(event.longitude ?? 0)")
+
+        Task {
+            // 1. Try API boundaries (admin-defined)
+            if let apiBoundaries = try? await CanopyAPIService.shared.fetchVenueBoundaries() {
+                let locationLower = event.location.lowercased()
+                if let match = apiBoundaries.first(where: {
+                    locationLower.contains($0.venueName.lowercased()) || $0.venueName.lowercased().contains(locationLower)
+                }) {
+                    print("[Boundary] Using API boundary: \(match.venueName) (\(match.coordinates.count) points)")
+                    await MainActor.run {
+                        boundaryCoords = match.coordinates.map {
+                            CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
+                        }
+                        boundaryLoaded = true
+                    }
+                    return
+                }
+            }
+
+            // 2. Check VenueMapData (hardcoded)
+            if let venue = VenueMapData.findVenue(for: event.location),
+               !venue.boundaryCoords.isEmpty {
+                print("[Boundary] Using VenueMapData boundary (\(venue.boundaryCoords.count) points)")
+                await MainActor.run {
+                    boundaryCoords = venue.boundaryCoords.map {
+                        CLLocationCoordinate2D(latitude: $0.0, longitude: $0.1)
+                    }
+                    boundaryLoaded = true
+                }
+                return
+            }
+
+            // 3. Fallback: Google Geocoding API
+            print("[Boundary] Falling back to Geocoding API")
+            let address = "\(event.location), \(CityConfig.cityDisplayName), WA"
+            if let bounds = await GeocodingService.fetchBounds(for: address) {
+                await MainActor.run {
+                    boundaryCoords = bounds.coordinates
+                    boundaryLoaded = true
+                    print("[Boundary] Loaded \(boundaryCoords.count) coords from geocoding")
+                }
+            } else {
+                print("[Boundary] Geocoding returned no results")
+            }
         }
     }
 

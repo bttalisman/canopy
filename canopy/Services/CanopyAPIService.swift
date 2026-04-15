@@ -63,6 +63,18 @@ struct APIMapPin: Codable, Sendable {
     let description: String?
 }
 
+struct APIVenueBoundary: Codable, Sendable {
+    let id: String
+    let venueName: String
+    let coordinates: [APICoordinate]
+    let city: String
+}
+
+struct APICoordinate: Codable, Sendable {
+    let lat: Double
+    let lng: Double
+}
+
 // MARK: - Service
 
 actor CanopyAPIService {
@@ -76,6 +88,32 @@ actor CanopyAPIService {
 
     var baseURL: String {
         Secrets.canopyAPIBaseURL
+    }
+
+    private var cachedBoundaries: [APIVenueBoundary]?
+    private var boundariesFetchedAt: Date?
+
+    func fetchVenueBoundaries() async throws -> [APIVenueBoundary] {
+        // Return cache if less than 10 minutes old
+        if let cached = cachedBoundaries,
+           let fetchedAt = boundariesFetchedAt,
+           Date().timeIntervalSince(fetchedAt) < 600 {
+            return cached
+        }
+
+        var components = URLComponents(string: "\(baseURL)/api/events/venue-boundaries")
+        components?.queryItems = [URLQueryItem(name: "city", value: CityConfig.citySlug)]
+        guard let url = components?.url else { throw CanopyAPIError.invalidURL }
+
+        let (data, response) = try await session.data(from: url)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw CanopyAPIError.serverError
+        }
+
+        let boundaries = try decoder.decode([APIVenueBoundary].self, from: data)
+        cachedBoundaries = boundaries
+        boundariesFetchedAt = Date()
+        return boundaries
     }
 
     func fetchEvents() async throws -> [APIEvent] {

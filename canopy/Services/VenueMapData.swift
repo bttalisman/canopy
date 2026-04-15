@@ -9,6 +9,7 @@ struct VenueTemplate {
     let mapSpan: Double // degrees to show around the center point
     let pins: [PinTemplate]
     let stages: [StageTemplate]
+    var boundaryCoords: [(Double, Double)] = [] // manual polygon (lat, lng) pairs
 }
 
 struct PinTemplate {
