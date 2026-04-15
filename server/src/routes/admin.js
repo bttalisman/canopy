@@ -206,15 +206,15 @@ router.post('/events/import-from-tm', requireSuperadmin, async (req, res) => {
       }
     }
 
+    // end_date is NOT NULL in schema, default to start + 3 hours
+    const effectiveEndDate = endDate || new Date(new Date(startDate).getTime() + 3 * 60 * 60 * 1000).toISOString();
+
     const { rows } = await pool.query(`
       INSERT INTO events (name, slug, description, start_date, end_date, location,
                           image_url, ticketing_url, latitude, longitude, category,
                           city, venue_id, price_min, price_max, is_active, status)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, true, 'active')
       RETURNING *
-    // end_date is NOT NULL in schema, default to start + 3 hours
-    const effectiveEndDate = endDate || new Date(new Date(startDate).getTime() + 3 * 60 * 60 * 1000).toISOString();
-
     `, [name, slug, description || '', startDate, effectiveEndDate, location || '',
         imageURL || null, ticketingURL || null, latitude || null, longitude || null,
         category || 'community', city || 'seattle', venueId, priceMin || null, priceMax || null]);
