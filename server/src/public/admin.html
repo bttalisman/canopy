@@ -875,6 +875,7 @@
     <input type="hidden" id="venueEditId">
     <div style="display:flex; gap:12px; margin-bottom:12px;">
       <input type="text" id="venueName" placeholder="Venue name (e.g. Neumos)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
+      <button class="btn-secondary" onclick="geocodeVenueName()" style="font-size:12px; padding:4px 10px; white-space:nowrap;">🔍 Lookup</button>
       <select id="venueCity" style="padding:8px 24px 8px 12px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px; -webkit-appearance:none; appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat:no-repeat; background-position:right 8px center;">
         <option value="seattle">Seattle</option>
         <option value="tacoma">Tacoma</option>
@@ -3182,6 +3183,35 @@ function initVenueMap() {
   }
 
   renderVenuePolygon();
+}
+
+async function geocodeVenueName() {
+  const name = document.getElementById('venueName').value.trim();
+  const city = document.getElementById('venueCity').value;
+  if (!name) { toast('Enter a venue name first'); return; }
+
+  const cityName = city === 'tacoma' ? 'Tacoma, WA' : 'Seattle, WA';
+  const address = `${name}, ${cityName}`;
+
+  const headers = await adminHeaders();
+  headers['Content-Type'] = 'application/json';
+  const res = await fetch(`${API}/api/admin/venues/geocode`, {
+    method: 'POST', headers, body: JSON.stringify({ address })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    toast(err.error || 'Venue not found');
+    return;
+  }
+  const result = await res.json();
+  document.getElementById('venueLat').value = result.latitude;
+  document.getElementById('venueLng').value = result.longitude;
+  document.getElementById('venueAddress').value = result.formattedAddress;
+  toast(`Found: ${result.formattedAddress}`);
+
+  if (venueMapInstance) {
+    setTimeout(() => initVenueMap(), 100);
+  }
 }
 
 async function geocodeVenueAddress() {
