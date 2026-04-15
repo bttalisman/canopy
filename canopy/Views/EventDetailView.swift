@@ -480,7 +480,7 @@ struct EventMapView: View {
     @State private var streetClosures: [StreetClosure] = []
     @State private var useGoogleMaps = false
     @State private var showSatellite = false
-    @State private var showBoundary = false
+    @State private var showBoundary = true
     @State private var recenterTrigger = 0
     @State private var boundaryCoords: [CLLocationCoordinate2D] = []
     @State private var boundaryLoaded = false
@@ -834,12 +834,18 @@ struct EventMapView: View {
 
         Task {
             // 1. Try API venue-boundaries endpoint (admin-defined venues + legacy)
-            if let apiBoundaries = try? await CanopyAPIService.shared.fetchVenueBoundaries() {
+            do {
+                let apiBoundaries = try await CanopyAPIService.shared.fetchVenueBoundaries()
+                print("[Boundary] Fetched \(apiBoundaries.count) venue boundaries from API")
+                for b in apiBoundaries {
+                    print("[Boundary]   - \(b.venueName): \(b.coordinates.count) pts")
+                }
                 let locationLower = event.location.lowercased()
+                print("[Boundary] Matching against location: '\(locationLower)'")
                 if let match = apiBoundaries.first(where: {
                     locationLower.contains($0.venueName.lowercased()) || $0.venueName.lowercased().contains(locationLower)
                 }) {
-                    print("[Boundary] Using API boundary: \(match.venueName) (\(match.coordinates.count) points)")
+                    print("[Boundary] Match found: \(match.venueName) (\(match.coordinates.count) points)")
                     await MainActor.run {
                         boundaryCoords = match.coordinates.map {
                             CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
@@ -847,7 +853,11 @@ struct EventMapView: View {
                         boundaryLoaded = true
                     }
                     return
+                } else {
+                    print("[Boundary] No match found in API boundaries")
                 }
+            } catch {
+                print("[Boundary] Failed to fetch venue boundaries: \(error)")
             }
 
             // 3. Check VenueMapData (hardcoded)
