@@ -85,7 +85,9 @@ actor TicketmasterService {
                 // Override coords from admin venue if available
                 if let event = existing.first,
                    let matchedVenue = venues.first(where: {
-                       $0.venueName.lowercased() == event.location.lowercased()
+                       let a = $0.venueName.lowercased()
+                       let b = event.location.lowercased()
+                       return a == b || b.hasPrefix(a) || a.hasPrefix(b)
                    }),
                    let vLat = matchedVenue.latitude, let vLng = matchedVenue.longitude {
                     event.latitude = vLat
@@ -158,9 +160,11 @@ actor TicketmasterService {
                 }
             }
 
-            // Override coordinates from admin-defined venue (exact name match)
+            // Override coordinates from admin-defined venue (exact or prefix match)
             if let matchedVenue = venues.first(where: {
-                $0.venueName.lowercased() == event.location.lowercased()
+                let a = $0.venueName.lowercased()
+                let b = event.location.lowercased()
+                return a == b || b.hasPrefix(a) || a.hasPrefix(b)
             }) {
                 if let lat = matchedVenue.latitude, let lng = matchedVenue.longitude {
                     print("[TM] Overriding coords for \(event.location) from admin venue: \(lat), \(lng)")
