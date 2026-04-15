@@ -2822,14 +2822,6 @@ async function importSeattleEvents() {
 
 // ---- Init ----
 
-// Load saved key
-const savedKey = localStorage.getItem('canopy_admin_key');
-if (savedKey) document.getElementById('apiKey').value = savedKey;
-
-document.getElementById('apiKey').addEventListener('change', (e) => {
-  localStorage.setItem('canopy_admin_key', e.target.value);
-});
-
 loadEvents();
 
 // =====================
