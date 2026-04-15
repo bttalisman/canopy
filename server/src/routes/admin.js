@@ -1713,7 +1713,7 @@ router.post('/cloudinary-signature', async (req, res) => {
 
     const timestamp = Math.round(Date.now() / 1000);
     const folder = req.body.folder || 'canopy';
-    const paramsToSign = { timestamp, folder };
+    const paramsToSign = { timestamp, folder, source: 'uw' };
     const signature = cloudinary.utils.api_sign_request(paramsToSign, secret);
 
     res.json({
