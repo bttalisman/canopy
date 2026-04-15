@@ -83,6 +83,16 @@
 
 The white-label platforms charge $500-$20,000+ per event because each event gets its own app. Canopy's advantage: organizers get the same features at a fraction of the cost because they're sharing infrastructure. A $50-200/month SaaS tier undercuts every white-label competitor while being more profitable per-organizer at scale.
 
+## Integration Notes
+
+### Eventbrite API
+Investigated April 2026. Eventbrite deprecated public event search in 2019 — the `GET /v3/events/search/` endpoint now only returns events you own or have been granted access to. You cannot discover all public events in a city like with Ticketmaster. 
+
+**Potential future use**: organizer-connected import. If an organizer links their Eventbrite account (OAuth), we can pull their event details automatically. This would be a good paid-tier feature ("Connect Eventbrite → auto-import"). Authentication is OAuth 2.0 via their developer portal.
+
+### Ticketmaster API
+Currently integrated via server-side proxy. Works well for concert/sports discovery. Does not cover community events, farmers markets, street fairs, etc. Price range data is available but inconsistent — many events return no pricing.
+
 ## Sources
 
 - Aloompa (Coachella, Bonnaroo, Lollapalooza)
