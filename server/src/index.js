@@ -19,9 +19,10 @@ app.use(express.json());
 // Per-route guards in middleware/auth.js enforce signed-in / org-owner / superadmin.
 app.use(clerk);
 
-// Static files (maps, images)
+// Static files (maps, images, video)
 app.use('/maps', express.static(path.join(__dirname, 'public', 'maps')));
 app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
+app.use('/canopyDemo.mp4', express.static(path.join(__dirname, 'public', 'canopyDemo.mp4')));
 
 // Support page
 app.get('/support', (req, res) => {
