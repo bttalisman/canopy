@@ -1059,6 +1059,65 @@ Return ONLY a JSON array. If no icons found, return [].`
 // SEATTLE OPEN DATA IMPORT
 // =====================
 
+// POST /api/admin/backfill-images — search Ticketmaster for images for events missing them
+router.post('/backfill-images', requireSuperadmin, async (req, res) => {
+  try {
+    const apiKey = process.env.TICKETMASTER_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'Ticketmaster API key not configured' });
+
+    const city = req.body.city || null;
+    const query = city
+      ? `SELECT id, name, location FROM events WHERE (image_url IS NULL OR image_url = '') AND city = $1`
+      : `SELECT id, name, location FROM events WHERE image_url IS NULL OR image_url = ''`;
+    const params = city ? [city] : [];
+    const { rows: events } = await pool.query(query, params);
+
+    console.log(`[Backfill] Found ${events.length} events without images${city ? ` (city: ${city})` : ''}`);
+
+    let updated = 0;
+    let skipped = 0;
+
+    for (const event of events) {
+      try {
+        const searchParams = new URLSearchParams({
+          apikey: apiKey,
+          keyword: event.name,
+          size: '1',
+        });
+        const tmRes = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${searchParams}`);
+        if (!tmRes.ok) { skipped++; continue; }
+
+        const tmData = await tmRes.json();
+        const tmEvent = tmData?._embedded?.events?.[0];
+        if (!tmEvent) { skipped++; continue; }
+
+        // Find best image (prefer 16_9 ratio, largest)
+        const images = tmEvent.images || [];
+        const best = images
+          .filter(img => img.ratio === '16_9')
+          .sort((a, b) => (b.width || 0) - (a.width || 0))[0]
+          || images[0];
+
+        if (!best?.url) { skipped++; continue; }
+
+        await pool.query('UPDATE events SET image_url = $1 WHERE id = $2', [best.url, event.id]);
+        updated++;
+        console.log(`[Backfill] ${event.name} → ${best.url.substring(0, 60)}...`);
+
+        // Rate limit: Ticketmaster allows ~5 req/sec
+        await new Promise(r => setTimeout(r, 250));
+      } catch (err) {
+        console.error(`[Backfill] Error for ${event.name}:`, err.message);
+        skipped++;
+      }
+    }
+
+    res.json({ total: events.length, updated, skipped });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/admin/import-seattle-events — import from Seattle Special Events Permits
 router.post('/import-seattle-events', requireSuperadmin, async (req, res) => {
   try {
