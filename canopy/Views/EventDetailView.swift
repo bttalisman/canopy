@@ -115,7 +115,9 @@ struct EventDetailView: View {
                         if let url = event.ticketingURL, let ticketURL = URL(string: url) {
                             Link(destination: ticketURL) {
                                 Label(ticketLabel, systemImage: "ticket")
-                                    .font(.headline)
+                                    .font(.subheadline.weight(.semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
                                     .background(Color.green)
@@ -134,7 +136,8 @@ struct EventDetailView: View {
                                     eventSaved ? "Saved" : "Save",
                                     systemImage: eventSaved ? "bookmark.fill" : "bookmark"
                                 )
-                                .font(.headline)
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
                                 .background(eventSaved ? Color.green.opacity(0.15) : Color(.systemGray5))
@@ -147,7 +150,8 @@ struct EventDetailView: View {
 
                         ShareLink(item: shareText) {
                             Label("Share", systemImage: "square.and.arrow.up")
-                                .font(.headline)
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
                                 .background(Color(.systemGray5))
