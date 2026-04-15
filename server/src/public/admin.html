@@ -298,6 +298,12 @@
         <button class="btn-primary" onclick="showCreateEvent()">+ New Event</button>
       </div>
     </div>
+    <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
+      <input type="text" id="eventSearch" placeholder="Search events..." oninput="renderEventPage()" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
+      <span id="eventPageInfo" style="color:#94a3b8; font-size:13px; white-space:nowrap;"></span>
+      <button class="btn-secondary" onclick="eventPagePrev()" style="font-size:12px; padding:4px 10px;">← Prev</button>
+      <button class="btn-secondary" onclick="eventPageNext()" style="font-size:12px; padding:4px 10px;">Next →</button>
+    </div>
 
     <!-- Seattle Data Import Panel -->
     <div id="seattleImportPanel" style="display:none;margin-bottom:16px">
@@ -1077,6 +1083,10 @@ function toLocalInput(d) {
 
 // ---- Event List ----
 
+var allEventsCache = [];
+var eventPage = 0;
+var eventPageSize = 15;
+
 async function loadEvents() {
   hideAll();
   document.getElementById('eventListView').style.display = 'block';
@@ -1085,19 +1095,40 @@ async function loadEvents() {
     const cityParam = cityFilter ? `?city=${cityFilter}` : '';
     const headers = await adminHeaders();
     const res = await fetch(`${API}/api/admin/events${cityParam}`, { headers });
-    const events = await res.json();
-    renderEventList(events);
+    allEventsCache = await res.json();
+    eventPage = 0;
+    renderEventPage();
   } catch (e) {
     document.getElementById('eventList').innerHTML = `<div class="empty">Error loading events: ${e.message}</div>`;
   }
 }
 
-function renderEventList(events) {
-  if (events.length === 0) {
-    document.getElementById('eventList').innerHTML = '<div class="empty">No events yet. Create one!</div>';
+function getFilteredEvents() {
+  const q = (document.getElementById('eventSearch')?.value || '').toLowerCase();
+  if (!q) return allEventsCache;
+  return allEventsCache.filter(e =>
+    e.name.toLowerCase().includes(q) ||
+    (e.location || '').toLowerCase().includes(q) ||
+    (e.neighborhood || '').toLowerCase().includes(q) ||
+    (e.category || '').toLowerCase().includes(q)
+  );
+}
+
+function renderEventPage() {
+  eventPage = Math.max(0, eventPage);
+  const filtered = getFilteredEvents();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / eventPageSize));
+  if (eventPage >= totalPages) eventPage = totalPages - 1;
+  const start = eventPage * eventPageSize;
+  const page = filtered.slice(start, start + eventPageSize);
+
+  document.getElementById('eventPageInfo').textContent = `${filtered.length} event${filtered.length === 1 ? '' : 's'} · Page ${eventPage + 1}/${totalPages}`;
+
+  if (filtered.length === 0) {
+    document.getElementById('eventList').innerHTML = '<div class="empty">No events match your search.</div>';
     return;
   }
-  document.getElementById('eventList').innerHTML = events.map(e => `
+  document.getElementById('eventList').innerHTML = page.map(e => `
     <div class="event-list-item" onclick="showEventDetail('${e.slug}')">
       <div class="info">
         <span class="name">${e.name}</span>
@@ -1110,6 +1141,9 @@ function renderEventList(events) {
     </div>
   `).join('');
 }
+
+function eventPagePrev() { eventPage--; renderEventPage(); }
+function eventPageNext() { eventPage++; renderEventPage(); }
 
 function showEventList() {
   hideAll();
