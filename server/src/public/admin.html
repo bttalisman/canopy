@@ -3086,7 +3086,8 @@ function showVenueForm(venue) {
   document.getElementById('venueCapacity').value = venue ? (venue.capacity || '') : '';
   document.getElementById('venueIsAccessible').checked = venue ? !!venue.is_accessible : false;
   editingVenueId = venue ? venue.id : null;
-  venuePoints = venue && venue.boundary_coordinates ? [...venue.boundary_coordinates] : [];
+  const bc = venue && venue.boundary_coordinates;
+  venuePoints = Array.isArray(bc) ? [...bc] : [];
 
   setTimeout(() => initVenueMap(), 100);
 }
@@ -3131,7 +3132,8 @@ function clearVenuePoints() {
 }
 
 function renderVenuePolygon() {
-  venueMarkers.forEach(m => venueMapInstance.removeLayer(m));
+  if (!venueMapInstance) return;
+  (venueMarkers || []).forEach(m => venueMapInstance.removeLayer(m));
   venueMarkers = [];
   if (venuePolygon) { venueMapInstance.removeLayer(venuePolygon); venuePolygon = null; }
 
