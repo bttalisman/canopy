@@ -158,6 +158,7 @@ const schema = `
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   );
+  ALTER TABLE venues ADD COLUMN IF NOT EXISTS aliases JSONB DEFAULT '[]';
   CREATE INDEX IF NOT EXISTS idx_venues_city ON venues(city);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_venues_name_city ON venues(name, city);
   ALTER TABLE events ADD COLUMN IF NOT EXISTS venue_id UUID REFERENCES venues(id) ON DELETE SET NULL;

@@ -842,8 +842,10 @@ struct EventMapView: View {
                 }
                 let locationLower = event.location.lowercased()
                 print("[Boundary] Matching against location: '\(locationLower)'")
-                if let match = apiBoundaries.first(where: {
-                    locationLower.contains($0.venueName.lowercased()) || $0.venueName.lowercased().contains(locationLower)
+                if let match = apiBoundaries.first(where: { venue in
+                    let a = venue.venueName.lowercased()
+                    if locationLower.contains(a) || a.contains(locationLower) { return true }
+                    return (venue.aliases ?? []).contains { $0.lowercased() == locationLower }
                 }) {
                     print("[Boundary] Match found: \(match.venueName) (\(match.coordinates.count) points)")
                     await MainActor.run {

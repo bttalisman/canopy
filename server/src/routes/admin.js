@@ -1493,16 +1493,17 @@ router.get('/venues', async (req, res) => {
 // POST /api/admin/venues — create venue (superadmin only)
 router.post('/venues', requireSuperadmin, async (req, res) => {
   try {
-    const { name, address, latitude, longitude, city, boundaryCoordinates, website, capacity, isAccessible } = req.body;
+    const { name, address, latitude, longitude, city, boundaryCoordinates, website, capacity, isAccessible, aliases } = req.body;
     if (!name) {
       return res.status(400).json({ error: 'Venue name is required' });
     }
     const { rows } = await pool.query(`
-      INSERT INTO venues (name, address, latitude, longitude, city, boundary_coordinates, website, capacity, is_accessible)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO venues (name, address, latitude, longitude, city, boundary_coordinates, website, capacity, is_accessible, aliases)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `, [name, address || '', latitude || null, longitude || null, city || 'seattle',
-        JSON.stringify(boundaryCoordinates || []), website || '', capacity || '', isAccessible || false]);
+        JSON.stringify(boundaryCoordinates || []), website || '', capacity || '', isAccessible || false,
+        JSON.stringify(aliases || [])]);
     res.status(201).json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1512,7 +1513,7 @@ router.post('/venues', requireSuperadmin, async (req, res) => {
 // PUT /api/admin/venues/:id — update venue (superadmin only)
 router.put('/venues/:id', requireSuperadmin, async (req, res) => {
   try {
-    const { name, address, latitude, longitude, city, boundaryCoordinates, website, capacity, isAccessible } = req.body;
+    const { name, address, latitude, longitude, city, boundaryCoordinates, website, capacity, isAccessible, aliases } = req.body;
     const { rows } = await pool.query(`
       UPDATE venues SET
         name = COALESCE($2, name),
@@ -1524,11 +1525,13 @@ router.put('/venues/:id', requireSuperadmin, async (req, res) => {
         website = COALESCE($8, website),
         capacity = COALESCE($9, capacity),
         is_accessible = COALESCE($10, is_accessible),
+        aliases = COALESCE($11, aliases),
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `, [req.params.id, name, address, latitude, longitude, city,
-        boundaryCoordinates ? JSON.stringify(boundaryCoordinates) : null, website, capacity, isAccessible]);
+        boundaryCoordinates ? JSON.stringify(boundaryCoordinates) : null, website, capacity, isAccessible,
+        aliases ? JSON.stringify(aliases) : null]);
     if (rows.length === 0) return res.status(404).json({ error: 'Venue not found' });
     res.json(rows[0]);
   } catch (err) {

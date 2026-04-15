@@ -894,6 +894,10 @@
         <input type="checkbox" id="venueIsAccessible"> Wheelchair Accessible
       </label>
     </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:4px;">Aliases <span style="font-size:11px;">(comma-separated alternate names, e.g. "Village Theatre - WA, VT Issaquah")</span></label>
+      <input type="text" id="venueAliases" placeholder="Alias 1, Alias 2, ..." style="width:100%; padding:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px;">
+    </div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
       <p style="color:#94a3b8; font-size:13px; margin:0;">Click on the map to add boundary polygon points. Click a marker to remove it.</p>
       <button class="btn-secondary" onclick="recenterVenueMap()" style="font-size:12px; padding:4px 10px; white-space:nowrap;">📍 Recenter</button>
@@ -3132,6 +3136,7 @@ function showVenueForm(venue) {
   document.getElementById('venueLng').value = venue ? (venue.longitude || '') : '';
   document.getElementById('venueCapacity').value = venue ? (venue.capacity || '') : '';
   document.getElementById('venueIsAccessible').checked = venue ? !!venue.is_accessible : false;
+  document.getElementById('venueAliases').value = venue && Array.isArray(venue.aliases) ? venue.aliases.join(', ') : '';
   editingVenueId = venue ? venue.id : null;
   const bc = venue && venue.boundary_coordinates;
   venuePoints = Array.isArray(bc) ? [...bc] : [];
@@ -3267,10 +3272,12 @@ async function saveVenue() {
   const longitude = parseFloat(document.getElementById('venueLng').value) || null;
   const capacity = document.getElementById('venueCapacity').value.trim();
   const isAccessible = document.getElementById('venueIsAccessible').checked;
+  const aliasStr = document.getElementById('venueAliases').value.trim();
+  const aliases = aliasStr ? aliasStr.split(',').map(s => s.trim()).filter(Boolean) : [];
   if (!name) { toast('Venue name is required'); return; }
 
   const headers = await adminHeaders();
-  const body = JSON.stringify({ name, address, city, website, latitude, longitude, capacity, isAccessible, boundaryCoordinates: venuePoints });
+  const body = JSON.stringify({ name, address, city, website, latitude, longitude, capacity, isAccessible, aliases, boundaryCoordinates: venuePoints });
 
   let res;
   if (editingVenueId) {
