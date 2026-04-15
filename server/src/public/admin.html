@@ -138,6 +138,16 @@
     }
     .btn-primary:hover { background: #22c55e; }
     .venue-boundary-point { cursor: pointer !important; }
+    .venue-pin-pulse {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: #4ade80; border: 3px solid white;
+      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6), 0 2px 6px rgba(0,0,0,0.5);
+      animation: venuePulse 2s ease-in-out infinite;
+    }
+    @keyframes venuePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6), 0 2px 6px rgba(0,0,0,0.5); }
+      50% { box-shadow: 0 0 0 12px rgba(74, 222, 128, 0), 0 2px 6px rgba(0,0,0,0.5); }
+    }
     .btn-danger {
       background: #ef444433;
       color: #f87171;
@@ -879,7 +889,10 @@
         <input type="checkbox" id="venueIsAccessible"> Wheelchair Accessible
       </label>
     </div>
-    <p style="color:#94a3b8; font-size:13px; margin-bottom:8px;">Click on the map to add boundary polygon points. Click a marker to remove it.</p>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+      <p style="color:#94a3b8; font-size:13px; margin:0;">Click on the map to add boundary polygon points. Click a marker to remove it.</p>
+      <button class="btn-secondary" onclick="recenterVenueMap()" style="font-size:12px; padding:4px 10px; white-space:nowrap;">📍 Recenter</button>
+    </div>
     <div id="venueMapContainer" style="height:350px; border-radius:10px; border:1px solid #334155; margin-bottom:12px;"></div>
     <div id="venuePointsList" style="margin-bottom:12px; font-size:13px; color:#94a3b8;"></div>
     <div style="display:flex; gap:8px;">
@@ -3129,14 +3142,27 @@ function initVenueMap() {
     L.marker([lat, lng], {
       icon: L.divIcon({
         className: '',
-        html: '<div style="background:#4ade80; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>',
-        iconSize: [12, 12],
-        iconAnchor: [6, 6],
-      })
-    }).addTo(venueMapInstance).bindTooltip('Venue location', { direction: 'top' });
+        html: '<div class="venue-pin-pulse"></div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      }),
+      zIndexOffset: 1000,
+      interactive: false,
+    }).addTo(venueMapInstance).bindTooltip('Venue location (lat/lng)', { permanent: true, direction: 'top', offset: [0, -14] });
   }
 
   renderVenuePolygon();
+}
+
+function recenterVenueMap() {
+  if (!venueMapInstance) return;
+  const lat = parseFloat(document.getElementById('venueLat').value);
+  const lng = parseFloat(document.getElementById('venueLng').value);
+  if (lat && lng) {
+    venueMapInstance.setView([lat, lng], 17);
+  } else {
+    toast('No lat/lng set for this venue');
+  }
 }
 
 function onVenueMapClick(e) {
