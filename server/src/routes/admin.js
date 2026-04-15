@@ -1573,27 +1573,29 @@ router.post('/venues/seed', requireSuperadmin, async (req, res) => {
   ];
 
   try {
+    // Verify venues table exists
+    try {
+      const tableCheck = await pool.query("SELECT COUNT(*) FROM venues");
+      console.log(`[Seed] Venues table exists, current count: ${tableCheck.rows[0].count}`);
+    } catch (tableErr) {
+      console.error('[Seed] Venues table does not exist:', tableErr.message);
+      return res.status(500).json({ error: 'Venues table does not exist. Migration may not have run.' });
+    }
+
     let created = 0;
     let skipped = 0;
     for (const v of seedVenues) {
       try {
-        // Check if venue already exists
-        const existing = await pool.query(
-          'SELECT id FROM venues WHERE LOWER(name) = LOWER($1) AND city = $2',
-          [v.name, v.city]
-        );
-        if (existing.rows.length > 0) {
-          skipped++;
-          continue;
-        }
+        console.log(`[Seed] Inserting: ${v.name}`);
         await pool.query(
           `INSERT INTO venues (name, address, latitude, longitude, city)
            VALUES ($1, $2, $3, $4, $5)`,
           [v.name, v.address, v.latitude, v.longitude, v.city]
         );
         created++;
+        console.log(`[Seed] Created: ${v.name}`);
       } catch (err) {
-        console.error(`Failed to seed venue ${v.name}:`, err.message);
+        console.error(`[Seed] Failed ${v.name}: ${err.message}`);
         skipped++;
       }
     }
