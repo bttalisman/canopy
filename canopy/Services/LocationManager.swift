@@ -5,9 +5,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     static let shared = LocationManager()
     private let manager = CLLocationManager()
 
-    // Toggle this to simulate being in Capitol Hill for testing
-    // Set to false for real location
+    // Debug location spoofing — only active in debug builds
+    #if DEBUG
     static let useDebugLocation = true
+    #else
+    static let useDebugLocation = false
+    #endif
     private static let debugLocation = CLLocation(latitude: 47.6150, longitude: -122.3200) // Capitol Hill
 
     @Published var userLocation: CLLocation?
