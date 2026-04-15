@@ -593,9 +593,6 @@ struct EventMapView: View {
 
                         Button {
                             showBoundary.toggle()
-                            if showBoundary && !boundaryLoaded {
-                                loadBoundary()
-                            }
                         } label: {
                             Image(systemName: "square.dashed")
                                 .font(.system(size: 14, weight: .semibold))
@@ -778,6 +775,9 @@ struct EventMapView: View {
                 }
             }
         }
+        .onAppear {
+            if !boundaryLoaded { loadBoundary() }
+        }
     }
 
     /// Center of the boundary polygon, if available.
@@ -833,24 +833,7 @@ struct EventMapView: View {
         print("[Boundary] Event coords: \(event.latitude ?? 0), \(event.longitude ?? 0)")
 
         Task {
-            // 1. Try venue boundary data from the API event response (venue.boundaryCoordinates)
-            // Fetch the event from the API to check for attached venue data
-            if let apiEvents = try? await CanopyAPIService.shared.fetchEvents() {
-                if let apiEvent = apiEvents.first(where: { $0.slug == event.slug }),
-                   let venueBoundary = apiEvent.venue?.boundaryCoordinates,
-                   !venueBoundary.isEmpty {
-                    print("[Boundary] Using venue boundary from API response: \(apiEvent.venue?.name ?? "") (\(venueBoundary.count) points)")
-                    await MainActor.run {
-                        boundaryCoords = venueBoundary.map {
-                            CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
-                        }
-                        boundaryLoaded = true
-                    }
-                    return
-                }
-            }
-
-            // 2. Try API venue-boundaries endpoint (admin-defined, legacy + venues)
+            // 1. Try API venue-boundaries endpoint (admin-defined venues + legacy)
             if let apiBoundaries = try? await CanopyAPIService.shared.fetchVenueBoundaries() {
                 let locationLower = event.location.lowercased()
                 if let match = apiBoundaries.first(where: {
