@@ -183,6 +183,9 @@ actor TicketmasterService {
             if let priceRange = tmEvent.priceRanges?.first {
                 event.priceMin = priceRange.min
                 event.priceMax = priceRange.max
+                print("[TM] Price for \(event.name): $\(priceRange.min ?? 0)–$\(priceRange.max ?? 0)")
+            } else {
+                print("[TM] No price data for \(event.name)")
             }
 
             context.insert(event)

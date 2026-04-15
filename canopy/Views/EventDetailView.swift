@@ -24,6 +24,16 @@ struct EventDetailView: View {
         }
     }
 
+    private var shareText: String {
+        var text = "\(event.name) — \(event.location)"
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        text += "\n\(formatter.string(from: event.startDate))"
+        if let url = event.ticketingURL { text += "\n\(url)" }
+        text += "\n\nShared via Canopy"
+        return text
+    }
+
     private var ticketLabel: String {
         if event.isFree == true { return "Free" }
         if let min = event.priceMin, let max = event.priceMax {
@@ -133,6 +143,16 @@ struct EventDetailView: View {
                             }
                             .accessibilityLabel(eventSaved ? "Remove \(event.name) from saved events" : "Save \(event.name) to my schedule")
                             .accessibilityAddTraits(eventSaved ? .isSelected : [])
+                        }
+
+                        ShareLink(item: shareText) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color(.systemGray5))
+                                .foregroundStyle(.primary)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
                     .padding(.horizontal)
