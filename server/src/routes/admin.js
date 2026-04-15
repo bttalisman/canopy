@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
 const cheerio = require('cheerio');
+const cloudinary = require('cloudinary').v2;
 const { pool } = require('../db/pool');
 const {
   requireSignedIn,
@@ -1696,6 +1697,32 @@ router.post('/venues/seed', requireSuperadmin, async (req, res) => {
       }
     }
     res.json({ created, skipped, total: seedVenues.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =====================
+// CLOUDINARY UPLOAD
+// =====================
+
+router.post('/cloudinary-signature', async (req, res) => {
+  try {
+    const secret = process.env.CLOUDINARY_API_SECRET;
+    if (!secret) return res.status(500).json({ error: 'Cloudinary not configured' });
+
+    const timestamp = Math.round(Date.now() / 1000);
+    const folder = req.body.folder || 'canopy';
+    const paramsToSign = { timestamp, folder };
+    const signature = cloudinary.utils.api_sign_request(paramsToSign, secret);
+
+    res.json({
+      signature,
+      timestamp,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      folder,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

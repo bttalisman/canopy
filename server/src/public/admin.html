@@ -6,6 +6,8 @@
   <title>Canopy Admin</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Cloudinary upload widget -->
+  <script src="https://upload-widget.cloudinary.com/latest/global/all.js"></script>
   <!-- Clerk authentication SDK -->
   <script
     data-clerk-publishable-key="pk_test_YXB0LWNyYXlmaXNoLTU4LmNsZXJrLmFjY291bnRzLmRldiQ"
@@ -407,7 +409,10 @@
           </div>
           <div class="form-group">
             <label>Image URL</label>
-            <input type="url" id="evImageURL" />
+            <div style="display:flex;gap:8px;">
+              <input type="url" id="evImageURL" style="flex:1;" />
+              <button type="button" class="btn-secondary" onclick="openUploadWidget('canopy/events', 'evImageURL')" style="font-size:12px;padding:4px 10px;white-space:nowrap;">📷 Upload</button>
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -468,6 +473,30 @@
           <div class="form-group">
             <label>Category</label>
             <input type="text" id="siCategory" value="General" />
+          </div>
+        </div>
+        <div style="border-top:1px solid #334155; margin-top:16px; padding-top:16px;">
+          <h4 style="margin:0 0 12px; color:#94a3b8; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">Performer (optional)</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Performer Name</label>
+              <input type="text" id="siPerformerName" placeholder="Artist or speaker name" />
+            </div>
+            <div class="form-group">
+              <label>Performer Image</label>
+              <div style="display:flex;gap:8px;">
+                <input type="url" id="siPerformerImageURL" placeholder="https://..." style="flex:1;" />
+                <button type="button" class="btn-secondary" onclick="openUploadWidget('canopy/performers', 'siPerformerImageURL')" style="font-size:12px;padding:4px 10px;white-space:nowrap;">📷 Upload</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Performer Bio</label>
+            <textarea id="siPerformerBio" placeholder="Short biography..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Performer Links (JSON)</label>
+            <input type="text" id="siPerformerLinks" placeholder='[{"label":"Website","url":"https://..."}]' />
           </div>
         </div>
         <div class="actions">
@@ -623,6 +652,7 @@
         <label>Map Image URL</label>
         <div style="display:flex;gap:8px">
           <input type="url" id="mapImageURL" placeholder="https://example.com/venue-map.png" style="flex:1" />
+          <button type="button" class="btn-secondary" onclick="openUploadWidget('canopy/maps', 'mapImageURL')" style="font-size:12px;padding:4px 10px;white-space:nowrap;">📷 Upload</button>
           <button class="btn-primary" onclick="saveMapImageURL()" style="font-size:13px;padding:5px 14px">Save</button>
         </div>
       </div>
@@ -1314,6 +1344,10 @@ function showEditScheduleItem(id) {
   document.getElementById('siEndTime').value = toLocalDatetime(si.endTime);
   document.getElementById('siStage').value = si.stageId || '';
   document.getElementById('siCategory').value = si.category || 'General';
+  document.getElementById('siPerformerName').value = si.performerName || '';
+  document.getElementById('siPerformerImageURL').value = si.performerImageURL || '';
+  document.getElementById('siPerformerBio').value = si.performerBio || '';
+  document.getElementById('siPerformerLinks').value = si.performerLinks || '';
 }
 
 async function saveScheduleItem(evt) {
@@ -1326,6 +1360,10 @@ async function saveScheduleItem(evt) {
     endTime: new Date(document.getElementById('siEndTime').value).toISOString(),
     stageId: document.getElementById('siStage').value || null,
     category: document.getElementById('siCategory').value,
+    performerName: document.getElementById('siPerformerName').value || null,
+    performerImageURL: document.getElementById('siPerformerImageURL').value || null,
+    performerBio: document.getElementById('siPerformerBio').value || null,
+    performerLinks: document.getElementById('siPerformerLinks').value || null,
   };
   try {
     let res;
@@ -2849,6 +2887,36 @@ async function importSeattleEvents() {
     btn.textContent = 'Import All New';
     btn.disabled = false;
   }
+}
+
+// ---- Cloudinary Upload ----
+
+async function openUploadWidget(folder, targetInputId) {
+  const headers = await adminHeaders();
+  headers['Content-Type'] = 'application/json';
+  const sigRes = await fetch(`${API}/api/admin/cloudinary-signature`, {
+    method: 'POST', headers, body: JSON.stringify({ folder })
+  });
+  if (!sigRes.ok) { toast('Upload not configured'); return; }
+  const { signature, timestamp, apiKey, cloudName } = await sigRes.json();
+
+  cloudinary.openUploadWidget({
+    cloudName, apiKey, uploadSignature: signature, uploadSignatureTimestamp: timestamp,
+    folder,
+    sources: ['local', 'url', 'camera'],
+    resourceType: 'auto',
+    maxFileSize: 10000000,
+    multiple: false,
+    styles: {
+      palette: { window: '#1e293b', windowBorder: '#334155', tabIcon: '#4ade80', menuIcons: '#94a3b8', textDark: '#0f172a', textLight: '#e2e8f0', link: '#4ade80', action: '#4ade80', inactiveTabIcon: '#64748b', error: '#f87171', inProgress: '#4ade80', complete: '#4ade80', sourceBg: '#0f172a' }
+    }
+  }, (error, result) => {
+    if (error) { toast('Upload error'); return; }
+    if (result?.event === 'success') {
+      document.getElementById(targetInputId).value = result.info.secure_url;
+      toast('Upload complete!');
+    }
+  });
 }
 
 // ---- Init ----
