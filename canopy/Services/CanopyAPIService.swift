@@ -25,6 +25,7 @@ struct APIEvent: Codable, Sendable, Identifiable {
     let isFree: Bool?
     let isCityOfficial: Bool?
     let city: String?
+    let venue: APIVenue?
     let stages: [APIStage]?
     let scheduleItems: [APIScheduleItem]?
     let mapPins: [APIMapPin]?
@@ -61,6 +62,18 @@ struct APIMapPin: Codable, Sendable {
     let latitude: Double?
     let longitude: Double?
     let description: String?
+}
+
+struct APIVenue: Codable, Sendable {
+    let id: String
+    let name: String
+    let address: String?
+    let latitude: Double?
+    let longitude: Double?
+    let boundaryCoordinates: [APICoordinate]?
+    let website: String?
+    let capacity: String?
+    let isAccessible: Bool?
 }
 
 struct APIVenueBoundary: Codable, Sendable {
@@ -176,8 +189,8 @@ actor CanopyAPIService {
                     event.mapImageURL = apiEvent.mapImageURL
                     event.mapPinSize = apiEvent.mapPinSize ?? event.mapPinSize
                     event.ticketingURL = apiEvent.ticketingURL
-                    event.latitude = apiEvent.latitude ?? event.latitude
-                    event.longitude = apiEvent.longitude ?? event.longitude
+                    event.latitude = apiEvent.latitude ?? apiEvent.venue?.latitude ?? event.latitude
+                    event.longitude = apiEvent.longitude ?? apiEvent.venue?.longitude ?? event.longitude
                     event.category = mapCategory(apiEvent.category ?? event.category.rawValue)
                     event.permitId = apiEvent.permitId
                     event.isAccessible = apiEvent.isAccessible
@@ -211,8 +224,8 @@ actor CanopyAPIService {
             event.imageURL = apiEvent.imageURL
             event.mapImageURL = apiEvent.mapImageURL
             event.mapPinSize = apiEvent.mapPinSize
-            event.latitude = apiEvent.latitude
-            event.longitude = apiEvent.longitude
+            event.latitude = apiEvent.latitude ?? apiEvent.venue?.latitude
+            event.longitude = apiEvent.longitude ?? apiEvent.venue?.longitude
             // Resolve neighborhood from coordinates if not provided by backend
             if (apiEvent.neighborhood ?? "").isEmpty,
                let lat = apiEvent.latitude, let lng = apiEvent.longitude,

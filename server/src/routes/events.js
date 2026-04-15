@@ -8,11 +8,18 @@ router.get('/', async (req, res) => {
   try {
     const city = req.query.city || 'seattle';
     const { rows: events } = await pool.query(`
-      SELECT * FROM events
-      WHERE is_active = true
-        AND (status = 'active' OR status IS NULL)
-        AND (city = $1 OR city IS NULL)
-      ORDER BY start_date ASC
+      SELECT e.*,
+        v.id AS venue__id, v.name AS venue__name, v.address AS venue__address,
+        v.latitude AS venue__latitude, v.longitude AS venue__longitude,
+        v.boundary_coordinates AS venue__boundary_coordinates,
+        v.website AS venue__website, v.capacity AS venue__capacity,
+        v.is_accessible AS venue__is_accessible
+      FROM events e
+      LEFT JOIN venues v ON e.venue_id = v.id
+      WHERE e.is_active = true
+        AND (e.status = 'active' OR e.status IS NULL)
+        AND (e.city = $1 OR e.city IS NULL)
+      ORDER BY e.start_date ASC
     `, [city]);
 
     if (events.length === 0) {
@@ -54,6 +61,17 @@ router.get('/', async (req, res) => {
       isFree: event.is_free,
       isCityOfficial: event.is_city_official,
       city: event.city,
+      venue: event.venue__id ? {
+        id: event.venue__id,
+        name: event.venue__name,
+        address: event.venue__address,
+        latitude: event.venue__latitude,
+        longitude: event.venue__longitude,
+        boundaryCoordinates: event.venue__boundary_coordinates || [],
+        website: event.venue__website,
+        capacity: event.venue__capacity,
+        isAccessible: event.venue__is_accessible,
+      } : null,
       stages: (stagesByEvent[event.id] || []).map(s => ({
         id: s.id,
         name: s.name,
@@ -94,14 +112,34 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/events/venue-boundaries — public venue boundary data for iOS
+// Now queries from venues table (with fallback to legacy venue_boundaries)
 router.get('/venue-boundaries', async (req, res) => {
   try {
     const city = req.query.city || 'seattle';
-    const { rows } = await pool.query(
+
+    // Query venues table for boundaries
+    const { rows: venueRows } = await pool.query(
+      `SELECT id, name AS venue_name, boundary_coordinates AS coordinates, city
+       FROM venues
+       WHERE city = $1 AND boundary_coordinates IS NOT NULL AND boundary_coordinates::text != '[]'
+       ORDER BY name ASC`,
+      [city]
+    );
+
+    // Also query legacy venue_boundaries for any that aren't in venues yet
+    const { rows: legacyRows } = await pool.query(
       'SELECT id, venue_name, coordinates, city FROM venue_boundaries WHERE city = $1 ORDER BY venue_name ASC',
       [city]
     );
-    res.json(rows.map(r => ({
+
+    // Merge: venues first, then legacy entries whose name doesn't match a venue
+    const venueNames = new Set(venueRows.map(r => r.venue_name.toLowerCase()));
+    const combined = [
+      ...venueRows,
+      ...legacyRows.filter(r => !venueNames.has(r.venue_name.toLowerCase())),
+    ];
+
+    res.json(combined.map(r => ({
       id: r.id,
       venueName: r.venue_name,
       coordinates: r.coordinates,
@@ -117,9 +155,16 @@ router.get('/venue-boundaries', async (req, res) => {
 router.get('/:slug', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT * FROM events
-       WHERE slug = $1 AND is_active = true
-         AND (status = 'active' OR status IS NULL)`,
+      `SELECT e.*,
+        v.id AS venue__id, v.name AS venue__name, v.address AS venue__address,
+        v.latitude AS venue__latitude, v.longitude AS venue__longitude,
+        v.boundary_coordinates AS venue__boundary_coordinates,
+        v.website AS venue__website, v.capacity AS venue__capacity,
+        v.is_accessible AS venue__is_accessible
+      FROM events e
+      LEFT JOIN venues v ON e.venue_id = v.id
+      WHERE e.slug = $1 AND e.is_active = true
+        AND (e.status = 'active' OR e.status IS NULL)`,
       [req.params.slug]
     );
 
@@ -158,6 +203,17 @@ router.get('/:slug', async (req, res) => {
       isFree: event.is_free,
       isCityOfficial: event.is_city_official,
       city: event.city,
+      venue: event.venue__id ? {
+        id: event.venue__id,
+        name: event.venue__name,
+        address: event.venue__address,
+        latitude: event.venue__latitude,
+        longitude: event.venue__longitude,
+        boundaryCoordinates: event.venue__boundary_coordinates || [],
+        website: event.venue__website,
+        capacity: event.venue__capacity,
+        isAccessible: event.venue__is_accessible,
+      } : null,
       stages: stagesResult.rows.map(s => ({
         id: s.id,
         name: s.name,

@@ -143,6 +143,24 @@ const schema = `
 
   CREATE INDEX IF NOT EXISTS idx_venue_boundaries_city ON venue_boundaries(city);
   CREATE INDEX IF NOT EXISTS idx_venue_boundaries_venue_name ON venue_boundaries(venue_name);
+
+  CREATE TABLE IF NOT EXISTS venues (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    address TEXT DEFAULT '',
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    city TEXT DEFAULT 'seattle',
+    boundary_coordinates JSONB DEFAULT '[]',
+    website TEXT DEFAULT '',
+    capacity TEXT DEFAULT '',
+    is_accessible BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_venues_city ON venues(city);
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS venue_id UUID REFERENCES venues(id) ON DELETE SET NULL;
+  CREATE INDEX IF NOT EXISTS idx_events_venue ON events(venue_id);
 `;
 
 async function migrate(pool) {

@@ -65,7 +65,7 @@ router.post('/events', async (req, res) => {
     }
 
     const { name, slug, description, startDate, endDate, location, neighborhood,
-            logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, city } = req.body;
+            logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, city, venueId } = req.body;
 
     // Superadmins create active events; organizers create pending_review.
     const status = superadmin ? 'active' : 'pending_review';
@@ -75,12 +75,12 @@ router.post('/events', async (req, res) => {
     const { rows } = await pool.query(`
       INSERT INTO events (name, slug, description, start_date, end_date, location, neighborhood,
                           logo_system_image, image_url, map_image_url, ticketing_url, latitude, longitude, category,
-                          owner_org_id, created_by_user_id, status, city)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                          owner_org_id, created_by_user_id, status, city, venue_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING *
     `, [name, slug, description || '', startDate, endDate, location, neighborhood || '',
         logoSystemImage || 'party.popper', imageURL, mapImageURL || null, ticketingURL, latitude, longitude, category || 'community',
-        ownerOrgId, createdByUserId, status, city || 'seattle']);
+        ownerOrgId, createdByUserId, status, city || 'seattle', venueId || null]);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -108,7 +108,7 @@ router.put('/events/:id', requireEventAccess, async (req, res) => {
   try {
     const { name, description, startDate, endDate, location, neighborhood,
             logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
-            permitId, isAccessible, isFree, isCityOfficial, city } = req.body;
+            permitId, isAccessible, isFree, isCityOfficial, city, venueId } = req.body;
 
     const { rows } = await pool.query(`
       UPDATE events SET
@@ -133,12 +133,14 @@ router.put('/events/:id', requireEventAccess, async (req, res) => {
         is_free = COALESCE($20, is_free),
         is_city_official = COALESCE($21, is_city_official),
         city = COALESCE($22, city),
+        venue_id = CASE WHEN $23::text = '__KEEP__' THEN venue_id ELSE $24::uuid END,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `, [req.params.id, name, description, startDate, endDate, location, neighborhood,
         logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
-        permitId, isAccessible, isFree, isCityOfficial, city]);
+        permitId, isAccessible, isFree, isCityOfficial, city,
+        venueId !== undefined ? 'SET' : '__KEEP__', venueId || null]);
 
     if (rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     res.json(rows[0]);
@@ -1463,6 +1465,82 @@ router.delete('/venue-boundaries/:id', requireSuperadmin, async (req, res) => {
   try {
     const { rowCount } = await pool.query('DELETE FROM venue_boundaries WHERE id = $1', [req.params.id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ deleted: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =====================
+// VENUES
+// =====================
+
+// GET /api/admin/venues — list all venues, optionally filtered by city
+router.get('/venues', async (req, res) => {
+  try {
+    const city = req.query.city || null;
+    const query = city
+      ? 'SELECT * FROM venues WHERE city = $1 ORDER BY name ASC'
+      : 'SELECT * FROM venues ORDER BY name ASC';
+    const params = city ? [city] : [];
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/venues — create venue (superadmin only)
+router.post('/venues', requireSuperadmin, async (req, res) => {
+  try {
+    const { name, address, latitude, longitude, city, boundaryCoordinates, website, capacity, isAccessible } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'Venue name is required' });
+    }
+    const { rows } = await pool.query(`
+      INSERT INTO venues (name, address, latitude, longitude, city, boundary_coordinates, website, capacity, is_accessible)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `, [name, address || '', latitude || null, longitude || null, city || 'seattle',
+        JSON.stringify(boundaryCoordinates || []), website || '', capacity || '', isAccessible || false]);
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/venues/:id — update venue (superadmin only)
+router.put('/venues/:id', requireSuperadmin, async (req, res) => {
+  try {
+    const { name, address, latitude, longitude, city, boundaryCoordinates, website, capacity, isAccessible } = req.body;
+    const { rows } = await pool.query(`
+      UPDATE venues SET
+        name = COALESCE($2, name),
+        address = COALESCE($3, address),
+        latitude = COALESCE($4, latitude),
+        longitude = COALESCE($5, longitude),
+        city = COALESCE($6, city),
+        boundary_coordinates = COALESCE($7, boundary_coordinates),
+        website = COALESCE($8, website),
+        capacity = COALESCE($9, capacity),
+        is_accessible = COALESCE($10, is_accessible),
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `, [req.params.id, name, address, latitude, longitude, city,
+        boundaryCoordinates ? JSON.stringify(boundaryCoordinates) : null, website, capacity, isAccessible]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Venue not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/admin/venues/:id — delete venue (superadmin only)
+router.delete('/venues/:id', requireSuperadmin, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query('DELETE FROM venues WHERE id = $1', [req.params.id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Venue not found' });
     res.json({ deleted: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

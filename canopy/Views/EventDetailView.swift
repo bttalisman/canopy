@@ -798,7 +798,24 @@ struct EventMapView: View {
         print("[Boundary] Event coords: \(event.latitude ?? 0), \(event.longitude ?? 0)")
 
         Task {
-            // 1. Try API boundaries (admin-defined)
+            // 1. Try venue boundary data from the API event response (venue.boundaryCoordinates)
+            // Fetch the event from the API to check for attached venue data
+            if let apiEvents = try? await CanopyAPIService.shared.fetchEvents() {
+                if let apiEvent = apiEvents.first(where: { $0.slug == event.slug }),
+                   let venueBoundary = apiEvent.venue?.boundaryCoordinates,
+                   !venueBoundary.isEmpty {
+                    print("[Boundary] Using venue boundary from API response: \(apiEvent.venue?.name ?? "") (\(venueBoundary.count) points)")
+                    await MainActor.run {
+                        boundaryCoords = venueBoundary.map {
+                            CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
+                        }
+                        boundaryLoaded = true
+                    }
+                    return
+                }
+            }
+
+            // 2. Try API venue-boundaries endpoint (admin-defined, legacy + venues)
             if let apiBoundaries = try? await CanopyAPIService.shared.fetchVenueBoundaries() {
                 let locationLower = event.location.lowercased()
                 if let match = apiBoundaries.first(where: {
@@ -815,7 +832,7 @@ struct EventMapView: View {
                 }
             }
 
-            // 2. Check VenueMapData (hardcoded)
+            // 3. Check VenueMapData (hardcoded)
             if let venue = VenueMapData.findVenue(for: event.location),
                !venue.boundaryCoords.isEmpty {
                 print("[Boundary] Using VenueMapData boundary (\(venue.boundaryCoords.count) points)")
@@ -828,7 +845,7 @@ struct EventMapView: View {
                 return
             }
 
-            // 3. Fallback: Google Geocoding API
+            // 4. Fallback: Google Geocoding API
             print("[Boundary] Falling back to Geocoding API")
             let address = "\(event.location), \(CityConfig.cityDisplayName), WA"
             if let bounds = await GeocodingService.fetchBounds(for: address) {
