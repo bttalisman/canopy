@@ -568,8 +568,8 @@ struct EventMapView: View {
                 // Google Maps
                 ZStack(alignment: .topTrailing) {
                     GoogleMapView(
-                        latitude: event.latitude ?? 47.6062,
-                        longitude: event.longitude ?? -122.3321,
+                        latitude: mapCenter.lat,
+                        longitude: mapCenter.lng,
                         span: VenueMapData.findVenue(for: event.location)?.mapSpan ?? 0.004,
                         markers: googleMapMarkers,
                         isSatellite: showSatellite,
@@ -780,12 +780,47 @@ struct EventMapView: View {
         }
     }
 
+    /// Center of the boundary polygon, if available.
+    private var boundaryCenter: (lat: Double, lng: Double)? {
+        guard !boundaryCoords.isEmpty else { return nil }
+        let avgLat = boundaryCoords.map(\.latitude).reduce(0, +) / Double(boundaryCoords.count)
+        let avgLng = boundaryCoords.map(\.longitude).reduce(0, +) / Double(boundaryCoords.count)
+        return (avgLat, avgLng)
+    }
+
+    /// Check if a point is inside the boundary polygon (ray casting).
+    private func pointInBoundary(lat: Double, lng: Double) -> Bool {
+        guard boundaryCoords.count >= 3 else { return true }
+        var inside = false
+        var j = boundaryCoords.count - 1
+        for i in 0..<boundaryCoords.count {
+            let yi = boundaryCoords[i].latitude, xi = boundaryCoords[i].longitude
+            let yj = boundaryCoords[j].latitude, xj = boundaryCoords[j].longitude
+            if ((yi > lat) != (yj > lat)) &&
+                (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) {
+                inside = !inside
+            }
+            j = i
+        }
+        return inside
+    }
+
+    /// Map center: use boundary center if event coords are outside the boundary.
+    private var mapCenter: (lat: Double, lng: Double) {
+        let eventLat = event.latitude ?? 47.6062
+        let eventLng = event.longitude ?? -122.3321
+
+        if !boundaryCoords.isEmpty,
+           !pointInBoundary(lat: eventLat, lng: eventLng),
+           let center = boundaryCenter {
+            return center
+        }
+        return (eventLat, eventLng)
+    }
+
     private var googleMapMarkers: [(lat: Double, lng: Double, title: String, color: UIColor)] {
         if filteredPins.isEmpty {
-            if let lat = event.latitude, let lng = event.longitude {
-                return [(lat: lat, lng: lng, title: event.location, color: UIColor(Color.leafDeep))]
-            }
-            return []
+            return [(lat: mapCenter.lat, lng: mapCenter.lng, title: event.location, color: UIColor(Color.leafDeep))]
         }
         return filteredPins.map { pin in
             let coord = pinCoordinate(pin)
