@@ -126,7 +126,7 @@ actor TicketmasterService {
 
             print("[TM] Importing: \(tmEvent.name) at \(venueName), \(venueCity)")
 
-            let endDate = tmEvent.endDate ?? Calendar.current.date(byAdding: .hour, value: 3, to: startDate)!
+            let endDate = tmEvent.endDate ?? Calendar.current.date(byAdding: .hour, value: 3, to: startDate) ?? startDate.addingTimeInterval(3 * 3600)
 
             let category = mapCategory(tmEvent.segmentName)
 

@@ -110,7 +110,7 @@ struct DiscoverView: View {
         case .all:
             result = result.filter { $0.endDate >= now }
         case .thisWeek:
-            let endOfWeek = calendar.date(byAdding: .day, value: 7, to: now)!
+            let endOfWeek = calendar.date(byAdding: .day, value: 7, to: now) ?? now
             result = result.filter { $0.startDate <= endOfWeek && $0.endDate >= now }
         case .thisWeekend:
             let weekday = calendar.component(.weekday, from: now)
@@ -121,13 +121,13 @@ struct DiscoverView: View {
             case 7: daysToSaturday = 0   // Already Saturday
             default: daysToSaturday = 7 - weekday  // Mon-Fri → next Saturday
             }
-            let saturday = calendar.date(byAdding: .day, value: daysToSaturday, to: now)!
-            let sunday = calendar.date(byAdding: .day, value: 1, to: saturday)!
+            let saturday = calendar.date(byAdding: .day, value: daysToSaturday, to: now) ?? now
+            let sunday = calendar.date(byAdding: .day, value: 1, to: saturday) ?? now
             let startOfSaturday = calendar.startOfDay(for: saturday)
-            let endOfSunday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: sunday)!
+            let endOfSunday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: sunday) ?? now
             result = result.filter { $0.startDate <= endOfSunday && $0.endDate >= startOfSaturday }
         case .thisMonth:
-            let endOfMonth = calendar.date(byAdding: .month, value: 1, to: now)!
+            let endOfMonth = calendar.date(byAdding: .month, value: 1, to: now) ?? now
             result = result.filter { $0.startDate <= endOfMonth && $0.endDate >= now }
         }
 

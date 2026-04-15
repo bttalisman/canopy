@@ -24,7 +24,7 @@ struct DiscoverMapView: View {
     @State private var selectedCluster: VenueCluster?
     @State private var dateRange: ClosedRange<Date> = {
         let now = Calendar.current.startOfDay(for: Date())
-        let sixMonths = Calendar.current.date(byAdding: .month, value: 6, to: now)!
+        let sixMonths = Calendar.current.date(byAdding: .month, value: 6, to: now) ?? now.addingTimeInterval(180 * 24 * 3600)
         return now...sixMonths
     }()
 
@@ -37,7 +37,7 @@ struct DiscoverMapView: View {
     private var dateMax: Date {
         let source = allEvents.isEmpty ? events : allEvents
         let latest = source.map(\.endDate).max() ?? Date()
-        return max(latest, Calendar.current.date(byAdding: .month, value: 1, to: Date())!)
+        return max(latest, Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date())
     }
 
     private var dateFilteredEvents: [Event] {

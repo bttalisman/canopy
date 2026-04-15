@@ -40,7 +40,18 @@ struct canopyApp: App {
                 configurations: [modelConfiguration]
             )
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // If the database is corrupted, delete it and retry
+            print("[Canopy] ModelContainer failed: \(error). Attempting recovery...")
+            let url = modelConfiguration.url
+            try? FileManager.default.removeItem(at: url)
+            do {
+                return try ModelContainer(
+                    for: schema,
+                    configurations: [modelConfiguration]
+                )
+            } catch {
+                fatalError("Could not create ModelContainer after recovery: \(error)")
+            }
         }
     }()
 
