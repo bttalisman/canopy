@@ -149,10 +149,9 @@ struct EventDetailView: View {
                         }
 
                         ShareLink(item: shareText) {
-                            Label("Share", systemImage: "square.and.arrow.up")
+                            Image(systemName: "square.and.arrow.up")
                                 .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
-                                .frame(maxWidth: .infinity)
+                                .frame(width: 44)
                                 .padding(.vertical, 12)
                                 .background(Color(.systemGray5))
                                 .foregroundStyle(.primary)
