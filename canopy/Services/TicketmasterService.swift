@@ -97,6 +97,8 @@ actor TicketmasterService {
             }
 
             let isDuplicate = existing.contains { event in
+                // Admin-imported event (tm- slug from our DB) always wins
+                event.slug.hasPrefix("tm-") ||
                 // Same day match
                 Calendar.current.isDate(event.startDate, inSameDayAs: startDate) ||
                 // Or TM date falls within the curated event's date range (recurring shows)
