@@ -175,6 +175,35 @@ router.post('/events/import-from-tm', requireSuperadmin, async (req, res) => {
       return res.status(400).json({ error: 'name and startDate are required' });
     }
 
+    // Search TM for all performances of this show to find the full date range
+    let resolvedEndDate = endDate;
+    const apiKey = process.env.TICKETMASTER_API_KEY;
+    if (apiKey && name) {
+      try {
+        const searchParams = new URLSearchParams({
+          apikey: apiKey, keyword: name, size: '50', sort: 'date,asc',
+        });
+        if (location) searchParams.set('venueId', ''); // we'll filter by name
+        const tmRes = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${searchParams}`);
+        if (tmRes.ok) {
+          const tmData = await tmRes.json();
+          const allDates = (tmData._embedded?.events || [])
+            .filter(ev => ev.name === name && ev._embedded?.venues?.[0]?.name === location)
+            .map(ev => ev.dates?.start?.dateTime || ev.dates?.start?.localDate)
+            .filter(Boolean)
+            .sort();
+          if (allDates.length > 1) {
+            const lastDate = allDates[allDates.length - 1];
+            // Add 3 hours to the last performance date for end time
+            resolvedEndDate = new Date(new Date(lastDate).getTime() + 3 * 60 * 60 * 1000).toISOString();
+            console.log(`[TM Import] Found ${allDates.length} performances of "${name}": ${allDates[0]} → ${lastDate}`);
+          }
+        }
+      } catch (e) {
+        console.log('[TM Import] Could not resolve date range:', e.message);
+      }
+    }
+
     // Generate slug: tm-{slugified name}-{date}
     const datePart = startDate.slice(0, 10); // YYYY-MM-DD
     const nameSlug = name.toLowerCase()
@@ -207,7 +236,7 @@ router.post('/events/import-from-tm', requireSuperadmin, async (req, res) => {
     }
 
     // end_date is NOT NULL in schema, default to start + 3 hours
-    const effectiveEndDate = endDate || new Date(new Date(startDate).getTime() + 3 * 60 * 60 * 1000).toISOString();
+    const effectiveEndDate = resolvedEndDate || new Date(new Date(startDate).getTime() + 3 * 60 * 60 * 1000).toISOString();
 
     const { rows } = await pool.query(`
       INSERT INTO events (name, slug, description, start_date, end_date, location,
