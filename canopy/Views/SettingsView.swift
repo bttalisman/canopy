@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("quietHoursEnabled") private var quietHoursEnabled = false
     @AppStorage("appearanceMode") private var appearanceMode = 0 // 0=system, 1=light, 2=dark
     @AppStorage("eventSortOrder") private var eventSortOrder = 0 // 0=date, 1=distance
+    @AppStorage("searchRadiusMiles") private var searchRadiusMiles = 30.0
     @State private var showingClearConfirmation = false
 
     var body: some View {
@@ -41,6 +42,32 @@ struct SettingsView: View {
                         Text("Distance").tag(1)
                     }
                     .pickerStyle(.segmented)
+                }
+
+                Section("Discovery Radius") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Search within")
+                            Spacer()
+                            Text("\(Int(searchRadiusMiles)) miles")
+                                .foregroundStyle(.green)
+                                .fontWeight(.semibold)
+                        }
+                        Slider(value: $searchRadiusMiles, in: 5...50, step: 5)
+                            .tint(.green)
+                        HStack {
+                            Text("5 mi")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("50 mi")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Text("Controls how far Ticketmaster searches for events. Curated events always show regardless of radius.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Notifications") {

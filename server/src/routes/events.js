@@ -283,7 +283,7 @@ router.get('/ticketmaster/search', async (req, res) => {
 
     if (metro) {
       params.set('latlong', metro.latlong);
-      params.set('radius', metro.radius);
+      params.set('radius', req.query.radius || metro.radius);
       params.set('unit', 'miles');
     } else {
       params.set('city', cityName);

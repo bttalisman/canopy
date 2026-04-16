@@ -9,7 +9,8 @@ actor TicketmasterService {
     // MARK: - Fetch Events (via backend proxy)
 
     func searchEvents(
-        startDateTime: String? = nil
+        startDateTime: String? = nil,
+        radiusMiles: Int? = nil
     ) async throws -> TMResponse {
         let baseURL = Secrets.canopyAPIBaseURL
         guard !baseURL.isEmpty, baseURL != "YOUR_API_URL_HERE" else {
@@ -23,6 +24,10 @@ actor TicketmasterService {
 
         if let startDateTime {
             queryItems.append(URLQueryItem(name: "startDateTime", value: startDateTime))
+        }
+
+        if let radiusMiles {
+            queryItems.append(URLQueryItem(name: "radius", value: String(radiusMiles)))
         }
 
         components.queryItems = queryItems.isEmpty ? nil : queryItems
