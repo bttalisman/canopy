@@ -90,10 +90,12 @@ actor TicketmasterService {
             }
 
             let isDuplicate = existing.contains { event in
-                Calendar.current.isDate(event.startDate, inSameDayAs: startDate)
-            }
-            if !isDuplicate && !existing.isEmpty {
-                print("[TM] Name matched but date didn't: '\(name)' vs existing dates: \(existing.map { $0.startDate })")
+                // Same day match
+                Calendar.current.isDate(event.startDate, inSameDayAs: startDate) ||
+                // Or TM date falls within the curated event's date range (recurring shows)
+                (startDate >= event.startDate && startDate <= event.endDate) ||
+                // Same venue + name at the same location = same show, different night
+                (event.location.lowercased() == (tmEvent.venue?.name ?? "").lowercased())
             }
 
             if isDuplicate {
