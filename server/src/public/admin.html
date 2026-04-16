@@ -3052,6 +3052,12 @@ async function runScript() {
   }
   code = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
+  // Show sanitized code for debugging
+  if (code.trim().startsWith('DEBUG')) {
+    output.textContent = code;
+    return;
+  }
+
   // Check for line breaks inside string literals
   const badStringMatch = code.match(/'[^']*\n[^']*'|"[^"]*\n[^"]*"/);
   if (badStringMatch) {
