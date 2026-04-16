@@ -3086,7 +3086,8 @@ async function runScript() {
   try {
     const h = await adminHeaders();
     h['Content-Type'] = 'application/json';
-    const fn = new Function('h', 'API', 'toast', 'log', 'fetch', `return (async () => { ${code} })();`);
+    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+    const fn = new AsyncFunction('h', 'API', 'toast', 'log', 'fetch', code);
     const result = await fn(h, API, toast, log, fetch);
     if (result !== undefined) log('→', result);
     output.textContent += '\nDone.';
