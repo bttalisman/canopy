@@ -3050,7 +3050,7 @@ async function runScript() {
     else if (c === 0x2026) { code += '...'; } // ellipsis
     // skip everything else (zero-width, non-breaking space, etc.)
   }
-  code = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  code = code.replace(/\r\n/g, ' ').replace(/\r/g, ' ').replace(/\n/g, ' ');
 
   const output = document.getElementById('scriptRunnerOutput');
 
