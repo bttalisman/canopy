@@ -3037,9 +3037,16 @@ function showScriptRunner() {
 
 async function runScript() {
   // Replace smart quotes with straight quotes
-  const code = document.getElementById('scriptRunnerCode').value
+  let code = document.getElementById('scriptRunnerCode').value
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u201C\u201D]/g, '"');
+
+  // Check for line breaks inside string literals
+  const badStringMatch = code.match(/'[^']*\n[^']*'|"[^"]*\n[^"]*"/);
+  if (badStringMatch) {
+    output.textContent = 'Error: Line break inside a string literal. Use concatenation or template literals instead.\n\nFound near: ' + badStringMatch[0].substring(0, 60) + '...';
+    return;
+  }
   const output = document.getElementById('scriptRunnerOutput');
   output.textContent = 'Running...\n';
 
