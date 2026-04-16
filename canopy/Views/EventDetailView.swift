@@ -61,7 +61,6 @@ struct EventDetailView: View {
                             .fill(Color(.systemGray5))
                             .frame(height: 200)
                             .overlay(ProgressView())
-                        }
                     }
                 }
 

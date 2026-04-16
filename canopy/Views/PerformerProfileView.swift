@@ -31,7 +31,6 @@ struct PerformerProfileView: View {
                             .fill(Color(.systemGray5))
                             .frame(height: 250)
                             .overlay(ProgressView())
-                        }
                     }
                 } else {
                     performerInitials
