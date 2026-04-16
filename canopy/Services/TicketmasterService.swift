@@ -100,6 +100,18 @@ actor TicketmasterService {
 
             if isDuplicate {
                 skippedDuplicate += 1
+                // Backfill missing image from TM data
+                if let event = existing.first {
+                    print("[TM] Duplicate: \(event.name) | imageURL: \(event.imageURL?.prefix(60) ?? "nil")")
+                    if event.imageURL == nil {
+                        if let imageURL = tmEvent.primaryImage?.url {
+                            event.imageURL = imageURL
+                            print("[TM] Backfilled image for \(event.name)")
+                        } else {
+                            print("[TM] No TM image available to backfill for \(event.name)")
+                        }
+                    }
+                }
                 // Override coords from admin venue if available
                 if let event = existing.first,
                    let matchedVenue = venues.first(where: { venue in
@@ -167,6 +179,12 @@ actor TicketmasterService {
 
             if let imageURL = tmEvent.primaryImage?.url {
                 event.imageURL = imageURL
+                print("[TM] Image for \(event.name): \(imageURL.prefix(80))...")
+            } else {
+                print("[TM] No image for \(event.name). images count: \(tmEvent.images?.count ?? 0)")
+                if let first = tmEvent.images?.first {
+                    print("[TM]   First image: ratio=\(first.ratio ?? "nil") w=\(first.width ?? 0) fallback=\(first.fallback ?? false) url=\(first.url.prefix(60))")
+                }
             }
 
             // Store venue coordinates and resolve neighborhood

@@ -54,11 +54,16 @@ struct TMEvent: Codable, Sendable, Identifiable {
     }
 
     var primaryImage: TMImage? {
-        // Prefer largest 16:9 ratio, non-fallback
-        let candidates = images?.filter { $0.fallback != true } ?? images ?? []
-        let wideImages = candidates.filter { $0.ratio == "16_9" }
-        let best = wideImages.max(by: { ($0.width ?? 0) < ($1.width ?? 0) })
-        return best ?? candidates.max(by: { ($0.width ?? 0) < ($1.width ?? 0) })
+        // Prefer largest 16:9 non-fallback, then any non-fallback, then any image
+        let nonFallback = images?.filter { $0.fallback != true } ?? []
+        let wideNF = nonFallback.filter { $0.ratio == "16_9" }
+        if let best = wideNF.max(by: { ($0.width ?? 0) < ($1.width ?? 0) }) { return best }
+        if let best = nonFallback.max(by: { ($0.width ?? 0) < ($1.width ?? 0) }) { return best }
+        // Include fallback images as last resort
+        let all = images ?? []
+        let wideAll = all.filter { $0.ratio == "16_9" }
+        if let best = wideAll.max(by: { ($0.width ?? 0) < ($1.width ?? 0) }) { return best }
+        return all.max(by: { ($0.width ?? 0) < ($1.width ?? 0) })
     }
 
     var venue: TMVenue? {
