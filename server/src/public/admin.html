@@ -1332,7 +1332,7 @@ function showEditEvent() {
   document.getElementById('evIsFree').checked = !!e.isFree;
   document.getElementById('evIsAccessible').checked = !!e.isAccessible;
   document.getElementById('evIsCityOfficial').checked = !!e.isCityOfficial;
-  populateVenueDropdown(e.venue_id || '');
+  populateVenueDropdown(e.venue?.id || e.venue_id || '');
 }
 
 async function saveEvent(evt) {
