@@ -69,6 +69,21 @@ actor TicketmasterService {
                 continue
             }
 
+            // Skip events from other cities (TM radius search can include nearby cities)
+            let expectedCity = CityConfig.cityDisplayName.lowercased()
+            let actualCity = venueCity.lowercased()
+            if actualCity != "?" && actualCity != expectedCity {
+                // Allow if venue is in our neighborhood lookup (e.g., Issaquah for Seattle metro)
+                if let lat = tmEvent.venue?.location?.latitudeDouble,
+                   let lng = tmEvent.venue?.location?.longitudeDouble,
+                   NeighborhoodLookup.lookup(latitude: lat, longitude: lng) != nil {
+                    // Venue is within our metro area boundaries — keep it
+                } else {
+                    print("[TM] Skipped (wrong city): \(tmEvent.name) at \(venueName), \(venueCity)")
+                    continue
+                }
+            }
+
             // Check for duplicates by name + start date
             let name = tmEvent.name
             let descriptor = FetchDescriptor<Event>(predicate: #Predicate {
@@ -161,7 +176,7 @@ actor TicketmasterService {
                             item.performerImageURL = imageURL
                         }
                         context.insert(item)
-                        print("[TM] Created session '\(sessionTitle)' for \(event.name)")
+                        print("[TM] Created session '\(sessionTitle)' for \(event.name) | ticketURL: \(tmEvent.url ?? "nil") | links: \(item.performerLinks ?? "nil")")
                     }
                 }
                 continue
