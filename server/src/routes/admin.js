@@ -1376,6 +1376,50 @@ router.post('/import-seattle-events', requireSuperadmin, async (req, res) => {
   }
 });
 
+// POST /api/admin/repair-seattle-events — re-fetch permit data and update location/neighborhood
+router.post('/repair-seattle-events', requireSuperadmin, async (req, res) => {
+  try {
+    const year = req.body.year || 2025;
+    const soqlUrl = `https://data.seattle.gov/resource/dm95-f8w5.json?$limit=500&$where=event_start_date>'${year}-01-01' AND permit_status!='Cancelled'&$order=event_start_date`;
+    const response = await fetch(soqlUrl);
+    if (!response.ok) throw new Error(`Seattle API error: ${response.status}`);
+    const permits = await response.json();
+
+    let updated = 0;
+    let skipped = 0;
+
+    for (const e of permits) {
+      const name = e.name_of_event;
+      if (!name) { skipped++; continue; }
+
+      const slug = `seattle-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').slice(0, 50)}-${year}`;
+      const existing = await pool.query('SELECT id FROM events WHERE slug = $1', [slug]);
+      if (existing.rows.length === 0) { skipped++; continue; }
+
+      const neighborhood = e.event_location_neighborhood || '';
+      const location = e.event_location_park || neighborhood || 'Seattle';
+      const attendance = parseInt(e.attendance) || 0;
+      const description = [
+        e.event_category ? `${e.event_category} event` : '',
+        e.event_sub_category ? `(${e.event_sub_category})` : '',
+        attendance ? `Expected attendance: ${attendance.toLocaleString()}` : '',
+        e.organization ? `Organized by ${e.organization}` : '',
+      ].filter(Boolean).join('. ');
+
+      await pool.query(
+        `UPDATE events SET location = $1, neighborhood = $2, description = $3 WHERE id = $4`,
+        [location, neighborhood, description, existing.rows[0].id]
+      );
+      updated++;
+      console.log(`[Seattle Repair] Updated: ${name} → ${location}, ${neighborhood}`);
+    }
+
+    res.json({ total: permits.length, updated, skipped });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/admin/seattle-events-preview — preview what would be imported
 router.get('/seattle-events-preview', requireSuperadmin, async (req, res) => {
   try {
