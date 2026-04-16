@@ -140,7 +140,7 @@ actor CanopyAPIService {
         }
 
         var components = URLComponents(string: "\(baseURL)/api/events")
-        components?.queryItems = [URLQueryItem(name: "city", value: CityConfig.citySlug)]
+        components?.queryItems = CityConfig.metroCities.map { URLQueryItem(name: "city", value: $0) }
         guard let url = components?.url else {
             throw CanopyAPIError.invalidURL
         }

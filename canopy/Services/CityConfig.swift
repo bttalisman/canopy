@@ -9,6 +9,15 @@ enum CityConfig {
         Bundle.main.infoDictionary?["CANOPY_CITY_DISPLAY_NAME"] as? String ?? "Seattle"
     }()
 
+    /// Cities to fetch curated events for (metro area)
+    static var metroCities: [String] {
+        switch citySlug {
+        case "seattle": return ["seattle", "tacoma"]
+        case "tacoma": return ["tacoma", "seattle"]
+        default: return [citySlug]
+        }
+    }
+
     static var appTitle: String { "Canopy \(cityDisplayName)" }
 
     static var eventsLoadingMessage: String { "Fetching \(cityDisplayName) events..." }

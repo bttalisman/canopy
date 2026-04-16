@@ -71,7 +71,8 @@ struct DiscoverView: View {
     }
 
     var filteredEvents: [Event] {
-        var result = events.filter { $0.isActive && $0.city == CityConfig.citySlug }
+        let metroCities = Set(CityConfig.metroCities)
+        var result = events.filter { $0.isActive && (metroCities.contains($0.city ?? "") || $0.city == nil) }
 
         if freeOnly {
             result = result.filter { $0.isFree == true }

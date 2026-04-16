@@ -6,7 +6,8 @@ const router = Router();
 // GET /api/events — list all active events with their stages, schedule items, and map pins
 router.get('/', async (req, res) => {
   try {
-    const city = req.query.city || 'seattle';
+    const cities = Array.isArray(req.query.city) ? req.query.city : (req.query.city ? [req.query.city] : ['seattle']);
+    const placeholders = cities.map((_, i) => `$${i + 1}`).join(', ');
     const { rows: events } = await pool.query(`
       SELECT e.*,
         v.id AS venue__id, v.name AS venue__name, v.address AS venue__address,
@@ -18,9 +19,9 @@ router.get('/', async (req, res) => {
       LEFT JOIN venues v ON e.venue_id = v.id
       WHERE e.is_active = true
         AND (e.status = 'active' OR e.status IS NULL)
-        AND (e.city = $1 OR e.city IS NULL)
+        AND (e.city IN (${placeholders}) OR e.city IS NULL)
       ORDER BY e.start_date ASC
-    `, [city]);
+    `, cities);
 
     if (events.length === 0) {
       return res.json([]);
