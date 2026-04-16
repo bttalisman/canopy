@@ -1196,14 +1196,14 @@ function renderEventPage() {
     const hasImg = e.image_url ? '🖼' : '';
     const hasVenue = e.venue_id ? '📍' : '';
     return `
-    <div class="event-list-item" onclick="showEventDetail('${e.slug}')">
-      <div class="info">
+    <div class="event-list-item" onclick="showEventDetail('${e.slug}')" style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="info" style="flex:1;">
         <span class="name">${hasImg}${hasVenue} ${e.name}</span>
-        <span class="meta">${e.location} · ${formatDate(e.start_date)} – ${formatDate(e.end_date)}</span>
-        <span class="meta" style="font-size:11px; color:#64748b;">Created ${created} · Updated ${updated}</span>
+        <span class="meta">📅 ${formatDate(e.start_date)} – ${formatDate(e.end_date)} · ${e.location}</span>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:140px;">
         <span class="badge" style="font-size:11px;">${e.category || ''}</span>
+        <span style="font-size:10px; color:#475569;">✏️ ${updated || '—'}</span>
       </div>
     </div>`;
   }).join('');
