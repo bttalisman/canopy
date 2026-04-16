@@ -183,20 +183,34 @@ router.post('/events/import-from-tm', requireSuperadmin, async (req, res) => {
         const searchParams = new URLSearchParams({
           apikey: apiKey, keyword: name, size: '50', sort: 'date,asc',
         });
-        if (location) searchParams.set('venueId', ''); // we'll filter by name
         const tmRes = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${searchParams}`);
         if (tmRes.ok) {
           const tmData = await tmRes.json();
-          const allDates = (tmData._embedded?.events || [])
-            .filter(ev => ev.name === name && ev._embedded?.venues?.[0]?.name === location)
+          const allEvents = tmData._embedded?.events || [];
+          console.log(`[TM Import] TM search for "${name}" returned ${allEvents.length} events`);
+
+          const locationLower = (location || '').toLowerCase();
+          const matching = allEvents.filter(ev => {
+            const evName = ev.name || '';
+            const evVenue = (ev._embedded?.venues?.[0]?.name || '').toLowerCase();
+            const nameMatch = evName === name;
+            const venueMatch = !location || evVenue.includes(locationLower) || locationLower.includes(evVenue);
+            if (nameMatch && !venueMatch) {
+              console.log(`[TM Import] Name matched but venue didn't: TM="${evVenue}" vs import="${locationLower}"`);
+            }
+            return nameMatch && venueMatch;
+          });
+
+          const allDates = matching
             .map(ev => ev.dates?.start?.dateTime || ev.dates?.start?.localDate)
             .filter(Boolean)
             .sort();
+          console.log(`[TM Import] ${matching.length} venue-matched events, ${allDates.length} dates: ${allDates.join(', ')}`);
+
           if (allDates.length > 1) {
             const lastDate = allDates[allDates.length - 1];
-            // Add 3 hours to the last performance date for end time
             resolvedEndDate = new Date(new Date(lastDate).getTime() + 3 * 60 * 60 * 1000).toISOString();
-            console.log(`[TM Import] Found ${allDates.length} performances of "${name}": ${allDates[0]} → ${lastDate}`);
+            console.log(`[TM Import] Date range: ${allDates[0]} → ${lastDate}`);
           }
         }
       } catch (e) {
