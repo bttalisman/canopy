@@ -3036,14 +3036,21 @@ function showScriptRunner() {
 }
 
 async function runScript() {
-  // Sanitize: smart quotes, zero-width chars, non-breaking spaces, etc.
-  let code = document.getElementById('scriptRunnerCode').value
-    .replace(/[\u2018\u2019\u2032]/g, "'")
-    .replace(/[\u201C\u201D\u2033]/g, '"')
-    .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')
-    .replace(/\u00A0/g, ' ')
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n');
+  // Sanitize: rebuild string using only printable ASCII + standard whitespace
+  const raw = document.getElementById('scriptRunnerCode').value;
+  let code = '';
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw.charCodeAt(i);
+    if (c === 0x0A || c === 0x0D) { code += '\n'; } // newlines
+    else if (c === 0x09) { code += '\t'; } // tab
+    else if (c >= 0x20 && c <= 0x7E) { code += raw[i]; } // printable ASCII
+    else if (c === 0x2018 || c === 0x2019 || c === 0x2032) { code += "'"; } // smart single quotes
+    else if (c === 0x201C || c === 0x201D || c === 0x2033) { code += '"'; } // smart double quotes
+    else if (c === 0x2013 || c === 0x2014) { code += '-'; } // en/em dash
+    else if (c === 0x2026) { code += '...'; } // ellipsis
+    // skip everything else (zero-width, non-breaking space, etc.)
+  }
+  code = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   // Check for line breaks inside string literals
   const badStringMatch = code.match(/'[^']*\n[^']*'|"[^"]*\n[^"]*"/);
