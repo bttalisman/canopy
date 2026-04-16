@@ -73,12 +73,23 @@ actor TicketmasterService {
             let expectedCity = CityConfig.cityDisplayName.lowercased()
             let actualCity = venueCity.lowercased()
             if actualCity != "?" && actualCity != expectedCity {
+                // Allow if we have an admin venue for this location
+                let hasAdminVenue = venues.contains { venue in
+                    let a = venue.venueName.lowercased()
+                    let b = venueName.lowercased()
+                    return a == b || b.hasPrefix(a) || a.hasPrefix(b) ||
+                        (venue.aliases ?? []).contains { $0.lowercased() == b }
+                }
                 // Allow if venue is in our neighborhood lookup (e.g., Issaquah for Seattle metro)
-                if let lat = tmEvent.venue?.location?.latitudeDouble,
-                   let lng = tmEvent.venue?.location?.longitudeDouble,
-                   NeighborhoodLookup.lookup(latitude: lat, longitude: lng) != nil {
-                    // Venue is within our metro area boundaries — keep it
-                } else {
+                let inMetro: Bool = {
+                    if let lat = tmEvent.venue?.location?.latitudeDouble,
+                       let lng = tmEvent.venue?.location?.longitudeDouble,
+                       NeighborhoodLookup.lookup(latitude: lat, longitude: lng) != nil {
+                        return true
+                    }
+                    return false
+                }()
+                if !hasAdminVenue && !inMetro {
                     print("[TM] Skipped (wrong city): \(tmEvent.name) at \(venueName), \(venueCity)")
                     continue
                 }
