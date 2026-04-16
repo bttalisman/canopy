@@ -146,17 +146,14 @@ struct DiscoverMapView: View {
                                     HStack(spacing: 10) {
                                         // Thumbnail
                                         if let imageURL = event.imageURL, let url = URL(string: imageURL) {
-                                            AsyncImage(url: url) { phase in
-                                                switch phase {
-                                                case .success(let image):
-                                                    image
-                                                        .resizable()
-                                                        .scaledToFill()
-                                                        .frame(width: 44, height: 44)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                                                default:
-                                                    categoryThumb(event.category)
-                                                }
+                                            CachedAsyncImage(url: url) { image in
+                                                image
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 44, height: 44)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                            } placeholder: {
+                                                categoryThumb(event.category)
                                             }
                                         } else {
                                             categoryThumb(event.category)

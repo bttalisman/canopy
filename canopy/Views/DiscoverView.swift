@@ -827,25 +827,18 @@ struct EventCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // Event image (if available from API)
             if let imageURL = event.imageURL, let url = URL(string: imageURL) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 140)
-                            .clipped()
-                    case .failure:
-                        fallbackHeader
-                    case .empty:
-                        Rectangle()
-                            .fill(Color(.systemGray5))
-                            .frame(height: 140)
-                            .overlay(ProgressView())
-                    @unknown default:
-                        fallbackHeader
-                    }
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 140)
+                        .clipped()
+                } placeholder: {
+                    Rectangle()
+                        .fill(Color(.systemGray5))
+                        .frame(height: 140)
+                        .overlay(ProgressView())
                 }
             } else {
                 fallbackHeader

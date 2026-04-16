@@ -49,24 +49,18 @@ struct EventDetailView: View {
             VStack(spacing: 0) {
                 // Hero header
                 if let imageURL = event.imageURL, let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 200)
-                                .clipped()
-                        case .failure:
-                            EmptyView()
-                        case .empty:
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                                .frame(height: 200)
-                                .overlay(ProgressView())
-                        @unknown default:
-                            EmptyView()
+                    CachedAsyncImage(url: url) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 200)
+                            .clipped()
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color(.systemGray5))
+                            .frame(height: 200)
+                            .overlay(ProgressView())
                         }
                     }
                 }

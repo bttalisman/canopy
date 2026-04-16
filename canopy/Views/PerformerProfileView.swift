@@ -20,23 +20,17 @@ struct PerformerProfileView: View {
             VStack(spacing: 20) {
                 // Performer image
                 if let imageURL = item.performerImageURL, let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(height: 250)
-                                .clipped()
-                        case .failure:
-                            performerInitials
-                        case .empty:
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                                .frame(height: 250)
-                                .overlay(ProgressView())
-                        @unknown default:
-                            performerInitials
+                    CachedAsyncImage(url: url) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 250)
+                            .clipped()
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color(.systemGray5))
+                            .frame(height: 250)
+                            .overlay(ProgressView())
                         }
                     }
                 } else {
