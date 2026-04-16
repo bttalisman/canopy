@@ -101,8 +101,12 @@ actor TicketmasterService {
                 Calendar.current.isDate(event.startDate, inSameDayAs: startDate) ||
                 // Or TM date falls within the curated event's date range (recurring shows)
                 (startDate >= event.startDate && startDate <= event.endDate) ||
-                // Same venue + name at the same location = same show, different night
-                (event.location.lowercased() == (tmEvent.venue?.name ?? "").lowercased())
+                // Same name at the same venue = same show, different night
+                {
+                    let a = event.location.lowercased()
+                    let b = (tmEvent.venue?.name ?? "").lowercased()
+                    return !b.isEmpty && (a == b || a.hasPrefix(b) || b.hasPrefix(a) || a.contains(b) || b.contains(a))
+                }()
             }
 
             if isDuplicate {
