@@ -173,13 +173,16 @@ actor CanopyAPIService {
             guard let startDate = parseDate(apiEvent.startDate),
                   let endDate = parseDate(apiEvent.endDate) else { continue }
 
-            // Check for duplicates by slug
+            // Check for duplicates by slug, or by name + date (catches TM-imported events)
             let slug = apiEvent.slug
+            let apiName = apiEvent.name
             let descriptor = FetchDescriptor<Event>(predicate: #Predicate {
-                $0.slug == slug
+                $0.slug == slug || $0.name == apiName
             })
 
-            let existing = (try? context.fetch(descriptor)) ?? []
+            let existing = (try? context.fetch(descriptor))?.filter { event in
+                event.slug == slug || Calendar.current.isDate(event.startDate, inSameDayAs: startDate)
+            } ?? []
             if !existing.isEmpty {
                 if let event = existing.first {
                     // Update event-level fields from backend
