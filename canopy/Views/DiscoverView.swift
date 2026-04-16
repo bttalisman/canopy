@@ -764,6 +764,9 @@ struct DiscoverView: View {
             print("[Canopy] Backend fetch error: \(error)")
         }
 
+        // Ensure backend events are saved before TM import queries for duplicates
+        try? modelContext.save()
+
         // 2. Fetch from Ticketmaster (via backend proxy)
         if hasBackend {
             do {
