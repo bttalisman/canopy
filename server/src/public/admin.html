@@ -457,6 +457,7 @@
             <label>Event Image <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(landscape 16:9 recommended, auto-cropped on upload)</span></label>
             <div style="display:flex;gap:8px;">
               <input type="url" id="evImageURL" style="flex:1;" />
+              <button type="button" class="btn-secondary" onclick="previewEventImage()" style="font-size:12px;padding:4px 10px;white-space:nowrap;">👁 Preview</button>
               <button type="button" class="btn-secondary" onclick="openUploadWidget('canopy/events', 'evImageURL')" style="font-size:12px;padding:4px 10px;white-space:nowrap;">📷 Upload</button>
             </div>
           </div>
@@ -3007,6 +3008,20 @@ async function importSeattleEvents() {
 }
 
 // ---- Cloudinary Upload ----
+
+function previewEventImage() {
+  const url = document.getElementById('evImageURL').value.trim();
+  if (!url) { toast('No image URL set'); return; }
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  overlay.onclick = () => overlay.remove();
+  const img = document.createElement('img');
+  img.src = url;
+  img.style.cssText = 'max-width:90%;max-height:90%;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+  img.onerror = () => { overlay.remove(); toast('Failed to load image'); };
+  overlay.appendChild(img);
+  document.body.appendChild(overlay);
+}
 
 async function openUploadWidget(folder, targetInputId) {
   const headers = await adminHeaders();
