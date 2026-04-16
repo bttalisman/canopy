@@ -1341,8 +1341,8 @@ router.post('/import-seattle-events', requireSuperadmin, async (req, res) => {
 
       const startDate = e.event_start_date;
       const endDate = e.event_end_date || e.event_start_date;
-      const neighborhood = e.neighborhood_s || '';
-      const location = e.park_name || neighborhood || 'Seattle';
+      const neighborhood = e.event_location_neighborhood || e.neighborhood_s || '';
+      const location = e.event_location_park || e.park_name || neighborhood || 'Seattle';
       const attendance = parseInt(e.attendance) || 0;
 
       const description = [
