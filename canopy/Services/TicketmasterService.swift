@@ -58,7 +58,7 @@ actor TicketmasterService {
     // MARK: - Import into SwiftData
 
     @MainActor
-    func importEvents(_ tmEvents: [TMEvent], into context: ModelContext, venues: [APIVenueBoundary] = []) -> Int {
+    func importEvents(_ tmEvents: [TMEvent], into context: ModelContext, venues: [APIVenueBoundary] = [], backendEventNames: Set<String> = []) -> Int {
         var importedCount = 0
         var skippedDuplicate = 0
         var skippedCurated = 0
@@ -75,6 +75,35 @@ actor TicketmasterService {
             }
 
             // TM radius search already limits by distance — trust the user's radius setting
+
+            // Quick check: skip if this event name exists in backend (curated events always win)
+            if backendEventNames.contains(tmEvent.name) {
+                skippedDuplicate += 1
+                // Still create sessions and backfill on the existing event
+                let allEvents = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+                if let event = allEvents.first(where: { $0.name == tmEvent.name }) {
+                    // Backfill image
+                    if event.imageURL == nil, let imageURL = tmEvent.primaryImage?.url {
+                        event.imageURL = imageURL
+                    }
+                    // Create session for this performance
+                    let endDate = tmEvent.endDate ?? Calendar.current.date(byAdding: .hour, value: 3, to: startDate) ?? startDate.addingTimeInterval(3 * 3600)
+                    let alreadyHasSession = event.scheduleItems.contains { Calendar.current.isDate($0.startTime, inSameDayAs: startDate) }
+                    if !alreadyHasSession {
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "EEEE, MMM d"
+                        let item = ScheduleItem(title: formatter.string(from: startDate), itemDescription: "", startTime: startDate, endTime: endDate, category: "Performance")
+                        item.event = event
+                        item.performerName = tmEvent.embedded?.attractions?.first?.name
+                        if let url = tmEvent.url { item.performerLinks = "[{\"label\":\"Tickets & Info\",\"url\":\"\(url)\"}]" }
+                        if let imageURL = tmEvent.primaryImage?.url { item.performerImageURL = imageURL }
+                        context.insert(item)
+                        print("[TM] Created session '\(formatter.string(from: startDate))' for \(event.name)")
+                    }
+                    print("[TM] Skipped (backend curated): \(tmEvent.name)")
+                }
+                continue
+            }
 
             // Check for duplicates by name + start date
             let name = tmEvent.name

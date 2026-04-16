@@ -748,12 +748,14 @@ struct DiscoverView: View {
         var totalImported = 0
 
         // 1. Fetch from Canopy backend (schedule items, curated events)
+        var backendEventNames: Set<String> = []
         do {
             print("[Canopy] Fetching events for city: \(CityConfig.citySlug)")
             let apiEvents = try await CanopyAPIService.shared.fetchEvents()
             print("[Canopy] API returned \(apiEvents.count) events")
             let count = await CanopyAPIService.shared.importEvents(apiEvents, into: modelContext)
             totalImported += count
+            backendEventNames = Set(apiEvents.map { $0.name })
             print("[Canopy] Imported \(count) events from backend")
         } catch let error as CanopyAPIError where error == .notConfigured {
             print("[Canopy] API not configured, skipping backend fetch")
@@ -782,7 +784,7 @@ struct DiscoverView: View {
                 print("[Canopy] Ticketmaster returned \(tmEvents.count) events")
                 // Fetch admin venues for coordinate override
                 let adminVenues = (try? await CanopyAPIService.shared.fetchVenueBoundaries()) ?? []
-                let count = await TicketmasterService.shared.importEvents(tmEvents, into: modelContext, venues: adminVenues)
+                let count = await TicketmasterService.shared.importEvents(tmEvents, into: modelContext, venues: adminVenues, backendEventNames: backendEventNames)
                 totalImported += count
                 print("[Canopy] Imported \(count) events from Ticketmaster")
             } catch is CancellationError {
