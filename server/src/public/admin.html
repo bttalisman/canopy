@@ -330,6 +330,10 @@
         <option value="has">Has Venue</option>
         <option value="no">No Venue</option>
       </select>
+      <span style="color:#94a3b8; font-size:12px;">Starts:</span>
+      <input type="date" id="eventFilterStartFrom" onchange="renderEventPage()" style="padding:4px 8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:12px;">
+      <span style="color:#94a3b8; font-size:12px;">to</span>
+      <input type="date" id="eventFilterStartTo" onchange="renderEventPage()" style="padding:4px 8px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:12px;">
     </div>
 
     <!-- Seattle Data Import Panel -->
@@ -1153,6 +1157,11 @@ function getFilteredEvents() {
   const venueFilter = document.getElementById('eventFilterVenue')?.value || '';
   if (venueFilter === 'has') result = result.filter(e => e.venue_id);
   if (venueFilter === 'no') result = result.filter(e => !e.venue_id);
+
+  const startFrom = document.getElementById('eventFilterStartFrom')?.value;
+  const startTo = document.getElementById('eventFilterStartTo')?.value;
+  if (startFrom) result = result.filter(e => e.start_date && e.start_date >= startFrom);
+  if (startTo) result = result.filter(e => e.start_date && e.start_date <= startTo + 'T23:59:59');
 
   const sortBy = document.getElementById('eventSortBy')?.value || 'name';
   result.sort((a, b) => {
