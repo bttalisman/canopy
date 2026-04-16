@@ -1269,6 +1269,7 @@ function renderEventDetail(e) {
         <h2 style="margin-bottom:4px">${e.name}</h2>
         <div style="color:#94a3b8;font-size:14px">${e.location} · ${e.neighborhood || ''}</div>
         <div style="color:#4ade80;font-size:14px;margin-top:4px">${formatDate(e.startDate)} – ${formatDate(e.endDate)}</div>
+        <div style="margin-top:4px;font-size:11px;color:#475569;cursor:pointer;" onclick="navigator.clipboard.writeText('${e.id}');toast('ID copied!');" title="Click to copy">ID: ${e.id}</div>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn-secondary" onclick="showEditEvent()">Edit</button>
