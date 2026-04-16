@@ -298,11 +298,38 @@
         <button class="btn-primary" onclick="showCreateEvent()">+ New Event</button>
       </div>
     </div>
-    <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
+    <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
       <input type="text" id="eventSearch" placeholder="Search events..." oninput="renderEventPage()" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
       <span id="eventPageInfo" style="color:#94a3b8; font-size:13px; white-space:nowrap;"></span>
       <button class="btn-secondary" onclick="eventPagePrev()" style="font-size:12px; padding:4px 10px;">← Prev</button>
       <button class="btn-secondary" onclick="eventPageNext()" style="font-size:12px; padding:4px 10px;">Next →</button>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
+      <select id="eventSortBy" onchange="renderEventPage()" style="padding:6px 12px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:12px;">
+        <option value="name">Sort: Name</option>
+        <option value="startDate">Sort: Start Date</option>
+        <option value="created">Sort: Created</option>
+        <option value="updated">Sort: Updated</option>
+      </select>
+      <select id="eventFilterCategory" onchange="renderEventPage()" style="padding:6px 12px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:12px;">
+        <option value="">All Categories</option>
+        <option value="festival">Festival</option>
+        <option value="concert">Concert</option>
+        <option value="fair">Fair</option>
+        <option value="conference">Conference</option>
+        <option value="expo">Expo</option>
+        <option value="community">Community</option>
+      </select>
+      <select id="eventFilterImage" onchange="renderEventPage()" style="padding:6px 12px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:12px;">
+        <option value="">All Images</option>
+        <option value="has">Has Image</option>
+        <option value="no">No Image</option>
+      </select>
+      <select id="eventFilterVenue" onchange="renderEventPage()" style="padding:6px 12px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:12px;">
+        <option value="">All Venues</option>
+        <option value="has">Has Venue</option>
+        <option value="no">No Venue</option>
+      </select>
     </div>
 
     <!-- Seattle Data Import Panel -->
@@ -1104,14 +1131,40 @@ async function loadEvents() {
 }
 
 function getFilteredEvents() {
+  let result = allEventsCache;
+
   const q = (document.getElementById('eventSearch')?.value || '').toLowerCase();
-  if (!q) return allEventsCache;
-  return allEventsCache.filter(e =>
-    e.name.toLowerCase().includes(q) ||
-    (e.location || '').toLowerCase().includes(q) ||
-    (e.neighborhood || '').toLowerCase().includes(q) ||
-    (e.category || '').toLowerCase().includes(q)
-  );
+  if (q) {
+    result = result.filter(e =>
+      e.name.toLowerCase().includes(q) ||
+      (e.location || '').toLowerCase().includes(q) ||
+      (e.neighborhood || '').toLowerCase().includes(q) ||
+      (e.category || '').toLowerCase().includes(q)
+    );
+  }
+
+  const catFilter = document.getElementById('eventFilterCategory')?.value || '';
+  if (catFilter) result = result.filter(e => e.category === catFilter);
+
+  const imgFilter = document.getElementById('eventFilterImage')?.value || '';
+  if (imgFilter === 'has') result = result.filter(e => e.image_url);
+  if (imgFilter === 'no') result = result.filter(e => !e.image_url);
+
+  const venueFilter = document.getElementById('eventFilterVenue')?.value || '';
+  if (venueFilter === 'has') result = result.filter(e => e.venue_id);
+  if (venueFilter === 'no') result = result.filter(e => !e.venue_id);
+
+  const sortBy = document.getElementById('eventSortBy')?.value || 'name';
+  result.sort((a, b) => {
+    switch (sortBy) {
+      case 'startDate': return new Date(a.start_date || 0) - new Date(b.start_date || 0);
+      case 'created': return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      case 'updated': return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+      default: return (a.name || '').localeCompare(b.name || '');
+    }
+  });
+
+  return result;
 }
 
 function renderEventPage() {
@@ -1125,21 +1178,26 @@ function renderEventPage() {
   document.getElementById('eventPageInfo').textContent = `${filtered.length} event${filtered.length === 1 ? '' : 's'} · Page ${eventPage + 1}/${totalPages}`;
 
   if (filtered.length === 0) {
-    document.getElementById('eventList').innerHTML = '<div class="empty">No events match your search.</div>';
+    document.getElementById('eventList').innerHTML = '<div class="empty">No events match your filters.</div>';
     return;
   }
-  document.getElementById('eventList').innerHTML = page.map(e => `
+  document.getElementById('eventList').innerHTML = page.map(e => {
+    const created = e.created_at ? formatDate(e.created_at) : '';
+    const updated = e.updated_at ? formatDate(e.updated_at) : '';
+    const hasImg = e.image_url ? '🖼' : '';
+    const hasVenue = e.venue_id ? '📍' : '';
+    return `
     <div class="event-list-item" onclick="showEventDetail('${e.slug}')">
       <div class="info">
-        <span class="name">${e.name}</span>
-        <span class="meta">${e.location} · ${formatDate(e.startDate)} – ${formatDate(e.endDate)}</span>
+        <span class="name">${hasImg}${hasVenue} ${e.name}</span>
+        <span class="meta">${e.location} · ${formatDate(e.start_date)} – ${formatDate(e.end_date)}</span>
+        <span class="meta" style="font-size:11px; color:#64748b;">Created ${created} · Updated ${updated}</span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <span class="badge green">${e.scheduleItems?.length || 0} sessions</span>
-        <span class="badge">${e.stages?.length || 0} stages</span>
+        <span class="badge" style="font-size:11px;">${e.category || ''}</span>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function eventPagePrev() { eventPage--; renderEventPage(); }
