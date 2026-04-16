@@ -134,6 +134,36 @@ actor TicketmasterService {
                    let hood = NeighborhoodLookup.lookup(latitude: lat, longitude: lng) {
                     event.neighborhood = hood
                 }
+                // Create schedule item for this performance if one doesn't exist at this time
+                if let event = existing.first {
+                    let endDate = tmEvent.endDate ?? Calendar.current.date(byAdding: .hour, value: 3, to: startDate) ?? startDate.addingTimeInterval(3 * 3600)
+                    let alreadyHasSession = event.scheduleItems.contains { item in
+                        Calendar.current.isDate(item.startTime, inSameDayAs: startDate)
+                    }
+                    if !alreadyHasSession {
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "EEEE, MMM d"
+                        let sessionTitle = "\(formatter.string(from: startDate))"
+                        let item = ScheduleItem(
+                            title: sessionTitle,
+                            itemDescription: "",
+                            startTime: startDate,
+                            endTime: endDate,
+                            category: "Performance"
+                        )
+                        item.event = event
+                        // Add performer info from TM
+                        item.performerName = tmEvent.embedded?.attractions?.first?.name
+                        if let url = tmEvent.url {
+                            item.performerLinks = "[{\"label\":\"Tickets & Info\",\"url\":\"\(url)\"}]"
+                        }
+                        if let imageURL = tmEvent.primaryImage?.url {
+                            item.performerImageURL = imageURL
+                        }
+                        context.insert(item)
+                        print("[TM] Created session '\(sessionTitle)' for \(event.name)")
+                    }
+                }
                 continue
             }
 
