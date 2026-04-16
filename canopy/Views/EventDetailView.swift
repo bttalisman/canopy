@@ -253,7 +253,8 @@ struct EventScheduleView: View {
     }
 
     var groupedItems: [(Date, [ScheduleItem])] {
-        var items = event.scheduleItems
+        let now = Date()
+        var items = event.scheduleItems.filter { $0.endTime >= now }
 
         if let stage = selectedStage {
             items = items.filter { $0.stage?.id == stage.id }
