@@ -3052,6 +3052,8 @@ async function runScript() {
   }
   code = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
+  const output = document.getElementById('scriptRunnerOutput');
+
   // Show sanitized code for debugging
   if (code.trim().startsWith('DEBUG')) {
     output.textContent = code;
@@ -3064,7 +3066,6 @@ async function runScript() {
     output.textContent = 'Error: Line break inside a string literal. Use concatenation or template literals instead.\n\nFound near: ' + badStringMatch[0].substring(0, 60) + '...';
     return;
   }
-  const output = document.getElementById('scriptRunnerOutput');
   output.textContent = 'Running...\n';
 
   const log = (...args) => { output.textContent += args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ') + '\n'; };
