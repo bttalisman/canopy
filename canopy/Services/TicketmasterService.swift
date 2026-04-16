@@ -75,9 +75,25 @@ actor TicketmasterService {
                 $0.name == name
             })
 
-            let existing = (try? context.fetch(descriptor)) ?? []
+            var existing = (try? context.fetch(descriptor)) ?? []
+
+            // Fallback: if exact match fails (e.g. curly vs straight quotes), try fuzzy match
+            if existing.isEmpty {
+                let allEvents = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+                let nameLower = name.lowercased().folding(options: .diacriticInsensitive, locale: nil)
+                existing = allEvents.filter {
+                    $0.name.lowercased().folding(options: .diacriticInsensitive, locale: nil) == nameLower
+                }
+                if !existing.isEmpty {
+                    print("[TM] Fuzzy name match for '\(name)' → '\(existing.first?.name ?? "")'")
+                }
+            }
+
             let isDuplicate = existing.contains { event in
                 Calendar.current.isDate(event.startDate, inSameDayAs: startDate)
+            }
+            if !isDuplicate && !existing.isEmpty {
+                print("[TM] Name matched but date didn't: '\(name)' vs existing dates: \(existing.map { $0.startDate })")
             }
 
             if isDuplicate {
