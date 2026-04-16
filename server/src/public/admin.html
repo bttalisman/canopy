@@ -3073,11 +3073,15 @@ async function runScript() {
     return;
   }
 
-  // Check for line breaks inside string literals
-  const badStringMatch = code.match(/'[^']*\n[^']*'|"[^"]*\n[^"]*"/);
-  if (badStringMatch) {
-    output.textContent = 'Error: Line break inside a string literal. Use concatenation or template literals instead.\n\nFound near: ' + badStringMatch[0].substring(0, 60) + '...';
-    return;
+  // Check for line breaks inside string literals (only on single lines)
+  for (const line of code.split('\n')) {
+    const singleOpen = (line.match(/'/g) || []).length;
+    const doubleOpen = (line.match(/"/g) || []).length;
+    if (singleOpen % 2 !== 0 || doubleOpen % 2 !== 0) {
+      output.textContent = 'Warning: Possible unclosed string on line: ' + line.trim().substring(0, 80);
+      // Don't block — just warn
+      break;
+    }
   }
   output.textContent = 'Running...\n';
 
