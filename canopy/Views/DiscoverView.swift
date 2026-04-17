@@ -153,17 +153,14 @@ struct DiscoverView: View {
         selectedCategory != nil || selectedTimeFilter != .all || !selectedNeighborhoods.isEmpty || !selectedRegions.isEmpty || freeOnly || accessibleOnly
     }
 
-    private var activeFilterSummary: String {
-        var parts: [String] = []
-        if let cat = selectedCategory { parts.append(cat.rawValue) }
-        if selectedTimeFilter != .all { parts.append(selectedTimeFilter.rawValue) }
-        if !selectedRegions.isEmpty || !selectedNeighborhoods.isEmpty {
-            let count = selectedRegions.count + selectedNeighborhoods.count
-            parts.append("\(count) area\(count == 1 ? "" : "s")")
-        }
-        if freeOnly { parts.append("Free") }
-        if accessibleOnly { parts.append("Accessible") }
-        return parts.joined(separator: " · ")
+    private var activeFilterDots: [Color] {
+        var dots: [Color] = []
+        if selectedTimeFilter != .all { dots.append(.green) }
+        if selectedCategory != nil { dots.append(.purple) }
+        if !selectedRegions.isEmpty || !selectedNeighborhoods.isEmpty { dots.append(.blue) }
+        if freeOnly { dots.append(.orange) }
+        if accessibleOnly { dots.append(.indigo) }
+        return dots
     }
 
     var body: some View {
@@ -479,13 +476,12 @@ struct DiscoverView: View {
                             .animation(.easeInOut(duration: 0.5), value: pillsHidden)
                         HStack {
                             if filterPillsCollapsed && hasActiveFilters {
-                                HStack(spacing: 4) {
-                                    Circle()
-                                        .fill(Color.green)
-                                        .frame(width: 6, height: 6)
-                                    Text(activeFilterSummary)
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundStyle(.secondary)
+                                HStack(spacing: 3) {
+                                    ForEach(activeFilterDots, id: \.self) { color in
+                                        Circle()
+                                            .fill(color)
+                                            .frame(width: 7, height: 7)
+                                    }
                                 }
                                 .padding(.leading, 4)
                                 .transition(.opacity)
