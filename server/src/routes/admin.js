@@ -1703,6 +1703,25 @@ router.delete('/analytics/demo-data', requireSuperadmin, async (req, res) => {
 });
 
 // =====================
+// NEIGHBORHOOD HEATMAP
+// =====================
+
+router.get('/analytics/neighborhood-heatmap', requireSuperadmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT neighborhood, COUNT(*) as event_count
+       FROM events
+       WHERE is_active = true
+       GROUP BY neighborhood
+       ORDER BY event_count DESC`
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =====================
 // VENUE BOUNDARIES
 // =====================
 

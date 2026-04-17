@@ -22,6 +22,7 @@ app.use(clerk);
 // Static files (maps, images, video)
 app.use('/maps', express.static(path.join(__dirname, 'public', 'maps')));
 app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
+app.use('/seattle-neighborhoods.geojson', express.static(path.join(__dirname, 'public', 'seattle-neighborhoods.geojson')));
 app.use('/canopyDemo.mp4', express.static(path.join(__dirname, 'public', 'canopyDemo.mp4')));
 
 // Support page

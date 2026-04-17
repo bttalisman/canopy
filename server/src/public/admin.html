@@ -260,6 +260,18 @@
       }
       h2 { font-size: 16px; }
     }
+    .heatmap-tooltip {
+      background: #1e293b !important;
+      border: 1px solid #334155 !important;
+      color: #e2e8f0 !important;
+      border-radius: 6px !important;
+      padding: 6px 10px !important;
+      font-size: 13px !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+    }
+    .heatmap-tooltip::before {
+      border-top-color: #334155 !important;
+    }
   </style>
 </head>
 <body>
@@ -912,6 +924,25 @@
   <div id="analyticsOverview" style="margin-bottom:32px;">
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:16px; margin-bottom:24px;" id="statCards"></div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;" id="overviewCharts"></div>
+  </div>
+
+  <!-- Neighborhood Equity Heatmap -->
+  <div id="neighborhoodHeatmapSection" style="margin-bottom:32px;">
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:20px;">
+      <h4 style="margin:0 0 16px;">Neighborhood Equity Map</h4>
+      <div id="neighborhoodHeatmap" style="height:400px; border-radius:8px; overflow:hidden; background:#0f172a;"></div>
+      <div id="heatmapLegend" style="margin-top:12px; display:flex; align-items:center; gap:8px; font-size:13px; color:#94a3b8;">
+        <span>Fewer events</span>
+        <div style="display:flex; height:12px; border-radius:3px; overflow:hidden; flex:1; max-width:200px;">
+          <div style="flex:1; background:#f0fdf4;"></div>
+          <div style="flex:1; background:#bbf7d0;"></div>
+          <div style="flex:1; background:#4ade80;"></div>
+          <div style="flex:1; background:#16a34a;"></div>
+          <div style="flex:1; background:#14532d;"></div>
+        </div>
+        <span>More events</span>
+      </div>
+    </div>
   </div>
 
   <!-- Per-Event Selector -->
@@ -3344,7 +3375,7 @@ console.log('[Admin] Version: 2026-04-15-v2');
 async function showAnalytics() {
   hideAll();
   document.getElementById('analyticsView').style.display = 'block';
-  await Promise.all([loadAnalyticsOverview(), loadAnalyticsEventList()]);
+  await Promise.all([loadAnalyticsOverview(), loadAnalyticsEventList(), loadNeighborhoodHeatmap()]);
 }
 
 async function loadAnalyticsOverview() {
@@ -3408,6 +3439,95 @@ function renderAnalyticsOverview(data) {
       `).join('')}
     </div>
   `;
+}
+
+// Neighborhood equity heatmap
+var heatmapMapInstance = null;
+var heatmapGeoLayer = null;
+
+async function loadNeighborhoodHeatmap() {
+  try {
+    const headers = await adminHeaders();
+    const [heatmapRes, geojsonRes] = await Promise.all([
+      fetch(`${API}/api/admin/analytics/neighborhood-heatmap`, { headers }),
+      fetch(`${API}/seattle-neighborhoods.geojson`),
+    ]);
+    if (!heatmapRes.ok || !geojsonRes.ok) { console.error('Failed to load heatmap data'); return; }
+    const heatmapData = await heatmapRes.json();
+    const geojson = await geojsonRes.json();
+
+    // Build lookup: lowercase neighborhood name -> event_count
+    const countMap = {};
+    heatmapData.forEach(row => {
+      countMap[(row.neighborhood || '').toLowerCase()] = parseInt(row.event_count) || 0;
+    });
+
+    const maxCount = Math.max(...Object.values(countMap), 1);
+
+    // Color scale: white -> light green -> dark green
+    function getColor(count) {
+      if (count === 0) return '#1e293b';
+      const ratio = count / maxCount;
+      if (ratio < 0.2) return '#f0fdf4';
+      if (ratio < 0.4) return '#bbf7d0';
+      if (ratio < 0.6) return '#4ade80';
+      if (ratio < 0.8) return '#16a34a';
+      return '#14532d';
+    }
+
+    // Initialize or reset map
+    if (heatmapMapInstance) {
+      heatmapMapInstance.remove();
+    }
+    heatmapMapInstance = L.map('neighborhoodHeatmap', {
+      scrollWheelZoom: true,
+    }).setView([47.6062, -122.3321], 11);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      maxZoom: 19,
+    }).addTo(heatmapMapInstance);
+
+    // Add GeoJSON layer
+    heatmapGeoLayer = L.geoJSON(geojson, {
+      style: function(feature) {
+        const name = (feature.properties.name || '').toLowerCase();
+        const count = countMap[name] || 0;
+        return {
+          fillColor: getColor(count),
+          weight: 1,
+          opacity: 0.8,
+          color: '#64748b',
+          fillOpacity: 0.7,
+        };
+      },
+      onEachFeature: function(feature, layer) {
+        const name = feature.properties.name || 'Unknown';
+        const count = countMap[name.toLowerCase()] || 0;
+        layer.bindTooltip(
+          `<strong>${name}</strong><br>${count} active event${count !== 1 ? 's' : ''}`,
+          { sticky: true, className: 'heatmap-tooltip' }
+        );
+        layer.on({
+          mouseover: function(e) {
+            e.target.setStyle({ weight: 3, color: '#e2e8f0', fillOpacity: 0.9 });
+            e.target.bringToFront();
+          },
+          mouseout: function(e) {
+            heatmapGeoLayer.resetStyle(e.target);
+          },
+        });
+      },
+    }).addTo(heatmapMapInstance);
+
+    // Fit to bounds
+    heatmapMapInstance.fitBounds(heatmapGeoLayer.getBounds());
+
+    // Force Leaflet to recalculate size (in case container was hidden)
+    setTimeout(() => heatmapMapInstance.invalidateSize(), 200);
+  } catch (err) {
+    console.error('Heatmap error:', err);
+  }
 }
 
 async function loadAnalyticsEventList() {
