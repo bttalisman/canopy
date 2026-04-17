@@ -11,7 +11,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     #else
     static let useDebugLocation = false
     #endif
-    private static let debugLocation = CLLocation(latitude: 47.6150, longitude: -122.3200) // Capitol Hill
+    private static let debugLocation: CLLocation = {
+        switch CityConfig.citySlug {
+        case "tacoma": return CLLocation(latitude: 47.2529, longitude: -122.4443) // Downtown Tacoma
+        default: return CLLocation(latitude: 47.6150, longitude: -122.3200) // Capitol Hill, Seattle
+        }
+    }()
 
     @Published var userLocation: CLLocation?
 
