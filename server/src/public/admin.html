@@ -3095,7 +3095,7 @@ async function runScript() {
       break;
     }
   }
-  output.textContent = 'Running...\n';
+  output.textContent = '> ' + code + '\n\nRunning...\n';
 
   const log = (...args) => { output.textContent += args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ') + '\n'; };
 
