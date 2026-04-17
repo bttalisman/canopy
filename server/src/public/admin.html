@@ -3034,6 +3034,17 @@ function showScriptRunner() {
     </div>
   `;
   document.body.appendChild(modal);
+
+  // Intercept paste to prevent browser from adding unwanted line breaks
+  document.getElementById('scriptRunnerCode').addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    const el = e.target;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    el.value = el.value.substring(0, start) + text + el.value.substring(end);
+    el.selectionStart = el.selectionEnd = start + text.length;
+  });
 }
 
 async function runScript() {
