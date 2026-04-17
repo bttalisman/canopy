@@ -473,11 +473,31 @@
               <input type="checkbox" id="evIsFree" /> Free
             </label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-              <input type="checkbox" id="evIsAccessible" /> Accessible
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
               <input type="checkbox" id="evIsCityOfficial" /> City Official
             </label>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Accessibility</label>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="evHasWheelchairAccess" /> Wheelchair Accessible
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="evHasAsl" /> ASL Interpreter
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="evHasSensoryFriendly" /> Sensory Friendly
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="evHasAdaParking" /> ADA Parking
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Accessibility Notes</label>
+            <textarea id="evAccessibilityNotes" rows="2" placeholder="Additional accessibility details..."></textarea>
           </div>
         </div>
         <div class="actions">
@@ -1342,8 +1362,12 @@ function showEditEvent() {
   document.getElementById('evImageURL').value = e.imageURL || '';
   document.getElementById('evPermitId').value = e.permitId || '';
   document.getElementById('evIsFree').checked = !!e.isFree;
-  document.getElementById('evIsAccessible').checked = !!e.isAccessible;
   document.getElementById('evIsCityOfficial').checked = !!e.isCityOfficial;
+  document.getElementById('evHasWheelchairAccess').checked = !!e.hasWheelchairAccess;
+  document.getElementById('evHasAsl').checked = !!e.hasAsl;
+  document.getElementById('evHasSensoryFriendly').checked = !!e.hasSensoryFriendly;
+  document.getElementById('evHasAdaParking').checked = !!e.hasAdaParking;
+  document.getElementById('evAccessibilityNotes').value = e.accessibilityNotes || '';
   populateVenueDropdown(e.venue?.id || e.venue_id || '');
 }
 
@@ -1366,8 +1390,12 @@ async function saveEvent(evt) {
     imageURL: document.getElementById('evImageURL').value || null,
     permitId: document.getElementById('evPermitId').value || null,
     isFree: document.getElementById('evIsFree').checked,
-    isAccessible: document.getElementById('evIsAccessible').checked,
     isCityOfficial: document.getElementById('evIsCityOfficial').checked,
+    hasWheelchairAccess: document.getElementById('evHasWheelchairAccess').checked,
+    hasAsl: document.getElementById('evHasAsl').checked,
+    hasSensoryFriendly: document.getElementById('evHasSensoryFriendly').checked,
+    hasAdaParking: document.getElementById('evHasAdaParking').checked,
+    accessibilityNotes: document.getElementById('evAccessibilityNotes').value || '',
     venueId: document.getElementById('evVenueId').value || null,
   };
 

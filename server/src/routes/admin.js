@@ -67,7 +67,8 @@ router.post('/events', async (req, res) => {
 
     const { name, slug, description, startDate, endDate, location, neighborhood,
             logoSystemImage, imageURL, mapImageURL, ticketingURL, latitude, longitude, category, city, venueId,
-            priceMin, priceMax } = req.body;
+            priceMin, priceMax,
+            hasWheelchairAccess, hasAsl, hasSensoryFriendly, hasAdaParking, accessibilityNotes } = req.body;
 
     // Superadmins create active events; organizers create pending_review.
     const status = superadmin ? 'active' : 'pending_review';
@@ -77,12 +78,15 @@ router.post('/events', async (req, res) => {
     const { rows } = await pool.query(`
       INSERT INTO events (name, slug, description, start_date, end_date, location, neighborhood,
                           logo_system_image, image_url, map_image_url, ticketing_url, latitude, longitude, category,
-                          owner_org_id, created_by_user_id, status, city, venue_id, price_min, price_max)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+                          owner_org_id, created_by_user_id, status, city, venue_id, price_min, price_max,
+                          has_wheelchair_access, has_asl, has_sensory_friendly, has_ada_parking, accessibility_notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+              $22, $23, $24, $25, $26)
       RETURNING *
     `, [name, slug, description || '', startDate, endDate, location, neighborhood || '',
         logoSystemImage || 'party.popper', imageURL, mapImageURL || null, ticketingURL, latitude, longitude, category || 'community',
-        ownerOrgId, createdByUserId, status, city || 'seattle', venueId || null, priceMin || null, priceMax || null]);
+        ownerOrgId, createdByUserId, status, city || 'seattle', venueId || null, priceMin || null, priceMax || null,
+        hasWheelchairAccess || null, hasAsl || null, hasSensoryFriendly || null, hasAdaParking || null, accessibilityNotes || '']);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -288,7 +292,8 @@ router.put('/events/:id', requireEventAccess, async (req, res) => {
   try {
     const { name, description, startDate, endDate, location, neighborhood,
             logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
-            permitId, isAccessible, isFree, isCityOfficial, city, venueId, priceMin, priceMax } = req.body;
+            permitId, isAccessible, isFree, isCityOfficial, city, venueId, priceMin, priceMax,
+            hasWheelchairAccess, hasAsl, hasSensoryFriendly, hasAdaParking, accessibilityNotes } = req.body;
 
     const { rows } = await pool.query(`
       UPDATE events SET
@@ -316,13 +321,19 @@ router.put('/events/:id', requireEventAccess, async (req, res) => {
         venue_id = CASE WHEN $23::text = '__KEEP__' THEN venue_id ELSE $24::uuid END,
         price_min = COALESCE($25, price_min),
         price_max = COALESCE($26, price_max),
+        has_wheelchair_access = COALESCE($27, has_wheelchair_access),
+        has_asl = COALESCE($28, has_asl),
+        has_sensory_friendly = COALESCE($29, has_sensory_friendly),
+        has_ada_parking = COALESCE($30, has_ada_parking),
+        accessibility_notes = COALESCE($31, accessibility_notes),
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `, [req.params.id, name, description, startDate, endDate, location, neighborhood,
         logoSystemImage, imageURL, mapImageURL, mapCalibration, mapPinSize, ticketingURL, latitude, longitude, category, isActive,
         permitId, isAccessible, isFree, isCityOfficial, city,
-        venueId !== undefined ? 'SET' : '__KEEP__', venueId || null, priceMin || null, priceMax || null]);
+        venueId !== undefined ? 'SET' : '__KEEP__', venueId || null, priceMin || null, priceMax || null,
+        hasWheelchairAccess ?? null, hasAsl ?? null, hasSensoryFriendly ?? null, hasAdaParking ?? null, accessibilityNotes ?? null]);
 
     if (rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     res.json(rows[0]);

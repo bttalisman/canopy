@@ -10,7 +10,8 @@ struct DiscoverView: View {
     @State private var selectedNeighborhoods: Set<String> = []
     @State private var selectedRegions: Set<String> = []
     @State private var freeOnly: Bool = false
-    @State private var accessibleOnly: Bool = false
+    @State private var wheelchairOnly: Bool = false
+    @State private var aslOnly: Bool = false
     @State private var showMapView = false
     @State private var selectedMapEvent: Event?
     @State private var isLoading = false
@@ -77,8 +78,11 @@ struct DiscoverView: View {
         if freeOnly {
             result = result.filter { $0.isFree == true }
         }
-        if accessibleOnly {
-            result = result.filter { $0.isAccessible == true }
+        if wheelchairOnly {
+            result = result.filter { $0.hasWheelchairAccess == true }
+        }
+        if aslOnly {
+            result = result.filter { $0.hasAsl == true }
         }
 
         if !searchText.isEmpty {
@@ -150,7 +154,7 @@ struct DiscoverView: View {
     private var pillsHidden: Bool { filterPillsCollapsed }
 
     private var hasActiveFilters: Bool {
-        selectedCategory != nil || selectedTimeFilter != .all || !selectedNeighborhoods.isEmpty || !selectedRegions.isEmpty || freeOnly || accessibleOnly
+        selectedCategory != nil || selectedTimeFilter != .all || !selectedNeighborhoods.isEmpty || !selectedRegions.isEmpty || freeOnly || wheelchairOnly || aslOnly
     }
 
     private var activeFilterDots: [Color] {
@@ -159,7 +163,8 @@ struct DiscoverView: View {
         if selectedCategory != nil { dots.append(.purple) }
         if !selectedRegions.isEmpty || !selectedNeighborhoods.isEmpty { dots.append(.blue) }
         if freeOnly { dots.append(.orange) }
-        if accessibleOnly { dots.append(.indigo) }
+        if wheelchairOnly { dots.append(.indigo) }
+        if aslOnly { dots.append(.indigo) }
         return dots
     }
 
@@ -300,19 +305,19 @@ struct DiscoverView: View {
                                     .accessibilityAddTraits(freeOnly ? .isSelected : [])
                             }
 
-                            // Accessibility toggle
+                            // Wheelchair accessible toggle
                             Button {
-                                withAnimation { accessibleOnly.toggle() }
+                                withAnimation { wheelchairOnly.toggle() }
                             } label: {
-                                Label("Accessible", systemImage: "figure.roll")
+                                Label("Wheelchair", systemImage: "figure.roll")
                                     .font(.subheadline)
-                                    .fontWeight(accessibleOnly ? .semibold : .regular)
+                                    .fontWeight(wheelchairOnly ? .semibold : .regular)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
                                     .background(
                                         Capsule()
                                             .fill(
-                                                accessibleOnly
+                                                wheelchairOnly
                                                     ? AnyShapeStyle(LinearGradient(
                                                         colors: [Color.leafMid, Color.leafDeep],
                                                         startPoint: .topLeading,
@@ -320,9 +325,34 @@ struct DiscoverView: View {
                                                     : AnyShapeStyle(Color(.systemGray5))
                                             )
                                     )
-                                    .foregroundStyle(accessibleOnly ? .white : .primary)
+                                    .foregroundStyle(wheelchairOnly ? .white : .primary)
                                     .accessibilityLabel("Wheelchair accessible filter")
-                                    .accessibilityAddTraits(accessibleOnly ? .isSelected : [])
+                                    .accessibilityAddTraits(wheelchairOnly ? .isSelected : [])
+                            }
+
+                            // ASL interpreter toggle
+                            Button {
+                                withAnimation { aslOnly.toggle() }
+                            } label: {
+                                Label("ASL", systemImage: "hand.raised.fill")
+                                    .font(.subheadline)
+                                    .fontWeight(aslOnly ? .semibold : .regular)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        Capsule()
+                                            .fill(
+                                                aslOnly
+                                                    ? AnyShapeStyle(LinearGradient(
+                                                        colors: [Color.leafMid, Color.leafDeep],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing))
+                                                    : AnyShapeStyle(Color(.systemGray5))
+                                            )
+                                    )
+                                    .foregroundStyle(aslOnly ? .white : .primary)
+                                    .accessibilityLabel("ASL interpreter filter")
+                                    .accessibilityAddTraits(aslOnly ? .isSelected : [])
                             }
                         }
                         .padding(.horizontal)
@@ -886,13 +916,22 @@ struct EventCard: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
 
-                        if event.isFree == true || event.isAccessible == true || event.permitId != nil {
+                        if event.isFree == true || event.hasWheelchairAccess == true || event.hasAsl == true || event.hasSensoryFriendly == true || event.hasAdaParking == true || event.permitId != nil {
                             HStack(spacing: 6) {
                                 if event.isFree == true {
                                     metaPill("Free", systemImage: "tag.fill", tint: Color.leafDeep)
                                 }
-                                if event.isAccessible == true {
-                                    metaPill("Accessible", systemImage: "figure.roll", tint: .blue)
+                                if event.hasWheelchairAccess == true {
+                                    metaPill("Wheelchair", systemImage: "figure.roll", tint: .blue)
+                                }
+                                if event.hasAsl == true {
+                                    metaPill("ASL", systemImage: "hand.raised.fill", tint: .purple)
+                                }
+                                if event.hasSensoryFriendly == true {
+                                    metaPill("Sensory", systemImage: "eye", tint: .teal)
+                                }
+                                if event.hasAdaParking == true {
+                                    metaPill("ADA Parking", systemImage: "car.fill", tint: .indigo)
                                 }
                                 if let permit = event.permitId, !permit.isEmpty {
                                     metaPill(permit, systemImage: "checkmark.seal.fill", tint: .gray)

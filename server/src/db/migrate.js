@@ -166,6 +166,14 @@ const schema = `
 
   ALTER TABLE events ADD COLUMN IF NOT EXISTS price_min DOUBLE PRECISION;
   ALTER TABLE events ADD COLUMN IF NOT EXISTS price_max DOUBLE PRECISION;
+
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS has_wheelchair_access BOOLEAN;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS has_asl BOOLEAN;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS has_sensory_friendly BOOLEAN;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS has_ada_parking BOOLEAN;
+  ALTER TABLE events ADD COLUMN IF NOT EXISTS accessibility_notes TEXT DEFAULT '';
+  -- Migrate existing is_accessible data to has_wheelchair_access
+  UPDATE events SET has_wheelchair_access = is_accessible WHERE is_accessible IS NOT NULL AND has_wheelchair_access IS NULL;
 `;
 
 async function migrate(pool) {

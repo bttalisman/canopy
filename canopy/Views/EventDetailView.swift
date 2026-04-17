@@ -981,6 +981,44 @@ struct EventInfoView: View {
                 .font(.subheadline)
             }
 
+            if event.hasWheelchairAccess == true || event.hasAsl == true || event.hasSensoryFriendly == true || event.hasAdaParking == true || !(event.accessibilityNotes ?? "").isEmpty {
+                Divider()
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Accessibility")
+                        .font(.headline)
+
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
+                        if event.hasWheelchairAccess == true {
+                            Label("Wheelchair Accessible", systemImage: "figure.roll")
+                                .font(.subheadline)
+                                .foregroundStyle(.blue)
+                        }
+                        if event.hasAsl == true {
+                            Label("ASL Interpreter", systemImage: "hand.raised.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(.purple)
+                        }
+                        if event.hasSensoryFriendly == true {
+                            Label("Sensory Friendly", systemImage: "eye")
+                                .font(.subheadline)
+                                .foregroundStyle(.teal)
+                        }
+                        if event.hasAdaParking == true {
+                            Label("ADA Parking", systemImage: "car.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(.indigo)
+                        }
+                    }
+
+                    if let notes = event.accessibilityNotes, !notes.isEmpty {
+                        Text(notes)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             if let lat = event.latitude, let lng = event.longitude {
                 Divider()
                 RideShareView(venueName: event.location, venueLatitude: lat, venueLongitude: lng)

@@ -23,6 +23,11 @@ final class Event {
     // City / civic metadata (all optional — additive only)
     var permitId: String?
     var isAccessible: Bool?
+    var hasWheelchairAccess: Bool?
+    var hasAsl: Bool?
+    var hasSensoryFriendly: Bool?
+    var hasAdaParking: Bool?
+    var accessibilityNotes: String?
     var isFree: Bool?
     var isCityOfficial: Bool?
     var priceMin: Double?

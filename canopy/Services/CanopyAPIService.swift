@@ -22,6 +22,11 @@ struct APIEvent: Codable, Sendable, Identifiable {
     let category: String?
     let permitId: String?
     let isAccessible: Bool?
+    let hasWheelchairAccess: Bool?
+    let hasAsl: Bool?
+    let hasSensoryFriendly: Bool?
+    let hasAdaParking: Bool?
+    let accessibilityNotes: String?
     let isFree: Bool?
     let isCityOfficial: Bool?
     let priceMin: Double?
@@ -202,6 +207,11 @@ actor CanopyAPIService {
                     event.category = mapCategory(apiEvent.category ?? event.category.rawValue)
                     event.permitId = apiEvent.permitId
                     event.isAccessible = apiEvent.isAccessible
+                    event.hasWheelchairAccess = apiEvent.hasWheelchairAccess
+                    event.hasAsl = apiEvent.hasAsl
+                    event.hasSensoryFriendly = apiEvent.hasSensoryFriendly
+                    event.hasAdaParking = apiEvent.hasAdaParking
+                    event.accessibilityNotes = apiEvent.accessibilityNotes
                     event.isFree = apiEvent.isFree
                     event.isCityOfficial = apiEvent.isCityOfficial
                     event.priceMin = apiEvent.priceMin
@@ -244,6 +254,11 @@ actor CanopyAPIService {
             }
             event.permitId = apiEvent.permitId
             event.isAccessible = apiEvent.isAccessible
+            event.hasWheelchairAccess = apiEvent.hasWheelchairAccess
+            event.hasAsl = apiEvent.hasAsl
+            event.hasSensoryFriendly = apiEvent.hasSensoryFriendly
+            event.hasAdaParking = apiEvent.hasAdaParking
+            event.accessibilityNotes = apiEvent.accessibilityNotes
             event.isFree = apiEvent.isFree
             event.isCityOfficial = apiEvent.isCityOfficial
             event.priceMin = apiEvent.priceMin
