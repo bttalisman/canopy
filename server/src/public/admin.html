@@ -448,6 +448,9 @@
             <label>Longitude</label>
             <input type="number" step="any" id="evLng" />
           </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;">
+            <button type="button" class="btn-secondary" onclick="geocodeEventLocation()" style="font-size:12px;padding:6px 10px;white-space:nowrap;">📍 Lookup</button>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -3132,6 +3135,22 @@ async function runScript() {
 }
 
 // ---- Cloudinary Upload ----
+
+async function geocodeEventLocation() {
+  const location = document.getElementById('evLocation').value.trim();
+  const city = document.getElementById('evCity').value;
+  if (!location) { toast('Enter a location first'); return; }
+  const cityName = city === 'tacoma' ? 'Tacoma, WA' : 'Seattle, WA';
+  const address = location + ', ' + cityName;
+  const headers = await adminHeaders();
+  headers['Content-Type'] = 'application/json';
+  const res = await fetch(API + '/api/admin/venues/geocode', {method:'POST', headers, body:JSON.stringify({address})});
+  if (!res.ok) { toast('Location not found'); return; }
+  const result = await res.json();
+  document.getElementById('evLat').value = result.latitude;
+  document.getElementById('evLng').value = result.longitude;
+  toast('Found: ' + result.formattedAddress);
+}
 
 function previewEventImage() {
   const url = document.getElementById('evImageURL').value.trim();
