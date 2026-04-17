@@ -3028,7 +3028,7 @@ function showScriptRunner() {
       <textarea id="scriptRunnerCode" autocorrect="off" autocapitalize="off" spellcheck="false" wrap="off" style="flex:1;min-height:200px;padding:12px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-family:monospace;font-size:13px;resize:vertical;tab-size:2;overflow-x:auto;white-space:pre;" placeholder="// Use semicolons between statements. Lines are joined with spaces."></textarea>
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button class="btn-primary" onclick="runScript()" style="font-size:13px;">▶ Run</button>
-        <button class="btn-secondary" onclick="document.getElementById('scriptRunnerOutput').textContent=''" style="font-size:13px;">Clear Output</button>
+        <button class="btn-secondary" onclick="document.getElementById('scriptRunnerOutput').textContent='';document.getElementById('scriptRunnerCode').value=''" style="font-size:13px;">Clear</button>
       </div>
       <pre id="scriptRunnerOutput" style="margin-top:12px;padding:12px;border-radius:8px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap;"></pre>
     </div>
