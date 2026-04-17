@@ -21,7 +21,7 @@ struct DiscoverView: View {
     @State private var filterPillsCollapsed: Bool = true
     @State private var expandedNeighborhoodGroup: String?
     @AppStorage("eventSortOrder") private var eventSortOrder = 0
-    @AppStorage("searchRadiusMiles") private var searchRadiusMiles = 30.0
+    @AppStorage("searchRadiusMiles") private var searchRadiusMiles = CityConfig.defaultRadiusMiles
     @ObservedObject private var locationManager = LocationManager.shared
     @State private var scrollMetrics = ScrollMetrics(offset: 0, contentHeight: 0)
     @State private var viewportHeight: CGFloat = 0

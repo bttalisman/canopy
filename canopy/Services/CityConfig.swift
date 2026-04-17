@@ -18,6 +18,13 @@ enum CityConfig {
         }
     }
 
+    static var defaultRadiusMiles: Double {
+        switch citySlug {
+        case "tacoma": return 15.0
+        default: return 30.0
+        }
+    }
+
     static var appTitle: String { "Canopy \(cityDisplayName)" }
 
     static var eventsLoadingMessage: String { "Fetching \(cityDisplayName) events..." }
