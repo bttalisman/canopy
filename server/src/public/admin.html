@@ -3062,18 +3062,18 @@ async function runScript() {
     else if (c === 0x2026) { code += '...'; } // ellipsis
     // skip everything else (zero-width, non-breaking space, etc.)
   }
+  // Join lines smartly: add semicolons between statements, spaces for block syntax
   code = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  // Strip any non-ASCII that snuck onto newline boundaries
-  code = code.split('\n').map(line => {
-    let clean = '';
-    for (let j = 0; j < line.length; j++) {
-      const c = line.charCodeAt(j);
-      if (c === 0x09 || (c >= 0x20 && c <= 0x7E)) clean += line[j];
-      else if (c === 0x2018 || c === 0x2019 || c === 0x2032) clean += "'";
-      else if (c === 0x201C || c === 0x201D || c === 0x2033) clean += '"';
+  const lines = code.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  code = lines.reduce((acc, line, i) => {
+    if (i === 0) return line;
+    const prev = lines[i-1];
+    // Don't add semicolon after { or before }
+    if (prev.endsWith('{') || prev.endsWith(',') || line.startsWith('}') || line.startsWith('.')) {
+      return acc + ' ' + line;
     }
-    return clean;
-  }).join('\n');
+    return acc + '; ' + line;
+  }, '');
 
   const output = document.getElementById('scriptRunnerOutput');
 
