@@ -732,19 +732,11 @@
 
     <div class="card">
       <div class="form-group">
-        <label>Map Image URL</label>
+        <label>Map Image URL (downloadable venue map)</label>
         <div style="display:flex;gap:8px">
           <input type="url" id="mapImageURL" placeholder="https://example.com/venue-map.png" style="flex:1" />
-          <button type="button" class="btn-secondary" onclick="openUploadWidget('canopy/maps', 'mapImageURL')" style="font-size:12px;padding:4px 10px;white-space:nowrap;">📷 Upload</button>
+          <button type="button" class="btn-secondary" onclick="openUploadWidget('canopy/maps', 'mapImageURL')" style="font-size:12px;padding:4px 10px;white-space:nowrap;">Upload</button>
           <button class="btn-primary" onclick="saveMapImageURL()" style="font-size:13px;padding:5px 14px">Save</button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Pin Size (% of map width — consistent across devices)</label>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" id="mapPinSizeSlider" min="0.5" max="8" step="0.1" value="3" style="flex:1;accent-color:#4ade80" oninput="onPinSizeChange()" />
-          <span id="mapPinSizeValue" style="font-size:12px;color:#94a3b8;min-width:35px">3%</span>
-          <button class="btn-secondary" onclick="saveMapPinSize()" style="font-size:12px;padding:4px 10px">Save</button>
         </div>
       </div>
     </div>
@@ -755,160 +747,45 @@
         <span class="badge green" id="mapPinCount">0 pins</span>
       </div>
 
-      <!-- Mode selector -->
-      <div class="tabs" style="margin-bottom:12px">
-        <div class="tab active" id="modeEditBtn" onclick="setEditorMode('edit')">✏️ Edit</div>
-        <div class="tab" id="modePlaceBtn" onclick="setEditorMode('place')">+ Place</div>
-        <div class="tab" id="tabCalibrate" onclick="setEditorMode('calibrate')">📐 Calibrate</div>
-      </div>
-
-      <p id="pinModeHint" style="color:#94a3b8;font-size:12px;margin-bottom:12px">
-        Click a pin to select it for editing, dragging, or deleting.
-      </p>
-
-      <!-- Pin placement controls (shown in edit and place modes) -->
-      <div id="pinControls">
-
-        <div class="form-row" style="margin-bottom:12px">
-          <div class="form-group" style="margin-bottom:0">
-            <label>Pin Type</label>
-            <select id="mapPinType" onchange="onPinTypeChange()">
-              <option value="Stage">Stage</option>
-              <option value="Food">Food</option>
-              <option value="Restroom">Restroom</option>
-              <option value="First Aid">First Aid</option>
-              <option value="Exit">Exit</option>
-              <option value="WiFi">WiFi</option>
-              <option value="Accessible">Accessible</option>
-              <option value="ATM">ATM</option>
-              <option value="Parking">Parking</option>
-              <option value="Info">Info</option>
-              <option value="Gift Shop">Gift Shop</option>
-              <option value="Bus">Bus</option>
-              <option value="Custom">Custom</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label>Label</label>
-            <input type="text" id="mapPinLabel" placeholder="e.g. Main Stage" />
-          </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <div class="form-group" style="margin-bottom:0;min-width:120px">
+          <label>Pin Type</label>
+          <select id="mapPinType" onchange="onPinTypeChange()">
+            <option value="Stage">Stage</option>
+            <option value="Food">Food</option>
+            <option value="Restroom">Restroom</option>
+            <option value="First Aid">First Aid</option>
+            <option value="Exit">Exit</option>
+            <option value="WiFi">WiFi</option>
+            <option value="Accessible">Accessible</option>
+            <option value="ATM">ATM</option>
+            <option value="Parking">Parking</option>
+            <option value="Info">Info</option>
+            <option value="Gift Shop">Gift Shop</option>
+            <option value="Bus">Bus</option>
+            <option value="Custom">Custom</option>
+          </select>
         </div>
-
-        <div class="form-group" style="margin-bottom:12px">
+        <div class="form-group" style="margin-bottom:0;flex:1;min-width:140px">
+          <label>Label</label>
+          <input type="text" id="mapPinLabel" placeholder="e.g. Main Stage" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;flex:1;min-width:140px">
           <label>Description (optional)</label>
           <input type="text" id="mapPinDescription" placeholder="e.g. Headliner performances" />
         </div>
       </div>
 
-      <!-- Calibration controls -->
-      <div id="calibrateControls" style="display:none">
-        <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">
-          Click two known locations on the map and enter their GPS coordinates. This lets us auto-place pins from GPS data.
-        </p>
+      <div id="leafletMap" style="height:500px;border:1px solid #334155;border-radius:8px;margin-bottom:8px"></div>
+      <p style="color:#94a3b8;font-size:12px;margin:0">Click the map to place a pin. Click a marker to delete it.</p>
+    </div>
 
-        <div class="form-row" style="margin-bottom:8px">
-          <div class="form-group" style="margin-bottom:0">
-            <label>Point 1 — Latitude</label>
-            <input type="number" step="any" id="cal1Lat" placeholder="47.6215" />
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label>Point 1 — Longitude</label>
-            <input type="number" step="any" id="cal1Lng" placeholder="-122.3510" />
-          </div>
-        </div>
-        <div style="font-size:12px;color:#64748b;margin-bottom:12px" id="cal1Status">Click the map to set Point 1 position</div>
-
-        <div class="form-row" style="margin-bottom:8px">
-          <div class="form-group" style="margin-bottom:0">
-            <label>Point 2 — Latitude</label>
-            <input type="number" step="any" id="cal2Lat" placeholder="47.6235" />
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label>Point 2 — Longitude</label>
-            <input type="number" step="any" id="cal2Lng" placeholder="-122.3490" />
-          </div>
-        </div>
-        <div style="font-size:12px;color:#64748b;margin-bottom:12px" id="cal2Status">Click the map to set Point 2 position</div>
-
-        <div class="actions" style="margin-bottom:12px">
-          <button class="btn-primary" onclick="saveCalibration()">Save Calibration</button>
-          <button class="btn-secondary" onclick="autoPlacePins()">Auto-Place from GPS</button>
-        </div>
+    <div class="card" style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3>Pin List</h3>
+        <button class="btn-danger" onclick="deleteAllEditorPins()" style="font-size:11px;padding:3px 10px">Delete All</button>
       </div>
-
-      <!-- Template matching -->
-      <div id="templateControls" style="display:none;margin-bottom:12px">
-        <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px;margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span style="font-size:13px;font-weight:600">Icon Selection</span>
-            <button class="btn-danger" onclick="cancelTemplateSelect()" style="font-size:11px;padding:2px 8px">Cancel</button>
-          </div>
-          <p style="color:#94a3b8;font-size:12px;margin-bottom:8px">
-            Click and drag on the map to select one icon. Then we'll find all copies.
-          </p>
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-            <canvas id="templatePreview" width="48" height="48" style="border:1px solid #334155;border-radius:4px;background:#0f172a"></canvas>
-            <div style="flex:1">
-              <div id="templateStatus" style="color:#64748b;font-size:12px">Draw a rectangle on the map</div>
-            </div>
-            <button class="btn-primary" onclick="findTemplateMatches()" id="findMatchesBtn" disabled style="font-size:12px;padding:4px 12px">Scan</button>
-          </div>
-          <div id="toleranceControls" style="display:none">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <label style="font-size:12px;color:#94a3b8;white-space:nowrap">Tolerance</label>
-              <input type="range" id="toleranceSlider" min="30" max="95" value="55" style="flex:1;accent-color:#4ade80" oninput="onToleranceChange()" />
-              <span id="toleranceValue" style="font-size:12px;color:#94a3b8;min-width:40px">55%</span>
-              <span id="toleranceMatchCount" class="badge green" style="min-width:50px;text-align:center">0</span>
-            </div>
-            <div class="actions">
-              <button class="btn-primary" onclick="placeFilteredMatches()" id="placeMatchesBtn" style="font-size:12px">Place Pins</button>
-              <button class="btn-secondary" onclick="cancelTemplateSelect()" style="font-size:12px">Cancel</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style="margin-bottom:12px;display:flex;gap:8px">
-        <button class="btn-secondary" onclick="startTemplateSelect()" id="templateSelectBtn" style="flex:1">🔍 Select Icon to Find Copies</button>
-        <button class="btn-secondary" onclick="aiDetectPins()" id="aiDetectBtn" style="flex:1">🤖 AI Detect</button>
-      </div>
-
-      <div style="font-size:11px;color:#64748b;margin-bottom:8px">
-        <strong>Keyboard:</strong> H = toggle pins · Delete = delete selected · Esc = deselect · ⌘Z = undo
-      </div>
-
-      <!-- Map image with clickable overlay (when a custom image is set) -->
-      <div id="mapImageContainer" style="position:relative;border:1px solid #334155;border-radius:8px;overflow:hidden;cursor:crosshair;background:#0f172a;min-height:200px">
-        <div id="mapNoImage" style="color:#64748b;text-align:center;padding:60px;font-style:italic">
-          No custom map image — using the live map below to place pins.
-        </div>
-        <img id="mapImage" style="width:100%;display:none" />
-        <div id="mapPinsOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
-        <div id="mapCalOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
-        <div id="mapSelectOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none">
-          <div id="selectRect" style="position:absolute;border:2px solid #f59e0b;background:rgba(245,158,11,0.15)"></div>
-        </div>
-      </div>
-
-      <!-- Leaflet (real-world) map for placing pins by GPS, used when no image is set -->
-      <div id="leafletContainer" style="display:none;margin-top:8px">
-        <p style="color:#94a3b8;font-size:12px;margin-bottom:6px">
-          Click anywhere on the map to drop a pin at that real-world location. Drag existing pins to move them.
-        </p>
-        <div id="leafletMap" style="height:520px;border:1px solid #334155;border-radius:8px"></div>
-      </div>
-
-      <!-- Pin list -->
-      <div style="margin-top:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <h3>Pins</h3>
-          <div style="display:flex;gap:6px">
-            <button class="btn-secondary" onclick="togglePinVisibility()" id="togglePinsBtn" style="font-size:11px;padding:3px 10px">Hide Pins</button>
-            <button class="btn-secondary" onclick="deleteAllPins()" style="font-size:11px;padding:3px 10px">Delete All</button>
-          </div>
-        </div>
-        <div id="mapPinsList"></div>
-      </div>
+      <div id="mapPinsList"></div>
     </div>
   </div>
 </div>
@@ -1907,89 +1784,34 @@ async function sendItemPush(itemId, itemTitle) {
 // ---- Map Pin Editor ----
 
 let mapEditorPins = [];
-let mapMode = 'pin'; // 'pin' or 'calibrate'
-let calPoints = [null, null]; // [{x,y}, {x,y}]
-let settingCalPoint = 0; // which calibration point to set next (0 or 1)
+let leafletMap = null;
+let leafletMarkers = [];
 
-// Keyboard handler for map editor
-document.addEventListener('keydown', (e) => {
-  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT') return;
-
-  if (e.key === 'h' || e.key === 'H') {
-    togglePinVisibility();
-    return;
-  }
-  if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) {
-    e.preventDefault();
-    undoLastPin();
-    return;
-  }
-
-  if (selectedMapPinIndex === null) return;
-
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    e.preventDefault();
-    deleteSelectedPin();
-  }
-  if (e.key === 'Escape') {
-    deselectPin();
-  }
-});
+const PIN_COLORS = {
+  Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444',
+  Exit: '#22c55e', WiFi: '#06b6d4', Accessible: '#6366f1', ATM: '#eab308',
+  Parking: '#3b82f6', Info: '#14b8a6', 'Gift Shop': '#ec4899', Bus: '#22c55e', Custom: '#6b7280'
+};
 
 function showMapEditor() {
   hideAll();
   document.getElementById('mapEditorView').style.display = 'block';
-  setEditorMode('edit');
 
   const mapURL = currentEventData?.mapImageURL || currentEventData?.map_image_url || '';
   document.getElementById('mapImageURL').value = mapURL;
 
-  const pinSize = currentEventData?.mapPinSize || currentEventData?.map_pin_size || 3;
-  document.getElementById('mapPinSizeSlider').value = pinSize;
-  document.getElementById('mapPinSizeValue').textContent = pinSize + '%';
+  // Load pins from event data
+  mapEditorPins = (currentEventData?.mapPins || []).map(p => ({
+    id: p.id,
+    label: p.label,
+    pinType: p.pinType || p.pin_type || 'Custom',
+    latitude: p.latitude ?? null,
+    longitude: p.longitude ?? null,
+    description: p.description || ''
+  }));
+  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
 
-  // Load existing calibration
-  const calStr = currentEventData?.mapCalibration || currentEventData?.map_calibration || '';
-  if (calStr) {
-    try {
-      const cal = JSON.parse(calStr);
-      if (cal.length === 2) {
-        calPoints = [{x: cal[0].x, y: cal[0].y}, {x: cal[1].x, y: cal[1].y}];
-        document.getElementById('cal1Lat').value = cal[0].lat;
-        document.getElementById('cal1Lng').value = cal[0].lng;
-        document.getElementById('cal2Lat').value = cal[1].lat;
-        document.getElementById('cal2Lng').value = cal[1].lng;
-        document.getElementById('cal1Status').textContent = `Point 1: (${cal[0].x.toFixed(2)}, ${cal[0].y.toFixed(2)})`;
-        document.getElementById('cal2Status').textContent = `Point 2: (${cal[1].x.toFixed(2)}, ${cal[1].y.toFixed(2)})`;
-      }
-    } catch(e) {}
-  }
-
-  if (mapURL) {
-    loadMapImage(mapURL);
-    document.getElementById('leafletContainer').style.display = 'none';
-  } else {
-    document.getElementById('mapImage').style.display = 'none';
-    document.getElementById('mapNoImage').style.display = 'block';
-    document.getElementById('leafletContainer').style.display = 'block';
-    initLeafletEditor();
-  }
-
-  loadMapPins();
-}
-
-// =====================
-// Leaflet (real-world) pin editor
-// =====================
-let leafletMap = null;
-let leafletMarkers = [];      // {id, marker}
-let leafletNewMarker = null;
-
-function initLeafletEditor() {
-  const container = document.getElementById('leafletMap');
-  if (!container) return;
-
-  // Center on the event's lat/lng if present, otherwise downtown Seattle.
+  // Init or update Leaflet map
   const lat = currentEventData?.latitude ?? 47.6062;
   const lng = currentEventData?.longitude ?? -122.3321;
 
@@ -1999,57 +1821,68 @@ function initLeafletEditor() {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(leafletMap);
-
-    leafletMap.on('click', onLeafletMapClick);
+    leafletMap.on('click', onEditorMapClick);
   } else {
     leafletMap.setView([lat, lng], leafletMap.getZoom() || 17);
-    // Force a layout pass in case the container was just shown.
     setTimeout(() => leafletMap.invalidateSize(), 50);
   }
 
-  renderLeafletPins();
+  renderEditorPins();
+  renderEditorPinList();
 }
 
-function renderLeafletPins() {
+function renderEditorPins() {
   if (!leafletMap) return;
-  // Clear existing markers
   leafletMarkers.forEach(m => leafletMap.removeLayer(m.marker));
   leafletMarkers = [];
 
   for (const pin of mapEditorPins) {
     if (pin.latitude == null || pin.longitude == null) continue;
-    addLeafletMarker(pin);
+    const color = PIN_COLORS[pin.pinType] || '#6b7280';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:24px;height:24px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center">
+        <span style="color:white;font-size:10px;font-weight:bold">${pin.pinType.charAt(0)}</span>
+      </div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+
+    const marker = L.marker([pin.latitude, pin.longitude], {
+      icon,
+      draggable: true,
+      title: pin.label
+    }).addTo(leafletMap);
+
+    marker.bindTooltip(pin.label, { direction: 'top', offset: [0, -12] });
+
+    marker.on('click', () => {
+      if (confirm(`Delete pin "${pin.label}"?`)) {
+        deleteEditorPin(pin.id);
+      }
+    });
+
+    marker.on('dragend', async () => {
+      const latlng = marker.getLatLng();
+      pin.latitude = latlng.lat;
+      pin.longitude = latlng.lng;
+      try {
+        await fetch(`${API}/api/admin/pins/${pin.id}`, {
+          method: 'PUT',
+          headers: (await adminHeaders()),
+          body: JSON.stringify({ latitude: latlng.lat, longitude: latlng.lng })
+        });
+        toast(`Moved: ${pin.label}`);
+      } catch (e) {
+        toast('Error moving pin: ' + e.message);
+      }
+    });
+
+    leafletMarkers.push({ id: pin.id, marker });
   }
 }
 
-function addLeafletMarker(pin) {
-  const marker = L.marker([pin.latitude, pin.longitude], {
-    draggable: true,
-    title: pin.label
-  }).addTo(leafletMap);
-
-  marker.bindPopup(`<strong>${escapeHtml(pin.label)}</strong><br>${escapeHtml(pin.pinType || 'Custom')}<br><button onclick="deleteLeafletPin('${pin.id}')" style="margin-top:6px;background:#ef4444;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer">Delete</button>`);
-
-  marker.on('dragend', async () => {
-    const latlng = marker.getLatLng();
-    pin.latitude = latlng.lat;
-    pin.longitude = latlng.lng;
-    try {
-      await fetch(`${API}/api/admin/pins/${pin.id}`, {
-        method: 'PUT',
-        headers: (await adminHeaders()),
-        body: JSON.stringify({ latitude: latlng.lat, longitude: latlng.lng })
-      });
-      toast(`Moved: ${pin.label}`);
-    } catch (e) {
-      toast('Error moving pin: ' + e.message);
-    }
-  });
-
-  leafletMarkers.push({ id: pin.id, marker });
-}
-
-async function onLeafletMapClick(e) {
+async function onEditorMapClick(e) {
   const label = (document.getElementById('mapPinLabel').value || '').trim();
   if (!label) {
     toast('Enter a pin label first');
@@ -2068,180 +1901,80 @@ async function onLeafletMapClick(e) {
     });
     if (!res.ok) throw new Error(await res.text());
     const saved = await res.json();
-    const pin = {
-      id: saved.id,
-      label,
-      pinType,
-      x: 0,
-      y: 0,
-      latitude: lat,
-      longitude: lng,
-      description
-    };
-    mapEditorPins.push(pin);
-    addLeafletMarker(pin);
+    mapEditorPins.push({
+      id: saved.id, label, pinType, latitude: lat, longitude: lng, description
+    });
     document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-    renderMapPinsList();
+    renderEditorPins();
+    renderEditorPinList();
     toast(`Placed: ${label}`);
   } catch (err) {
     toast('Error: ' + err.message);
   }
 }
 
-async function deleteLeafletPin(id) {
+async function deleteEditorPin(id) {
   try {
     await fetch(`${API}/api/admin/pins/${id}`, { method: 'DELETE', headers: (await adminHeaders()) });
   } catch (e) {}
-  const idx = mapEditorPins.findIndex(p => p.id === id);
-  if (idx >= 0) mapEditorPins.splice(idx, 1);
-  const m = leafletMarkers.find(m => m.id === id);
-  if (m) {
-    leafletMap.removeLayer(m.marker);
-    leafletMarkers = leafletMarkers.filter(x => x.id !== id);
-  }
+  mapEditorPins = mapEditorPins.filter(p => p.id !== id);
   document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-  renderMapPinsList();
+  renderEditorPins();
+  renderEditorPinList();
+  toast('Pin deleted');
 }
 
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-let pinsVisible = true;
-
-function togglePinVisibility() {
-  pinsVisible = !pinsVisible;
-  document.getElementById('mapPinsOverlay').style.display = pinsVisible ? 'block' : 'none';
-  document.getElementById('togglePinsBtn').textContent = pinsVisible ? 'Hide Pins' : 'Show Pins';
-}
-
-async function undoLastPin() {
-  if (pinUndoStack.length === 0) { toast('Nothing to undo'); return; }
-  const entry = pinUndoStack.pop();
-
-  if (entry.action === 'place') {
-    // Undo a placement — delete the pin
-    const pin = entry.pin;
-    const idx = mapEditorPins.findIndex(p => p.id === pin.id);
-    if (idx >= 0) {
-      if (pin.id) {
-        try { await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) }); } catch(e) {}
-      }
-      mapEditorPins.splice(idx, 1);
-    }
+function renderEditorPinList() {
+  const list = document.getElementById('mapPinsList');
+  if (mapEditorPins.length === 0) {
+    list.innerHTML = '<div class="empty">No pins yet. Click on the map to place one.</div>';
+    return;
   }
-
-  selectedMapPinIndex = null;
-  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-  const btn = document.getElementById('updatePinBtn');
-  if (btn) btn.remove();
-  renderMapPins();
-  renderMapPinsList();
-  toast('Undone');
+  list.innerHTML = mapEditorPins.map((pin, i) => {
+    const color = PIN_COLORS[pin.pinType] || '#6b7280';
+    const coords = (pin.latitude != null && pin.longitude != null)
+      ? `${pin.latitude.toFixed(5)}, ${pin.longitude.toFixed(5)}`
+      : 'no coords';
+    return `<div class="schedule-item" style="align-items:center">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:24px;height:24px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="color:white;font-size:10px;font-weight:bold">${pin.pinType.charAt(0)}</span>
+        </div>
+        <div>
+          <div class="title">${escapeHtml(pin.label)}</div>
+          <div class="detail">${escapeHtml(pin.pinType)} · (${coords})${pin.description ? ' · ' + escapeHtml(pin.description) : ''}</div>
+        </div>
+      </div>
+      <button class="btn-danger" onclick="if(confirm('Delete pin &quot;${escapeHtml(pin.label)}&quot;?')) deleteEditorPin('${pin.id}')">Delete</button>
+    </div>`;
+  }).join('');
 }
 
 function onPinTypeChange() {
   const type = document.getElementById('mapPinType').value;
   const label = document.getElementById('mapPinLabel');
-  // Only auto-fill if label is empty or matches a pin type name
   const typeNames = ['Stage', 'Food', 'Restroom', 'First Aid', 'Exit', 'WiFi', 'Accessible', 'ATM', 'Parking', 'Info', 'Gift Shop', 'Bus', 'Custom', ''];
   if (typeNames.includes(label.value)) {
     label.value = type;
   }
 }
 
-function setEditorMode(mode) {
-  pinMode = mode === 'place' ? 'place' : 'edit';
-  mapMode = mode === 'calibrate' ? 'calibrate' : 'pin';
-
-  document.getElementById('modeEditBtn').classList.toggle('active', mode === 'edit');
-  document.getElementById('modePlaceBtn').classList.toggle('active', mode === 'place');
-  document.getElementById('tabCalibrate').classList.toggle('active', mode === 'calibrate');
-
-  document.getElementById('pinControls').style.display = mode !== 'calibrate' ? 'block' : 'none';
-  document.getElementById('calibrateControls').style.display = mode === 'calibrate' ? 'block' : 'none';
-
-  const hints = {
-    edit: 'Click a pin to select it for editing, dragging, or deleting.',
-    place: 'Click the map to place pins. Set type and label below.',
-    calibrate: 'Click two known locations on the map and enter their GPS coordinates.'
-  };
-  document.getElementById('pinModeHint').textContent = hints[mode];
-  document.getElementById('mapImageContainer').style.cursor = mode === 'place' ? 'crosshair' : 'default';
-
-  if (mode === 'place') deselectPin();
-  if (mode === 'calibrate') settingCalPoint = 0;
-  renderCalibrationOverlay();
-  renderMapPins();
-}
-
-function loadMapImage(url) {
-  const img = document.getElementById('mapImage');
-  const noImg = document.getElementById('mapNoImage');
-  img.src = url;
-  img.onload = () => {
-    img.style.display = 'block';
-    noImg.style.display = 'none';
-    renderMapPins();
-    renderCalibrationOverlay();
-  };
-  img.onerror = () => {
-    img.style.display = 'none';
-    noImg.style.display = 'block';
-    noImg.textContent = 'Failed to load map image';
-  };
-
-  const container = document.getElementById('mapImageContainer');
-  container.onclick = (e) => {
-    if (img.style.display === 'none') return;
-    const rect = container.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-
-    if (mapMode === 'calibrate') {
-      calPoints[settingCalPoint] = {x, y};
-      const label = settingCalPoint === 0 ? 'cal1Status' : 'cal2Status';
-      document.getElementById(label).textContent = `Point ${settingCalPoint + 1} set: (${x.toFixed(3)}, ${y.toFixed(3)})`;
-      settingCalPoint = (settingCalPoint + 1) % 2;
-      renderCalibrationOverlay();
-    } else if (pinMode === 'place') {
-      placePin(x, y);
+async function deleteAllEditorPins() {
+  if (!mapEditorPins.length || !confirm(`Delete all ${mapEditorPins.length} pins?`)) return;
+  for (const pin of mapEditorPins) {
+    if (pin.id) {
+      try { await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) }); } catch(e) {}
     }
-    // In edit mode, clicks on the background do nothing — pin clicks handled by pin elements
-  };
-}
-
-function renderCalibrationOverlay() {
-  const overlay = document.getElementById('mapCalOverlay');
-  overlay.innerHTML = calPoints.map((pt, i) => {
-    if (!pt) return '';
-    const color = i === 0 ? '#f59e0b' : '#3b82f6';
-    return `<div style="position:absolute;left:${pt.x*100}%;top:${pt.y*100}%;transform:translate(-50%,-50%)">
-      <div style="width:16px;height:16px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,0.5)"></div>
-      <div style="color:white;font-size:10px;font-weight:bold;text-align:center;margin-top:2px;text-shadow:0 1px 2px black">P${i+1}</div>
-    </div>`;
-  }).join('');
-}
-
-function onPinSizeChange() {
-  const val = document.getElementById('mapPinSizeSlider').value;
-  document.getElementById('mapPinSizeValue').textContent = val + '%';
-  renderMapPins();
-}
-
-async function saveMapPinSize() {
-  const size = parseFloat(document.getElementById('mapPinSizeSlider').value);
-  try {
-    await fetch(`${API}/api/admin/events/${currentEventId}`, {
-      method: 'PUT',
-      headers: (await adminHeaders()),
-      body: JSON.stringify({ mapPinSize: size })
-    });
-    if (currentEventData) currentEventData.mapPinSize = size;
-    toast(`Pin size set to ${size}px`);
-  } catch (e) {
-    toast('Error: ' + e.message);
   }
+  mapEditorPins = [];
+  document.getElementById('mapPinCount').textContent = '0 pins';
+  renderEditorPins();
+  renderEditorPinList();
+  toast('All pins deleted');
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 async function saveMapImageURL() {
@@ -2254,738 +1987,6 @@ async function saveMapImageURL() {
     });
     if (currentEventData) currentEventData.mapImageURL = url || null;
     toast(url ? 'Map image saved!' : 'Map image removed');
-    if (url) {
-      loadMapImage(url);
-    } else {
-      // Cleared — refresh the editor so the empty state shows immediately.
-      showMapEditor();
-    }
-  } catch (e) {
-    toast('Error: ' + e.message);
-  }
-}
-
-function loadMapPins() {
-  mapEditorPins = (currentEventData?.mapPins || []).map(p => ({
-    id: p.id,
-    label: p.label,
-    pinType: p.pinType || p.pin_type || 'Custom',
-    x: p.x,
-    y: p.y,
-    latitude: p.latitude ?? null,
-    longitude: p.longitude ?? null,
-    description: p.description || ''
-  }));
-  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-  renderMapPins();
-  renderMapPinsList();
-  if (leafletMap && document.getElementById('leafletContainer').style.display !== 'none') {
-    renderLeafletPins();
-  }
-}
-
-function renderMapPins() {
-  const overlay = document.getElementById('mapPinsOverlay');
-  const img = document.getElementById('mapImage');
-  if (img.style.display === 'none') return;
-
-  overlay.style.pointerEvents = pinMode === 'edit' ? 'auto' : 'none';
-  overlay.innerHTML = mapEditorPins.map((pin, i) => {
-    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', WiFi: '#06b6d4', Accessible: '#6366f1', ATM: '#eab308', Parking: '#3b82f6', Info: '#14b8a6', 'Gift Shop': '#ec4899', Bus: '#22c55e', Custom: '#6b7280' };
-    const color = colors[pin.pinType] || '#6b7280';
-    const selected = selectedMapPinIndex === i;
-    const pinPct = parseFloat(document.getElementById('mapPinSizeSlider')?.value || 3);
-    const container = document.getElementById('mapImageContainer');
-    const containerWidth = container ? container.offsetWidth : 600;
-    const pinSz = Math.round(containerWidth * pinPct / 100);
-    const border = selected ? '3px solid #f59e0b' : '2px solid white';
-    const size = selected ? (pinSz + 4) + 'px' : pinSz + 'px';
-    const fontSize = Math.max(Math.round(pinSz * 0.35), 6) + 'px';
-    return `<div class="map-pin-draggable" data-index="${i}" style="position:absolute;left:${pin.x * 100}%;top:${pin.y * 100}%;transform:translate(-50%,-50%);cursor:grab;touch-action:none" title="${pin.label} — drag to move, click to edit">
-      <div style="width:${size};height:${size};border-radius:50%;background:${color};border:${border};box-shadow:0 1px 3px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;transition:all 0.15s">
-        <span style="color:white;font-size:${fontSize};font-weight:bold">${i + 1}</span>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Attach drag and click handlers
-  overlay.querySelectorAll('.map-pin-draggable').forEach(el => {
-    let dragging = false;
-    let moved = false;
-    let startX = 0, startY = 0;
-    el.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      dragging = true;
-      moved = false;
-      startX = e.clientX;
-      startY = e.clientY;
-      el.style.cursor = 'grabbing';
-      el.style.zIndex = '100';
-    });
-    document.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      if (Math.abs(e.clientX - startX) > 6 || Math.abs(e.clientY - startY) > 6) moved = true;
-      const container = document.getElementById('mapImageContainer');
-      const rect = container.getBoundingClientRect();
-      const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-      el.style.left = (x * 100) + '%';
-      el.style.top = (y * 100) + '%';
-    });
-    document.addEventListener('mouseup', async () => {
-      if (!dragging) return;
-      dragging = false;
-      el.style.cursor = 'grab';
-      el.style.zIndex = '';
-      const index = parseInt(el.dataset.index);
-
-      if (!moved) {
-        // Click — select for editing
-        if (pinMode === 'edit') {
-          selectMapPin(index);
-        }
-        return;
-      }
-
-      // Drag — save new position
-      const container = document.getElementById('mapImageContainer');
-      const rect = container.getBoundingClientRect();
-      const elRect = el.getBoundingClientRect();
-      const x = Math.max(0, Math.min(1, (elRect.left + 10 - rect.left) / rect.width));
-      const y = Math.max(0, Math.min(1, (elRect.top + 10 - rect.top) / rect.height));
-
-      mapEditorPins[index].x = x;
-      mapEditorPins[index].y = y;
-
-      const pin = mapEditorPins[index];
-      if (pin.id) {
-        try {
-          await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
-          const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
-            method: 'POST', headers: (await adminHeaders()),
-            body: JSON.stringify({ label: pin.label, pinType: pin.pinType, x, y, description: pin.description || '' })
-          });
-          if (res.ok) {
-            const saved = await res.json();
-            mapEditorPins[index].id = saved.id;
-          }
-        } catch(e) { console.error('Failed to update pin position:', e); }
-      }
-    });
-  });
-}
-
-function renderMapPinsList() {
-  const list = document.getElementById('mapPinsList');
-  if (mapEditorPins.length === 0) {
-    list.innerHTML = '<div class="empty">No pins yet. Click on the map to place one.</div>';
-    return;
-  }
-  list.innerHTML = mapEditorPins.map((pin, i) => {
-    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', WiFi: '#06b6d4', Accessible: '#6366f1', ATM: '#eab308', Parking: '#3b82f6', Info: '#14b8a6', 'Gift Shop': '#ec4899', Bus: '#22c55e', Custom: '#6b7280' };
-    const color = colors[pin.pinType] || '#6b7280';
-    return `<div class="schedule-item" style="align-items:center">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:24px;height:24px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <span style="color:white;font-size:10px;font-weight:bold">${i + 1}</span>
-        </div>
-        <div>
-          <div class="title">${pin.label}</div>
-          <div class="detail">${pin.pinType} · (${pin.x.toFixed(2)}, ${pin.y.toFixed(2)})${pin.description ? ' · ' + pin.description : ''}</div>
-        </div>
-      </div>
-      <button class="btn-danger" onclick="deleteMapPin(${i})">Delete</button>
-    </div>`;
-  }).join('');
-}
-
-let selectedMapPinIndex = null;
-
-function selectMapPin(index) {
-  const pin = mapEditorPins[index];
-  selectedMapPinIndex = index;
-
-  // Populate the form fields with this pin's data
-  document.getElementById('mapPinType').value = pin.pinType;
-  document.getElementById('mapPinLabel').value = pin.label;
-  document.getElementById('mapPinDescription').value = pin.description || '';
-
-  // Show update button
-  const existing = document.getElementById('updatePinBtn');
-  if (existing) existing.remove();
-
-  const controls = document.getElementById('pinControls');
-  const btn = document.createElement('div');
-  btn.id = 'updatePinBtn';
-  btn.className = 'actions';
-  btn.style.marginTop = '8px';
-  btn.innerHTML = `
-    <button class="btn-primary" onclick="updateSelectedPin()" style="font-size:13px">Update Pin ${index + 1}</button>
-    <button class="btn-danger" onclick="deleteSelectedPin()" style="font-size:13px">Delete</button>
-    <button class="btn-secondary" onclick="deselectPin()" style="font-size:13px">Cancel</button>
-  `;
-  controls.appendChild(btn);
-
-  // Highlight the pin
-  renderMapPins();
-  toast(`Editing pin ${index + 1}: ${pin.label}`);
-}
-
-function deselectPin() {
-  selectedMapPinIndex = null;
-  document.getElementById('mapPinLabel').value = '';
-  document.getElementById('mapPinDescription').value = '';
-  const btn = document.getElementById('updatePinBtn');
-  if (btn) btn.remove();
-  renderMapPins();
-}
-
-async function deleteSelectedPin() {
-  if (selectedMapPinIndex === null) return;
-  const pin = mapEditorPins[selectedMapPinIndex];
-  try {
-    if (pin.id) {
-      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
-    }
-    mapEditorPins.splice(selectedMapPinIndex, 1);
-    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-    deselectPin();
-    renderMapPins();
-    renderMapPinsList();
-    toast('Pin deleted');
-  } catch(e) {
-    toast('Error: ' + e.message);
-  }
-}
-
-async function updateSelectedPin() {
-  if (selectedMapPinIndex === null) return;
-  const pin = mapEditorPins[selectedMapPinIndex];
-  const newLabel = document.getElementById('mapPinLabel').value.trim();
-  const newType = document.getElementById('mapPinType').value;
-  const newDesc = document.getElementById('mapPinDescription').value.trim();
-
-  if (!newLabel) { toast('Enter a label'); return; }
-
-  // Delete old and recreate with new metadata at same position
-  try {
-    if (pin.id) {
-      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
-    }
-    const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
-      method: 'POST', headers: (await adminHeaders()),
-      body: JSON.stringify({ label: newLabel, pinType: newType, x: pin.x, y: pin.y, description: newDesc })
-    });
-    if (res.ok) {
-      const saved = await res.json();
-      mapEditorPins[selectedMapPinIndex] = { id: saved.id, label: newLabel, pinType: newType, x: pin.x, y: pin.y, description: newDesc };
-    }
-    deselectPin();
-    renderMapPins();
-    renderMapPinsList();
-    toast('Pin updated');
-  } catch(e) {
-    toast('Error: ' + e.message);
-  }
-}
-
-async function placePin(x, y) {
-  const label = document.getElementById('mapPinLabel').value.trim();
-  const pinType = document.getElementById('mapPinType').value;
-  const description = document.getElementById('mapPinDescription').value.trim();
-
-  if (!label) {
-    toast('Enter a pin label first');
-    document.getElementById('mapPinLabel').focus();
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
-      method: 'POST',
-      headers: (await adminHeaders()),
-      body: JSON.stringify({ label, pinType, x, y, description })
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const pin = await res.json();
-
-    mapEditorPins.push({
-      id: pin.id,
-      label,
-      pinType,
-      x,
-      y,
-      description
-    });
-
-    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-    renderMapPins();
-    renderMapPinsList();
-    pinUndoStack.push({ action: 'place', index: mapEditorPins.length - 1, pin: mapEditorPins[mapEditorPins.length - 1] });
-    toast(`Placed: ${label}`);
-  } catch (e) {
-    toast('Error: ' + e.message);
-  }
-}
-
-async function saveCalibration() {
-  const lat1 = parseFloat(document.getElementById('cal1Lat').value);
-  const lng1 = parseFloat(document.getElementById('cal1Lng').value);
-  const lat2 = parseFloat(document.getElementById('cal2Lat').value);
-  const lng2 = parseFloat(document.getElementById('cal2Lng').value);
-
-  if (!calPoints[0] || !calPoints[1] || isNaN(lat1) || isNaN(lng1) || isNaN(lat2) || isNaN(lng2)) {
-    toast('Set both points on the map and enter GPS coordinates');
-    return;
-  }
-
-  const calibration = JSON.stringify([
-    {x: calPoints[0].x, y: calPoints[0].y, lat: lat1, lng: lng1},
-    {x: calPoints[1].x, y: calPoints[1].y, lat: lat2, lng: lng2}
-  ]);
-
-  try {
-    await fetch(`${API}/api/admin/events/${currentEventId}`, {
-      method: 'PUT',
-      headers: (await adminHeaders()),
-      body: JSON.stringify({ mapCalibration: calibration })
-    });
-    if (currentEventData) currentEventData.mapCalibration = calibration;
-    toast('Calibration saved!');
-  } catch (e) {
-    toast('Error: ' + e.message);
-  }
-}
-
-function gpsToMapXY(lat, lng) {
-  // Use calibration to convert GPS to map x,y
-  let calStr = currentEventData?.mapCalibration || currentEventData?.map_calibration || '';
-  if (!calStr) return null;
-
-  let cal;
-  try { cal = JSON.parse(calStr); } catch(e) { return null; }
-  if (!cal || cal.length !== 2) return null;
-
-  const p1 = cal[0], p2 = cal[1];
-  // Linear interpolation between the two reference points
-  const dLat = p2.lat - p1.lat;
-  const dLng = p2.lng - p1.lng;
-  const dX = p2.x - p1.x;
-  const dY = p2.y - p1.y;
-
-  if (Math.abs(dLat) < 0.000001 && Math.abs(dLng) < 0.000001) return null;
-
-  // Solve: x = p1.x + ((lat - p1.lat) * dX/dLat) ... but need to handle 2D mapping
-  // For axis-aligned maps: lat maps to y, lng maps to x independently
-  const x = p1.x + ((lng - p1.lng) / dLng) * dX;
-  const y = p1.y + ((lat - p1.lat) / dLat) * dY;
-
-  return {x, y};
-}
-
-async function autoPlacePins() {
-  // Get venue's known pins from the event's location
-  const eventLat = currentEventData?.latitude;
-  const eventLng = currentEventData?.longitude;
-  const location = currentEventData?.location || '';
-
-  if (!currentEventData?.mapCalibration && !currentEventData?.map_calibration) {
-    toast('Save calibration first');
-    return;
-  }
-
-  // Fetch the known venues list from the backend to get existing pins with GPS coords
-  // Since VenueMapData is iOS-only, we'll use the event's existing MapKit pins
-  // which have GPS coordinates derivable from the venue template
-  // For now, use a predefined set of common Seattle Center landmarks
-  const landmarks = {
-    'seattle center': [
-      {label: 'Space Needle', type: 'Custom', lat: 47.6205, lng: -122.3493, desc: 'Iconic observation tower'},
-      {label: 'Climate Pledge Arena', type: 'Stage', lat: 47.6220, lng: -122.3540, desc: 'Major concert venue'},
-      {label: 'Mural Amphitheatre', type: 'Stage', lat: 47.6210, lng: -122.3518, desc: 'Outdoor stage'},
-      {label: 'Fisher Pavilion', type: 'Stage', lat: 47.6225, lng: -122.3525, desc: 'Covered event space'},
-      {label: 'Armory (Food Hall)', type: 'Food', lat: 47.6213, lng: -122.3508, desc: 'Indoor food court'},
-      {label: 'International Fountain', type: 'Custom', lat: 47.6230, lng: -122.3513, desc: 'Iconic fountain and gathering area'},
-      {label: 'Memorial Stadium', type: 'Stage', lat: 47.6245, lng: -122.3503, desc: 'Outdoor stadium'},
-      {label: 'KEXP Studio', type: 'Custom', lat: 47.6245, lng: -122.3560, desc: 'KEXP radio station'},
-      {label: 'Restrooms - Armory', type: 'Restroom', lat: 47.6215, lng: -122.3512},
-      {label: 'Restrooms - Fountain', type: 'Restroom', lat: 47.6228, lng: -122.3520},
-      {label: 'First Aid', type: 'First Aid', lat: 47.6218, lng: -122.3505},
-      {label: 'Entrance - 5th Ave', type: 'Exit', lat: 47.6208, lng: -122.3490},
-      {label: 'Entrance - Mercer St', type: 'Exit', lat: 47.6250, lng: -122.3510},
-    ]
-  };
-
-  const key = Object.keys(landmarks).find(k => location.toLowerCase().includes(k));
-  if (!key) {
-    toast('No landmark data for this venue. Place pins manually.');
-    return;
-  }
-
-  const pins = landmarks[key];
-  let placed = 0;
-
-  for (const pin of pins) {
-    const pos = gpsToMapXY(pin.lat, pin.lng);
-    if (!pos || pos.x < 0 || pos.x > 1 || pos.y < 0 || pos.y > 1) continue;
-
-    // Check if a pin with this label already exists
-    if (mapEditorPins.some(p => p.label === pin.label)) continue;
-
-    try {
-      const res = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
-        method: 'POST',
-        headers: (await adminHeaders()),
-        body: JSON.stringify({
-          label: pin.label,
-          pinType: pin.type,
-          x: pos.x,
-          y: pos.y,
-          description: pin.desc || ''
-        })
-      });
-      if (!res.ok) continue;
-      const saved = await res.json();
-      mapEditorPins.push({id: saved.id, label: pin.label, pinType: pin.type, x: pos.x, y: pos.y, description: pin.desc || ''});
-      placed++;
-    } catch(e) {}
-  }
-
-  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-  renderMapPins();
-  renderMapPinsList();
-  toast(`Auto-placed ${placed} pins`);
-}
-
-// ---- Template Matching ----
-
-let pinMode = 'edit'; // 'place' or 'edit'
-let pinUndoStack = []; // {action, pin, index} for undo
-let templateMode = false;
-let templateDragStart = null;
-let templateRegion = null; // {x, y, w, h} in 0-1 coords
-let allTemplateMatches = []; // all matches from server, filtered by slider
-
-function startTemplateSelect() {
-  templateMode = true;
-  templateRegion = null;
-  document.getElementById('templateControls').style.display = 'block';
-  document.getElementById('mapSelectOverlay').style.display = 'block';
-  document.getElementById('mapSelectOverlay').style.pointerEvents = 'auto';
-  document.getElementById('templateStatus').textContent = 'Draw a rectangle around one icon on the map';
-  document.getElementById('findMatchesBtn').disabled = true;
-
-  const overlay = document.getElementById('mapSelectOverlay');
-  const rect = document.getElementById('selectRect');
-
-  overlay.onmousedown = (e) => {
-    const bounds = overlay.getBoundingClientRect();
-    templateDragStart = {
-      x: (e.clientX - bounds.left) / bounds.width,
-      y: (e.clientY - bounds.top) / bounds.height
-    };
-    rect.style.left = (templateDragStart.x * 100) + '%';
-    rect.style.top = (templateDragStart.y * 100) + '%';
-    rect.style.width = '0';
-    rect.style.height = '0';
-    rect.style.display = 'block';
-  };
-
-  overlay.onmousemove = (e) => {
-    if (!templateDragStart) return;
-    const bounds = overlay.getBoundingClientRect();
-    const curX = (e.clientX - bounds.left) / bounds.width;
-    const curY = (e.clientY - bounds.top) / bounds.height;
-    const x = Math.min(templateDragStart.x, curX);
-    const y = Math.min(templateDragStart.y, curY);
-    const w = Math.abs(curX - templateDragStart.x);
-    const h = Math.abs(curY - templateDragStart.y);
-    rect.style.left = (x * 100) + '%';
-    rect.style.top = (y * 100) + '%';
-    rect.style.width = (w * 100) + '%';
-    rect.style.height = (h * 100) + '%';
-  };
-
-  overlay.onmouseup = (e) => {
-    if (!templateDragStart) return;
-    const bounds = overlay.getBoundingClientRect();
-    const endX = (e.clientX - bounds.left) / bounds.width;
-    const endY = (e.clientY - bounds.top) / bounds.height;
-    const x = Math.min(templateDragStart.x, endX);
-    const y = Math.min(templateDragStart.y, endY);
-    const w = Math.abs(endX - templateDragStart.x);
-    const h = Math.abs(endY - templateDragStart.y);
-    templateDragStart = null;
-
-    if (w < 0.001 || h < 0.001) return; // basically zero
-
-    templateRegion = {x, y, w, h};
-    document.getElementById('templateStatus').textContent = `Selected region: ${Math.round(w*100)}% × ${Math.round(h*100)}%`;
-    document.getElementById('findMatchesBtn').disabled = false;
-
-    // Draw preview
-    const img = document.getElementById('mapImage');
-    const canvas = document.getElementById('templatePreview');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 48, 48);
-    ctx.drawImage(img,
-      x * img.naturalWidth, y * img.naturalHeight,
-      w * img.naturalWidth, h * img.naturalHeight,
-      0, 0, 48, 48
-    );
-  };
-}
-
-function cancelTemplateSelect() {
-  templateMode = false;
-  templateRegion = null;
-  allTemplateMatches = [];
-  document.getElementById('templateControls').style.display = 'none';
-  document.getElementById('toleranceControls').style.display = 'none';
-  document.getElementById('mapSelectOverlay').style.display = 'none';
-  document.getElementById('mapSelectOverlay').style.pointerEvents = 'none';
-  document.getElementById('selectRect').style.display = 'none';
-  renderMapPins(); // restore normal pin overlay
-}
-
-async function findTemplateMatches() {
-  if (!templateRegion) return;
-
-  const mapURL = document.getElementById('mapImageURL').value.trim();
-
-  const btn = document.getElementById('findMatchesBtn');
-  btn.textContent = 'Scanning...';
-  btn.disabled = true;
-
-  try {
-    const res = await fetch(`${API}/api/admin/match-template`, {
-      method: 'POST',
-      headers: (await adminHeaders()),
-      body: JSON.stringify({
-        mapImageURL: mapURL,
-        template: templateRegion,
-        threshold: 0.3 // get everything, slider will filter
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Match failed');
-    }
-
-    const data = await res.json();
-    allTemplateMatches = (data.matches || []).filter(m => m.similarity < 1.0); // exclude the original
-
-    if (allTemplateMatches.length === 0) {
-      toast('No matches found — try selecting a different icon');
-      return;
-    }
-
-    // Show tolerance slider
-    document.getElementById('toleranceControls').style.display = 'block';
-    document.getElementById('toleranceSlider').value = 55;
-    onToleranceChange();
-    toast(`Found ${allTemplateMatches.length} candidates — adjust the slider`);
-  } catch (e) {
-    toast('Error: ' + e.message);
-  } finally {
-    btn.textContent = 'Scan';
-    btn.disabled = false;
-  }
-}
-
-function getFilteredMatches() {
-  const tolerance = parseInt(document.getElementById('toleranceSlider').value) / 100;
-  return allTemplateMatches.filter(m => m.similarity >= tolerance);
-}
-
-function onToleranceChange() {
-  const val = document.getElementById('toleranceSlider').value;
-  document.getElementById('toleranceValue').textContent = val + '%';
-  const filtered = getFilteredMatches();
-  document.getElementById('toleranceMatchCount').textContent = `${filtered.length} match${filtered.length !== 1 ? 'es' : ''}`;
-
-  // Preview matches on map overlay
-  const overlay = document.getElementById('mapPinsOverlay');
-  const existingPinHtml = mapEditorPins.map((pin, i) => {
-    const colors = { Stage: '#a855f7', Food: '#f97316', Restroom: '#3b82f6', 'First Aid': '#ef4444', Exit: '#22c55e', WiFi: '#06b6d4', Accessible: '#6366f1', ATM: '#eab308', Parking: '#3b82f6', Info: '#14b8a6', 'Gift Shop': '#ec4899', Bus: '#22c55e', Custom: '#6b7280' };
-    const color = colors[pin.pinType] || '#6b7280';
-    return `<div style="position:absolute;left:${pin.x * 100}%;top:${pin.y * 100}%;transform:translate(-50%,-50%)" title="${pin.label}">
-      <div style="width:20px;height:20px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center">
-        <span style="color:white;font-size:8px;font-weight:bold">${i + 1}</span>
-      </div>
-    </div>`;
-  }).join('');
-
-  const matchHtml = filtered.map(m => {
-    return `<div style="position:absolute;left:${m.x * 100}%;top:${m.y * 100}%;transform:translate(-50%,-50%)">
-      <div style="width:18px;height:18px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 6px rgba(245,158,11,0.6);opacity:0.9"></div>
-    </div>`;
-  }).join('');
-
-  overlay.innerHTML = existingPinHtml + matchHtml;
-}
-
-async function placeFilteredMatches() {
-  const filtered = getFilteredMatches();
-  if (filtered.length === 0) { toast('No matches at this tolerance'); return; }
-
-  const label = document.getElementById('mapPinLabel').value.trim() || 'Detected Icon';
-  const pinType = document.getElementById('mapPinType').value;
-  const description = document.getElementById('mapPinDescription').value.trim();
-
-  let placed = 0;
-  for (const match of filtered) {
-    try {
-      const saveRes = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
-        method: 'POST',
-        headers: (await adminHeaders()),
-        body: JSON.stringify({
-          label: filtered.length > 1 ? `${label} ${placed + 1}` : label,
-          pinType,
-          x: match.x,
-          y: match.y,
-          description
-        })
-      });
-      if (!saveRes.ok) continue;
-      const saved = await saveRes.json();
-      mapEditorPins.push({
-        id: saved.id,
-        label: filtered.length > 1 ? `${label} ${placed + 1}` : label,
-        pinType,
-        x: match.x,
-        y: match.y,
-        description
-      });
-      placed++;
-    } catch(e) {}
-  }
-
-  document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-  allTemplateMatches = [];
-  renderMapPins();
-  renderMapPinsList();
-  cancelTemplateSelect();
-  toast(`Placed ${placed} pins`);
-}
-
-async function aiDetectPins() {
-  const mapURL = document.getElementById('mapImageURL').value.trim();
-  if (!mapURL) { toast('Set a map image URL first'); return; }
-
-  const btn = document.getElementById('aiDetectBtn');
-  btn.textContent = '🤖 Analyzing map...';
-  btn.disabled = true;
-
-  try {
-    const res = await fetch(`${API}/api/admin/detect-map-pins`, {
-      method: 'POST',
-      headers: (await adminHeaders()),
-      body: JSON.stringify({
-        mapImageURL: mapURL,
-        eventName: currentEventData?.name || ''
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Detection failed');
-    }
-
-    const data = await res.json();
-    const detected = data.pins || [];
-
-    if (detected.length === 0) {
-      toast('No locations detected on this map');
-      return;
-    }
-
-    // Delete all existing pins first
-    for (const pin of mapEditorPins) {
-      if (pin.id) {
-        try {
-          await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
-        } catch(e) {}
-      }
-    }
-    mapEditorPins = [];
-
-    // Place all detected pins
-    let placed = 0;
-    for (const pin of detected) {
-      try {
-        const saveRes = await fetch(`${API}/api/admin/events/${currentEventId}/pins`, {
-          method: 'POST',
-          headers: (await adminHeaders()),
-          body: JSON.stringify({
-            label: pin.label,
-            pinType: pin.pinType || 'Custom',
-            x: pin.x,
-            y: pin.y,
-            description: pin.description || ''
-          })
-        });
-        if (!saveRes.ok) continue;
-        const saved = await saveRes.json();
-        mapEditorPins.push({
-          id: saved.id,
-          label: pin.label,
-          pinType: pin.pinType || 'Custom',
-          x: pin.x,
-          y: pin.y,
-          description: pin.description || ''
-        });
-        placed++;
-      } catch(e) {}
-    }
-
-    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-    renderMapPins();
-    renderMapPinsList();
-    toast(`AI detected ${detected.length} locations, placed ${placed} new pins`);
-  } catch (e) {
-    console.error('AI detect error:', e);
-    document.getElementById('mapPinsList').innerHTML = `<div class="empty" style="color:#f87171">Error: ${e.message}</div>`;
-    toast('AI detection failed — see error below');
-  } finally {
-    btn.textContent = '🤖 AI Detect Pins from Map Image';
-    btn.disabled = false;
-  }
-}
-
-async function deleteAllPins() {
-  if (!confirm(`Delete all ${mapEditorPins.length} pins?`)) return;
-  for (const pin of mapEditorPins) {
-    if (pin.id) {
-      try {
-        await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
-      } catch(e) {}
-    }
-  }
-  mapEditorPins = [];
-  selectedMapPinIndex = null;
-  document.getElementById('mapPinCount').textContent = '0 pins';
-  document.getElementById('mapPinsOverlay').innerHTML = '';
-  document.getElementById('mapPinsList').innerHTML = '<div class="empty">No pins yet. Click on the map to place one.</div>';
-  const btn = document.getElementById('updatePinBtn');
-  if (btn) btn.remove();
-  toast('All pins deleted');
-}
-
-async function deleteMapPin(index) {
-  const pin = mapEditorPins[index];
-  if (!confirm(`Delete pin "${pin.label}"?`)) return;
-
-  try {
-    if (pin.id) {
-      await fetch(`${API}/api/admin/pins/${pin.id}`, { method: 'DELETE', headers: (await adminHeaders()) });
-    }
-    mapEditorPins.splice(index, 1);
-    document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
-    renderMapPins();
-    renderMapPinsList();
-    toast('Pin deleted');
   } catch (e) {
     toast('Error: ' + e.message);
   }
