@@ -3024,7 +3024,7 @@ function showScriptRunner() {
         <h3 style="margin:0;">⚡ Script Runner</h3>
         <button onclick="document.getElementById('scriptRunnerModal').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;">&times;</button>
       </div>
-      <p style="color:#94a3b8;font-size:12px;margin-bottom:8px;">Variables available: <code style="color:#4ade80;">h</code> (auth headers with Content-Type), <code style="color:#4ade80;">API</code> (base URL), <code style="color:#4ade80;">toast()</code></p>
+      <p style="color:#94a3b8;font-size:12px;margin-bottom:8px;">Variables: <code style="color:#4ade80;">h</code> (auth headers), <code style="color:#4ade80;">API</code> (base URL), <code style="color:#4ade80;">log()</code>, <code style="color:#4ade80;">ctx</code> (persists between runs)</p>
       <textarea id="scriptRunnerCode" autocorrect="off" autocapitalize="off" spellcheck="false" wrap="off" style="flex:1;min-height:200px;padding:12px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-family:monospace;font-size:13px;resize:vertical;tab-size:2;overflow-x:auto;white-space:pre;" placeholder="// Use semicolons between statements. Lines are joined with spaces."></textarea>
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button class="btn-primary" onclick="runScript()" style="font-size:13px;">▶ Run</button>
@@ -3092,9 +3092,10 @@ async function runScript() {
   try {
     const h = await adminHeaders();
     h['Content-Type'] = 'application/json';
+    if (!window._scriptCtx) window._scriptCtx = {};
     const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-    const fn = new AsyncFunction('h', 'API', 'toast', 'log', 'fetch', code);
-    const result = await fn(h, API, toast, log, fetch);
+    const fn = new AsyncFunction('h', 'API', 'toast', 'log', 'fetch', 'ctx', code);
+    const result = await fn(h, API, toast, log, fetch, window._scriptCtx);
     if (result !== undefined) log('→', result);
     output.textContent += '\nDone.';
   } catch (err) {
