@@ -55,6 +55,7 @@ enum CityConfig {
         let label: String
         let members: Set<String>
         let color: Color
+        var isSinglePill: Bool = false // when true, no expandable sub-items
     }
 
     private static let seattleGroups: [NeighborhoodGroup] = {
@@ -128,7 +129,7 @@ enum CityConfig {
             NeighborhoodGroup(label: "South End", members: southEnd, color: .green),
             NeighborhoodGroup(label: "West End", members: westEnd, color: .teal),
             NeighborhoodGroup(label: "Eastside", members: eastside, color: .orange),
-            NeighborhoodGroup(label: "Seattle", members: seattle, color: .indigo),
+            NeighborhoodGroup(label: "Seattle", members: seattle, color: .indigo, isSinglePill: true),
         ]
     }()
 

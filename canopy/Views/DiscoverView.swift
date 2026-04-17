@@ -48,6 +48,7 @@ struct DiscoverView: View {
         let label: String
         let hoods: [String]
         let color: Color
+        var isSinglePill: Bool = false
         var id: String { label }
     }
 
@@ -60,7 +61,7 @@ struct DiscoverView: View {
         for group in groups {
             let matching = neighborhoods.filter { group.members.contains($0) }
             if !matching.isEmpty {
-                result.append(NeighborhoodGroupView(label: group.label, hoods: matching, color: group.color))
+                result.append(NeighborhoodGroupView(label: group.label, hoods: matching, color: group.color, isSinglePill: group.isSinglePill))
             }
         }
         let allGrouped = Set(groups.flatMap(\.members))
@@ -654,7 +655,6 @@ struct DiscoverView: View {
         let isExpanded = expandedNeighborhoodGroup == group.label
         let regionSelected = selectedRegions.contains(group.label)
         let isActive = isExpanded || regionSelected
-        let chevron = isExpanded ? "chevron.up" : "chevron.down"
         let bgStyle: AnyShapeStyle = isActive
             ? AnyShapeStyle(LinearGradient(
                 colors: [group.color.opacity(0.25), group.color.opacity(0.10)],
@@ -664,13 +664,23 @@ struct DiscoverView: View {
 
         return Button {
             withAnimation(.easeInOut(duration: 0.25)) {
-                expandedNeighborhoodGroup = isExpanded ? nil : group.label
+                if group.isSinglePill {
+                    if regionSelected {
+                        selectedRegions.remove(group.label)
+                    } else {
+                        selectedRegions.insert(group.label)
+                    }
+                } else {
+                    expandedNeighborhoodGroup = isExpanded ? nil : group.label
+                }
             }
         } label: {
             HStack(spacing: 4) {
                 Text(group.label)
-                Image(systemName: chevron)
-                    .font(.caption2)
+                if !group.isSinglePill {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                }
             }
             .font(.subheadline)
             .padding(.horizontal, 14)
