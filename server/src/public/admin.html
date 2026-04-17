@@ -1800,15 +1800,29 @@ function showMapEditor() {
   const mapURL = currentEventData?.mapImageURL || currentEventData?.map_image_url || '';
   document.getElementById('mapImageURL').value = mapURL;
 
-  // Load pins from event data
-  mapEditorPins = (currentEventData?.mapPins || []).map(p => ({
-    id: p.id,
-    label: p.label,
-    pinType: p.pinType || p.pin_type || 'Custom',
-    latitude: p.latitude ?? null,
-    longitude: p.longitude ?? null,
-    description: p.description || ''
-  }));
+  // Load pins from event data, converting x/y to lat/lng if needed
+  const evLat = currentEventData?.latitude ?? 47.6062;
+  const evLng = currentEventData?.longitude ?? -122.3321;
+  const span = 0.005; // approximate venue span in degrees
+  mapEditorPins = (currentEventData?.mapPins || []).map(p => {
+    let lat = p.latitude ?? null;
+    let lng = p.longitude ?? null;
+    // Convert x/y (0-1) to lat/lng if no real coords
+    if (lat == null || lng == null) {
+      const x = p.x ?? 0.5;
+      const y = p.y ?? 0.5;
+      lat = evLat + (0.5 - y) * span;
+      lng = evLng + (x - 0.5) * span;
+    }
+    return {
+      id: p.id,
+      label: p.label,
+      pinType: p.pinType || p.pin_type || 'Custom',
+      latitude: lat,
+      longitude: lng,
+      description: p.description || ''
+    };
+  });
   document.getElementById('mapPinCount').textContent = `${mapEditorPins.length} pins`;
 
   // Init or update Leaflet map
