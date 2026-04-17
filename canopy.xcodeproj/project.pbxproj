@@ -227,6 +227,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.03;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconTacoma;
 				PRODUCT_BUNDLE_IDENTIFIER = btt.canopy.tacoma;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -324,6 +325,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.03;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconTacoma;
 				PRODUCT_BUNDLE_IDENTIFIER = btt.canopy.tacoma;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
