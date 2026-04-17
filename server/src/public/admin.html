@@ -868,6 +868,11 @@
   </div>
   <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
     <input type="text" id="venueSearch" placeholder="Search venues..." oninput="renderVenueList()" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px;">
+    <select id="venueCityFilter" onchange="renderVenueList()" style="padding:6px 12px; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:13px;">
+      <option value="">All Cities</option>
+      <option value="seattle">Seattle</option>
+      <option value="tacoma">Tacoma</option>
+    </select>
     <span id="venuePageInfo" style="color:#94a3b8; font-size:13px; white-space:nowrap;"></span>
     <button class="btn-secondary" onclick="venuePagePrev()" style="font-size:12px; padding:4px 10px;">← Prev</button>
     <button class="btn-secondary" onclick="venuePageNext()" style="font-size:12px; padding:4px 10px;">Next →</button>
@@ -2700,13 +2705,16 @@ async function loadVenues() {
 }
 
 function getFilteredVenues() {
+  let result = allVenues;
+  const cityFilter = document.getElementById('venueCityFilter')?.value || '';
+  if (cityFilter) result = result.filter(v => v.city === cityFilter);
   const q = (document.getElementById('venueSearch')?.value || '').toLowerCase();
-  if (!q) return allVenues;
-  return allVenues.filter(v =>
+  if (q) result = result.filter(v =>
     v.name.toLowerCase().includes(q) ||
     (v.address || '').toLowerCase().includes(q) ||
     (v.city || '').toLowerCase().includes(q)
   );
+  return result;
 }
 
 function renderVenueList() {
