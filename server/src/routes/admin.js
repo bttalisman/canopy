@@ -1711,7 +1711,7 @@ router.get('/analytics/neighborhood-heatmap', requireSuperadmin, async (req, res
     const { rows } = await pool.query(
       `SELECT neighborhood, COUNT(*) as event_count
        FROM events
-       WHERE is_active = true AND is_city_official = true
+       WHERE is_active = true AND slug LIKE 'seattle-%'
        GROUP BY neighborhood
        ORDER BY event_count DESC`
     );
