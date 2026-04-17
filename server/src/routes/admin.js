@@ -1363,11 +1363,12 @@ router.post('/import-seattle-events', requireSuperadmin, async (req, res) => {
         e.organization ? `Organized by ${e.organization}` : '',
       ].filter(Boolean).join('. ');
 
+      const permitId = e.year_month_app || null;
       const { rows } = await pool.query(`
-        INSERT INTO events (name, slug, description, start_date, end_date, location, neighborhood, category, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+        INSERT INTO events (name, slug, description, start_date, end_date, location, neighborhood, category, is_active, permit_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
         RETURNING id, name
-      `, [name, slug, description, startDate, endDate, location, neighborhood, category]);
+      `, [name, slug, description, startDate, endDate, location, neighborhood, category, permitId]);
 
       if (rows.length > 0) {
         imported++;
@@ -1417,9 +1418,10 @@ router.post('/repair-seattle-events', requireSuperadmin, async (req, res) => {
         e.organization ? `Organized by ${e.organization}` : '',
       ].filter(Boolean).join('. ');
 
+      const permitId = e.year_month_app || null;
       await pool.query(
-        `UPDATE events SET location = $1, neighborhood = $2, description = $3 WHERE id = $4`,
-        [location, neighborhood, description, existing.rows[0].id]
+        `UPDATE events SET location = $1, neighborhood = $2, description = $3, permit_id = COALESCE($5, permit_id) WHERE id = $4`,
+        [location, neighborhood, description, existing.rows[0].id, permitId]
       );
       updated++;
       console.log(`[Seattle Repair] Updated: ${name} → ${location}, ${neighborhood}`);
@@ -1711,7 +1713,7 @@ router.get('/analytics/neighborhood-heatmap', requireSuperadmin, async (req, res
     const { rows } = await pool.query(
       `SELECT neighborhood, COUNT(*) as event_count
        FROM events
-       WHERE is_active = true AND slug LIKE 'seattle-%'
+       WHERE is_active = true AND permit_id IS NOT NULL AND permit_id != ''
        GROUP BY neighborhood
        ORDER BY event_count DESC`
     );
