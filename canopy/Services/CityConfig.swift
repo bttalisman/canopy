@@ -94,9 +94,48 @@ enum CityConfig {
         ]
     }()
 
+    private static let tacomaGroups: [NeighborhoodGroup] = {
+        let downtown: Set<String> = [
+            "Downtown", "Stadium District", "Hilltop", "Central",
+        ]
+        let northEnd: Set<String> = [
+            "North End", "Proctor District", "Old Town", "Ruston",
+            "North Slope", "North Tacoma",
+        ]
+        let southEnd: Set<String> = [
+            "South End", "South Tacoma", "Lincoln District", "Fern Hill",
+            "Wapato", "Larchmont",
+        ]
+        let westEnd: Set<String> = [
+            "West End", "Narrows", "University Place",
+        ]
+        let eastside: Set<String> = [
+            "Eastside", "McKinley", "Portland Ave",
+            "Salishan", "Swan Creek",
+        ]
+        let seattle: Set<String> = [
+            "Ballard", "Capitol Hill", "Central Area", "Central District",
+            "Chinatown-International District", "Downtown / Citywide",
+            "Fremont", "Green Lake", "Greenwood", "Industrial District",
+            "Lower Queen Anne", "Magnolia", "Mount Baker", "Pioneer Square",
+            "Queen Anne", "University District", "Wallingford", "West Seattle",
+            "Beacon Hill", "Cascade", "Columbia City", "Carnation",
+            "Interbay", "Laurelhurst / Sand Point", "Various",
+        ]
+        return [
+            NeighborhoodGroup(label: "Downtown Tacoma", members: downtown, color: .blue),
+            NeighborhoodGroup(label: "North End", members: northEnd, color: .purple),
+            NeighborhoodGroup(label: "South End", members: southEnd, color: .green),
+            NeighborhoodGroup(label: "West End", members: westEnd, color: .teal),
+            NeighborhoodGroup(label: "Eastside", members: eastside, color: .orange),
+            NeighborhoodGroup(label: "Seattle", members: seattle, color: .indigo),
+        ]
+    }()
+
     static var neighborhoodGroups: [NeighborhoodGroup] {
         switch citySlug {
         case "seattle": return seattleGroups
+        case "tacoma": return tacomaGroups
         default: return []
         }
     }
