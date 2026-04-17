@@ -33,7 +33,7 @@ struct GoogleMapView: UIViewRepresentable {
         mapView.isMyLocationEnabled = true
 
         addMarkers(to: mapView)
-        if !boundaryCoords.isEmpty { addBoundary(to: mapView) }
+        if !boundaryCoords.isEmpty { addBoundary(to: mapView, coordinator: context.coordinator) }
         return mapView
     }
 
@@ -46,7 +46,7 @@ struct GoogleMapView: UIViewRepresentable {
         mapView.mapType = isSatellite ? .hybrid : .normal
         mapView.clear()
         addMarkers(to: mapView)
-        if !boundaryCoords.isEmpty { addBoundary(to: mapView) }
+        if !boundaryCoords.isEmpty { addBoundary(to: mapView, coordinator: context.coordinator) }
 
         // Recenter when trigger changes
         if context.coordinator.lastRecenterTrigger != recenterTrigger {
@@ -66,6 +66,7 @@ struct GoogleMapView: UIViewRepresentable {
 
     class Coordinator {
         var lastRecenterTrigger: Int = 0
+        var hasInitialZoom: Bool = false
     }
 
     private func addMarkers(to mapView: GMSMapView) {
@@ -176,7 +177,7 @@ struct GoogleMapView: UIViewRepresentable {
         return "mappin"
     }
 
-    private func addBoundary(to mapView: GMSMapView) {
+    private func addBoundary(to mapView: GMSMapView, coordinator: Coordinator) {
         let path = GMSMutablePath()
         for coord in boundaryCoords {
             path.add(coord)
@@ -188,10 +189,13 @@ struct GoogleMapView: UIViewRepresentable {
         polygon.strokeWidth = 2
         polygon.map = mapView
 
-        // Zoom to fit boundary with padding (~20% of view)
-        let bounds = GMSCoordinateBounds(path: path)
-        let update = GMSCameraUpdate.fit(bounds, withPadding: 80)
-        mapView.animate(with: update)
+        // Zoom to fit boundary only on first render
+        if !coordinator.hasInitialZoom {
+            coordinator.hasInitialZoom = true
+            let bounds = GMSCoordinateBounds(path: path)
+            let update = GMSCameraUpdate.fit(bounds, withPadding: 80)
+            mapView.animate(with: update)
+        }
     }
 
     private func zoomFromSpan(_ span: Double) -> Float {
