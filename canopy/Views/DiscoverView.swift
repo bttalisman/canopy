@@ -67,7 +67,7 @@ struct DiscoverView: View {
         let allGrouped = Set(groups.flatMap(\.members))
         let ungrouped = neighborhoods.filter { !allGrouped.contains($0) }
         if !ungrouped.isEmpty {
-            result.append(NeighborhoodGroupView(label: "Other", hoods: ungrouped, color: .orange))
+            result.append(NeighborhoodGroupView(label: "Other", hoods: ungrouped, color: .orange, isSinglePill: true))
         }
         return result
     }
