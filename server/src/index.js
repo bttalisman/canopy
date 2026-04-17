@@ -35,9 +35,12 @@ app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
 });
 
-// City pitch page
+// City pitch pages
 app.get('/city', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'city.html'));
+});
+app.get('/city/tacoma', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'city-tacoma.html'));
 });
 
 // Admin dashboard
