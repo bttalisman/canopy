@@ -149,6 +149,23 @@ struct DiscoverView: View {
     private var isSearching: Bool { !searchText.isEmpty }
     private var pillsHidden: Bool { filterPillsCollapsed }
 
+    private var hasActiveFilters: Bool {
+        selectedCategory != nil || selectedTimeFilter != .all || !selectedNeighborhoods.isEmpty || !selectedRegions.isEmpty || freeOnly || accessibleOnly
+    }
+
+    private var activeFilterSummary: String {
+        var parts: [String] = []
+        if let cat = selectedCategory { parts.append(cat.rawValue) }
+        if selectedTimeFilter != .all { parts.append(selectedTimeFilter.rawValue) }
+        if !selectedRegions.isEmpty || !selectedNeighborhoods.isEmpty {
+            let count = selectedRegions.count + selectedNeighborhoods.count
+            parts.append("\(count) area\(count == 1 ? "" : "s")")
+        }
+        if freeOnly { parts.append("Free") }
+        if accessibleOnly { parts.append("Accessible") }
+        return parts.joined(separator: " · ")
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -461,6 +478,18 @@ struct DiscoverView: View {
                             .rotationEffect(.degrees(pillsHidden ? 720 : 0))
                             .animation(.easeInOut(duration: 0.5), value: pillsHidden)
                         HStack {
+                            if filterPillsCollapsed && hasActiveFilters {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 6, height: 6)
+                                    Text(activeFilterSummary)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.leading, 4)
+                                .transition(.opacity)
+                            }
                             Spacer()
                             HStack(spacing: 4) {
                                 if filterPillsCollapsed {
