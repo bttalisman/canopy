@@ -2820,8 +2820,7 @@ async function geocodeVenueName() {
   const city = document.getElementById('venueCity').value;
   if (!name) { toast('Enter a venue name first'); return; }
 
-  const cityName = city === 'tacoma' ? 'Tacoma, WA' : 'Seattle, WA';
-  const address = `${name}, ${cityName}`;
+  const address = `${name}, WA`;
 
   const headers = await adminHeaders();
   headers['Content-Type'] = 'application/json';
@@ -2837,6 +2836,13 @@ async function geocodeVenueName() {
   document.getElementById('venueLat').value = result.latitude;
   document.getElementById('venueLng').value = result.longitude;
   document.getElementById('venueAddress').value = result.formattedAddress;
+  // Auto-detect city from returned address
+  const addr = result.formattedAddress.toLowerCase();
+  if (addr.includes('tacoma')) {
+    document.getElementById('venueCity').value = 'tacoma';
+  } else if (addr.includes('seattle')) {
+    document.getElementById('venueCity').value = 'seattle';
+  }
   toast(`Found: ${result.formattedAddress}`);
 
   if (venueMapInstance) {
@@ -2861,6 +2867,13 @@ async function geocodeVenueAddress() {
   const result = await res.json();
   document.getElementById('venueLat').value = result.latitude;
   document.getElementById('venueLng').value = result.longitude;
+  // Auto-detect city from returned address
+  const addr = result.formattedAddress.toLowerCase();
+  if (addr.includes('tacoma')) {
+    document.getElementById('venueCity').value = 'tacoma';
+  } else if (addr.includes('seattle')) {
+    document.getElementById('venueCity').value = 'seattle';
+  }
   toast(`Found: ${result.formattedAddress}`);
 
   // Reinit map to show new pin location
